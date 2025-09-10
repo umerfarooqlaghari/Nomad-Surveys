@@ -59,13 +59,15 @@ public class HealthController : ControllerBase
         {
             // Test database connectivity and get some basic info
             var canConnect = await _context.Database.CanConnectAsync();
-            var surveyCount = await _context.Surveys.CountAsync();
+            var tenantCount = await _context.Tenants.CountAsync();
+            var userCount = await _context.Users.CountAsync();
             
             var response = new
             {
                 Status = "Connected",
                 CanConnect = canConnect,
-                SurveyCount = surveyCount,
+                TenantCount = tenantCount,
+                UserCount = userCount,
                 ConnectionString = _context.Database.GetConnectionString()?.Substring(0, 50) + "...", // Partial for security
                 Timestamp = DateTime.UtcNow
             };
