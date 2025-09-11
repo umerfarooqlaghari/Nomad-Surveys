@@ -11,6 +11,7 @@ public class CompanyDomain
     public string ContactPersonEmail { get; set; } = string.Empty;
     public string ContactPersonRole { get; set; } = string.Empty;
     public string? ContactPersonPhone { get; set; }
+    public string? LogoUrl { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public Guid TenantId { get; set; }

@@ -28,19 +28,27 @@ public class SeedDataService
     {
         try
         {
+            // Test database connection first
+            if (!await _context.Database.CanConnectAsync())
+            {
+                _logger.LogWarning("Cannot connect to database. Skipping seeding.");
+                return;
+            }
+
             await _context.Database.MigrateAsync();
-            
+
             await SeedPermissionsAsync();
             await SeedRolesAsync();
             await SeedSuperAdminAsync();
             await SeedSampleTenantAsync();
-            
+
             _logger.LogInformation("Database seeding completed successfully");
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during database seeding");
-            throw;
+            // Don't throw - allow application to start even if seeding fails
+            _logger.LogWarning("Application will continue without seeding data");
         }
     }
 

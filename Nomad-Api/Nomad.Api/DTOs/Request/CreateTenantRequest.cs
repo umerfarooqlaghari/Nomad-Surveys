@@ -57,6 +57,9 @@ public class CreateCompanyRequest
     [Phone]
     [StringLength(20)]
     public string? ContactPersonPhone { get; set; }
+
+    [StringLength(500)]
+    public string? LogoUrl { get; set; }
 }
 
 public class CreateTenantAdminRequest

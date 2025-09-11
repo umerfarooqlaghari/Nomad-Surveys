@@ -70,6 +70,7 @@ public class TenantService : ITenantService
                 ContactPersonEmail = request.Company.ContactPersonEmail,
                 ContactPersonRole = request.Company.ContactPersonRole,
                 ContactPersonPhone = request.Company.ContactPersonPhone,
+                LogoUrl = request.Company.LogoUrl,
                 CreatedAt = DateTime.UtcNow
             };
 

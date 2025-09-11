@@ -37,7 +37,10 @@ public class Company
     [Phone]
     [MaxLength(20)]
     public string? ContactPersonPhone { get; set; }
-    
+
+    [MaxLength(500)]
+    public string? LogoUrl { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     
     public DateTime? UpdatedAt { get; set; }

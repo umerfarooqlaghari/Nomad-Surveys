@@ -74,6 +74,7 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
             entity.Property(e => e.ContactPersonEmail).IsRequired().HasMaxLength(255);
             entity.Property(e => e.ContactPersonRole).IsRequired().HasMaxLength(100);
             entity.Property(e => e.ContactPersonPhone).HasMaxLength(20);
+            entity.Property(e => e.LogoUrl).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.HasOne(e => e.Tenant)
@@ -173,6 +174,9 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         modelBuilder.Entity<Company>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
         modelBuilder.Entity<TenantRole>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId || e.TenantId == null);
         modelBuilder.Entity<UserTenantRole>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId || e.TenantId == null);
+
+        // Add query filter for RolePermission to match TenantRole filter
+        modelBuilder.Entity<RolePermission>().HasQueryFilter(rp => CurrentTenantId == null || rp.Role.TenantId == CurrentTenantId || rp.Role.TenantId == null);
     }
 
     public override int SaveChanges()

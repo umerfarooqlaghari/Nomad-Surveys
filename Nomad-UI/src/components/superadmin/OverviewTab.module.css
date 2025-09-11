@@ -1,0 +1,223 @@
+/* OverviewTab CSS Module */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .statsGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.statCard {
+  background-color: white;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  border-radius: 0.5rem;
+}
+
+.statCardContent {
+  padding: 1.25rem;
+}
+
+.statCardInner {
+  display: flex;
+  align-items: center;
+}
+
+.statIcon {
+  flex-shrink: 0;
+}
+
+.statIconText {
+  font-size: 1.5rem;
+}
+
+.statDetails {
+  margin-left: 1.25rem;
+  width: 0;
+  flex: 1 1 0%;
+}
+
+.statName {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.statValueContainer {
+  display: flex;
+  align-items: baseline;
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.statChange {
+  margin-left: 0.5rem;
+  display: flex;
+  align-items: baseline;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.statChangeIncrease {
+  color: #059669;
+}
+
+.statChangeDecrease {
+  color: #dc2626;
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .chartsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.chartCard {
+  background-color: white;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+
+.chartTitle {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 1rem;
+}
+
+.chartPlaceholder {
+  height: 16rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9fafb;
+  border-radius: 0.5rem;
+}
+
+.chartPlaceholderContent {
+  text-align: center;
+}
+
+.chartPlaceholderIcon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.chartPlaceholderText {
+  color: #6b7280;
+}
+
+.chartPlaceholderSubtext {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+.activityCard {
+  background-color: white;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  border-radius: 0.5rem;
+}
+
+.activityHeader {
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.activityTitle {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.activityList {
+  border-top: 1px solid #e5e7eb;
+}
+
+.activityItem {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.activityItem:last-child {
+  border-bottom: none;
+}
+
+.activityItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.activityDot {
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: #3b82f6;
+  border-radius: 50%;
+}
+
+.activityDetails h4 {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.activityDetails p {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.activityTime {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+.activityFooter {
+  padding: 0.75rem 1.5rem;
+  background-color: #f9fafb;
+  text-align: center;
+}
+
+.activityFooterButton {
+  font-size: 0.875rem;
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.activityFooterButton:hover {
+  color: #2563eb;
+}

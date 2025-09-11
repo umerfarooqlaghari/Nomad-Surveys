@@ -1,0 +1,92 @@
+'use client';
+
+import React, { useState } from 'react';
+import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import DashboardLayout from '@/components/DashboardLayout';
+import OverviewTab from '@/components/superadmin/OverviewTab';
+import CompaniesTab from '@/components/superadmin/CompaniesTab';
+import SubjectsTab from '@/components/superadmin/SubjectsTab';
+import EvaluatorsTab from '@/components/superadmin/EvaluatorsTab';
+import SurveyBuilderTab from '@/components/superadmin/SurveyBuilderTab';
+import ReportsTab from '@/components/superadmin/ReportsTab';
+
+const tabs = [
+  { id: 'overview', name: 'Overview', icon: "/Icons/yelp.svg" },
+  { id: 'companies', name: 'Companies', icon: "/Icons/buildings.svg" },
+  { id: 'subjects', name: 'Subjects', icon: "/Icons/person-add.svg" },
+  { id: 'evaluators', name: 'Evaluators', icon: "/Icons/person-gear.svg" },
+  { id: 'survey-builder', name: 'Survey Builder', icon: "/Icons/wrench-adjustable-circle.svg" },
+  { id: 'reports', name: 'Reports', icon: "/Icons/archive.svg" },
+];
+
+export default function SuperAdminDashboard() {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return <OverviewTab />;
+      case 'companies':
+        return <CompaniesTab />;
+      case 'subjects':
+        return <SubjectsTab />;
+      case 'evaluators':
+        return <EvaluatorsTab />;
+      case 'survey-builder':
+        return <SurveyBuilderTab />;
+      case 'reports':
+        return <ReportsTab />;
+      default:
+        return <OverviewTab />;
+    }
+  };
+
+  return (
+    <ProtectedRoute allowedRoles={['SuperAdmin']}>
+      <DashboardLayout title="SuperAdmin Dashboard">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">SuperAdmin Dashboard</h1>
+            <p className="mt-1 text-sm text-gray-600">
+              Welcome back, {user?.firstName} {user?.lastName}
+            </p>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8" aria-label="Tabs">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
+                >
+                  <Image
+                    src={tab.icon}
+                    alt={`${tab.name} icon`}
+                    width={20}
+                    height={20}
+                    className="w-5 h-5"
+                  />
+                  <span>{tab.name}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+
+          {/* Tab Content */}
+          <div className="mt-6">
+            {renderTabContent()}
+          </div>
+        </div>
+      </DashboardLayout>
+    </ProtectedRoute>
+  );
+}

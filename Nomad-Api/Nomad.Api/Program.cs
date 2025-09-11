@@ -15,7 +15,12 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
 
 // Add HttpContextAccessor for tenant resolution
 builder.Services.AddHttpContextAccessor();
@@ -132,10 +137,19 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // Seed database
-using (var scope = app.Services.CreateScope())
+// Seed database
+try
 {
-    var seedService = scope.ServiceProvider.GetRequiredService<SeedDataService>();
-    await seedService.SeedAsync();
+    using (var scope = app.Services.CreateScope())
+    {
+        var seedService = scope.ServiceProvider.GetRequiredService<SeedDataService>();
+        await seedService.SeedAsync();
+    }
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "Failed to seed database. Application will continue without seeded data.");
 }
 
 // Configure the HTTP request pipeline.

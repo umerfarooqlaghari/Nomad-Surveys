@@ -93,16 +93,38 @@ public class MappingProfile : Profile
     private void CreateEntityToResponseMaps()
     {
         // Direct entity to response mappings for convenience
-        CreateMap<Tenant, TenantResponse>();
+        CreateMap<Tenant, TenantResponse>()
+            .ForMember(dest => dest.Company, opt => opt.MapFrom(src => src.Company));
+
         CreateMap<Tenant, TenantListResponse>()
             .ForMember(dest => dest.UserCount, opt => opt.MapFrom(src => src.Users.Count(u => u.IsActive)))
             .ForMember(dest => dest.CompanyName, opt => opt.MapFrom(src => src.Company != null ? src.Company.Name : null));
 
-        CreateMap<Company, CompanyResponse>();
+        CreateMap<Company, CompanyResponse>()
+            .ForMember(dest => dest.ContactPerson, opt => opt.MapFrom(src => src.ContactPerson != null ? new UserResponse
+            {
+                Id = src.ContactPerson.Id,
+                UserName = src.ContactPerson.UserName ?? string.Empty,
+                Email = src.ContactPerson.Email ?? string.Empty,
+                FirstName = src.ContactPerson.FirstName ?? string.Empty,
+                LastName = src.ContactPerson.LastName ?? string.Empty,
+                FullName = (src.ContactPerson.FirstName ?? string.Empty) + " " + (src.ContactPerson.LastName ?? string.Empty),
+                IsActive = src.ContactPerson.IsActive,
+                EmailConfirmed = src.ContactPerson.EmailConfirmed,
+                PhoneNumber = src.ContactPerson.PhoneNumber,
+                CreatedAt = src.ContactPerson.CreatedAt,
+                UpdatedAt = src.ContactPerson.UpdatedAt,
+                LastLoginAt = src.ContactPerson.LastLoginAt,
+                TenantId = src.ContactPerson.TenantId,
+                Roles = new List<string>(),
+                Permissions = new List<string>(),
+                Tenant = null
+            } : null));
 
         CreateMap<ApplicationUser, UserResponse>()
             .ForMember(dest => dest.Roles, opt => opt.Ignore())
-            .ForMember(dest => dest.Permissions, opt => opt.Ignore());
+            .ForMember(dest => dest.Permissions, opt => opt.Ignore())
+            .ForMember(dest => dest.Tenant, opt => opt.Ignore());
 
         CreateMap<ApplicationUser, UserListResponse>()
             .ForMember(dest => dest.Roles, opt => opt.Ignore());
