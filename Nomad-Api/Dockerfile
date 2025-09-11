@@ -33,12 +33,11 @@ RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app
 USER appuser
 
 # Expose the port that the application will run on
-EXPOSE 8080
+# Port will be dynamically assigned by Render
 
 # Set environment variables for production
 ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS=http://+:8080
-ENV PORT=8080
+ENV ASPNETCORE_URLS=http://+:$PORT
 
 # Set the entry point
 ENTRYPOINT ["dotnet", "Nomad.Api.dll"]
