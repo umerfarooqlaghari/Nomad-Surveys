@@ -37,6 +37,7 @@
 ### Build Settings
 - **Build Command**: (Leave empty - Docker handles this)
 - **Start Command**: (Leave empty - Docker handles this)
+- **Dockerfile Path**: `Dockerfile` (should be in root directory)
 
 ### Environment Variables
 Add these environment variables in Render:
@@ -104,6 +105,8 @@ After deployment, test your API:
    - Check Dockerfile syntax
    - Verify all dependencies are restored
    - Check build logs in Render dashboard
+   - Ensure Dockerfile is in the root directory (`Nomad-Surveys/Nomad-Api/`)
+   - Verify file paths in Dockerfile match your project structure
 
 ### Monitoring
 - Use Render's built-in logging

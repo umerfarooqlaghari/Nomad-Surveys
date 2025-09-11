@@ -4,22 +4,19 @@ FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 # Set the working directory
 WORKDIR /app
 
-# Copy the solution file and project files
-COPY Nomad.Api.sln ./
+# Copy the main project file first for better caching
 COPY Nomad.Api/Nomad.Api.csproj ./Nomad.Api/
-COPY Nomad.Api.Tests/Nomad.Api.Tests.csproj ./Nomad.Api.Tests/
 
-# Restore dependencies
+# Restore dependencies for the main project
+WORKDIR /app/Nomad.Api
 RUN dotnet restore
 
 # Copy the entire source code
+WORKDIR /app
 COPY . .
 
-# Build the application
+# Build and publish the application
 WORKDIR /app/Nomad.Api
-RUN dotnet build -c Release -o /app/build
-
-# Publish the application
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
 # Use the official .NET 9.0 runtime image for the final stage
