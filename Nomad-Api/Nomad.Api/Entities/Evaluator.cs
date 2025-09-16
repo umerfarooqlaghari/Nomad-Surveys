@@ -63,9 +63,13 @@ public class Evaluator
     
     // Tenant isolation
     public Guid TenantId { get; set; }
-    
+
+    // Link to ApplicationUser for authentication
+    public Guid? UserId { get; set; }
+
     // Navigation properties
     public virtual Tenant Tenant { get; set; } = null!;
+    public virtual ApplicationUser? User { get; set; }
     public virtual ICollection<SubjectEvaluator> SubjectEvaluators { get; set; } = new List<SubjectEvaluator>();
     
     // Computed property

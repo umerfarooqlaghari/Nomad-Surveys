@@ -14,13 +14,19 @@ public class EvaluatorService : IEvaluatorService
     private readonly NomadSurveysDbContext _context;
     private readonly IMapper _mapper;
     private readonly ILogger<EvaluatorService> _logger;
+    private readonly IAuthenticationService _authenticationService;
     private const string DefaultPassword = "Password@123";
 
-    public EvaluatorService(NomadSurveysDbContext context, IMapper mapper, ILogger<EvaluatorService> logger)
+    public EvaluatorService(
+        NomadSurveysDbContext context,
+        IMapper mapper,
+        ILogger<EvaluatorService> logger,
+        IAuthenticationService authenticationService)
     {
         _context = context;
         _mapper = mapper;
         _logger = logger;
+        _authenticationService = authenticationService;
     }
 
     public async Task<List<EvaluatorListResponse>> GetEvaluatorsAsync(Guid? tenantId = null)
@@ -149,14 +155,52 @@ public class EvaluatorService : IEvaluatorService
                 evaluatorsToCreate.Add(evaluator);
             }
 
-            // Bulk insert valid evaluators
-            if (evaluatorsToCreate.Any())
+            // Create ApplicationUser accounts and evaluators
+            if (evaluatorsToCreate.Count > 0)
             {
-                await _context.Evaluators.AddRangeAsync(evaluatorsToCreate);
-                await _context.SaveChangesAsync();
-                
-                response.SuccessfullyCreated = evaluatorsToCreate.Count;
-                response.CreatedIds = evaluatorsToCreate.Select(e => e.Id).ToList();
+                var createdUserIds = new List<Guid>();
+                var createdEvaluatorIds = new List<Guid>();
+
+                foreach (var evaluator in evaluatorsToCreate)
+                {
+                    try
+                    {
+                        // Create ApplicationUser account
+                        var createUserRequest = new CreateUserRequest
+                        {
+                            FirstName = evaluator.FirstName,
+                            LastName = evaluator.LastName,
+                            Email = evaluator.EvaluatorEmail,
+                            Password = DefaultPassword,
+                            Roles = new List<string> { "Participant" }
+                        };
+
+                        var userResponse = await _authenticationService.CreateUserAsync(createUserRequest, tenantId);
+                        createdUserIds.Add(userResponse.Id);
+
+                        // Link the evaluator to the user
+                        evaluator.UserId = userResponse.Id;
+
+                        await _context.Evaluators.AddAsync(evaluator);
+                        createdEvaluatorIds.Add(evaluator.Id);
+
+                        _logger.LogInformation("Created evaluator {EvaluatorId} with user account {UserId}",
+                            evaluator.Id, userResponse.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to create evaluator with email {Email}", evaluator.EvaluatorEmail);
+                        errors.Add($"Failed to create evaluator {evaluator.EvaluatorEmail}: {ex.Message}");
+                    }
+                }
+
+                if (createdEvaluatorIds.Count > 0)
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                response.SuccessfullyCreated = createdEvaluatorIds.Count;
+                response.CreatedIds = createdEvaluatorIds;
             }
 
             response.Failed = response.TotalRequested - response.SuccessfullyCreated;

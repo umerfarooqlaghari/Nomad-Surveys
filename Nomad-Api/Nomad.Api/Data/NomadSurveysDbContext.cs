@@ -202,6 +202,12 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
                 .WithMany()
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Foreign key to ApplicationUser (optional)
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Evaluator configurations
@@ -231,6 +237,12 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
                 .WithMany()
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Foreign key to ApplicationUser (optional)
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // SubjectEvaluator configurations (junction table)

@@ -14,13 +14,19 @@ public class SubjectService : ISubjectService
     private readonly NomadSurveysDbContext _context;
     private readonly IMapper _mapper;
     private readonly ILogger<SubjectService> _logger;
+    private readonly IAuthenticationService _authenticationService;
     private const string DefaultPassword = "Password@123";
 
-    public SubjectService(NomadSurveysDbContext context, IMapper mapper, ILogger<SubjectService> logger)
+    public SubjectService(
+        NomadSurveysDbContext context,
+        IMapper mapper,
+        ILogger<SubjectService> logger,
+        IAuthenticationService authenticationService)
     {
         _context = context;
         _mapper = mapper;
         _logger = logger;
+        _authenticationService = authenticationService;
     }
 
     public async Task<List<SubjectListResponse>> GetSubjectsAsync(Guid? tenantId = null)
@@ -149,14 +155,52 @@ public class SubjectService : ISubjectService
                 subjectsToCreate.Add(subject);
             }
 
-            // Bulk insert valid subjects
-            if (subjectsToCreate.Any())
+            // Create ApplicationUser accounts and subjects
+            if (subjectsToCreate.Count > 0)
             {
-                await _context.Subjects.AddRangeAsync(subjectsToCreate);
-                await _context.SaveChangesAsync();
-                
-                response.SuccessfullyCreated = subjectsToCreate.Count;
-                response.CreatedIds = subjectsToCreate.Select(s => s.Id).ToList();
+                var createdUserIds = new List<Guid>();
+                var createdSubjectIds = new List<Guid>();
+
+                foreach (var subject in subjectsToCreate)
+                {
+                    try
+                    {
+                        // Create ApplicationUser account
+                        var createUserRequest = new CreateUserRequest
+                        {
+                            FirstName = subject.FirstName,
+                            LastName = subject.LastName,
+                            Email = subject.Email,
+                            Password = DefaultPassword,
+                            Roles = new List<string> { "Participant" }
+                        };
+
+                        var userResponse = await _authenticationService.CreateUserAsync(createUserRequest, tenantId);
+                        createdUserIds.Add(userResponse.Id);
+
+                        // Link the subject to the user
+                        subject.UserId = userResponse.Id;
+
+                        await _context.Subjects.AddAsync(subject);
+                        createdSubjectIds.Add(subject.Id);
+
+                        _logger.LogInformation("Created subject {SubjectId} with user account {UserId}",
+                            subject.Id, userResponse.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to create subject with email {Email}", subject.Email);
+                        errors.Add($"Failed to create subject {subject.Email}: {ex.Message}");
+                    }
+                }
+
+                if (createdSubjectIds.Count > 0)
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                response.SuccessfullyCreated = createdSubjectIds.Count;
+                response.CreatedIds = createdSubjectIds;
             }
 
             response.Failed = response.TotalRequested - response.SuccessfullyCreated;
