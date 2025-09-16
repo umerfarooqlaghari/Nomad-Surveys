@@ -36,6 +36,15 @@ public class MappingProfile : Profile
         CreateMap<Permission, PermissionDomain>();
 
         CreateMap<UserTenantRole, UserRoleDomain>();
+
+        // Participant mappings
+        CreateMap<Subject, SubjectDomain>()
+            .ForMember(dest => dest.SubjectEvaluators, opt => opt.MapFrom(src => src.SubjectEvaluators));
+
+        CreateMap<Evaluator, EvaluatorDomain>()
+            .ForMember(dest => dest.SubjectEvaluators, opt => opt.MapFrom(src => src.SubjectEvaluators));
+
+        CreateMap<SubjectEvaluator, SubjectEvaluatorDomain>();
     }
 
     private void CreateDomainToResponseMaps()
@@ -53,6 +62,17 @@ public class MappingProfile : Profile
         CreateMap<RoleDomain, RoleResponse>();
 
         CreateMap<PermissionDomain, PermissionResponse>();
+
+        // Participant domain to response mappings
+        CreateMap<SubjectDomain, SubjectResponse>();
+        CreateMap<SubjectDomain, SubjectListResponse>()
+            .ForMember(dest => dest.EvaluatorCount, opt => opt.MapFrom(src => src.SubjectEvaluators.Count(se => se.IsActive)));
+
+        CreateMap<EvaluatorDomain, EvaluatorResponse>();
+        CreateMap<EvaluatorDomain, EvaluatorListResponse>()
+            .ForMember(dest => dest.SubjectCount, opt => opt.MapFrom(src => src.SubjectEvaluators.Count(se => se.IsActive)));
+
+        CreateMap<SubjectEvaluatorDomain, SubjectEvaluatorResponse>();
     }
 
     private void CreateRequestToDomainMaps()
@@ -88,6 +108,96 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.UserRoles, opt => opt.Ignore())
             .ForMember(dest => dest.Roles, opt => opt.MapFrom(src => src.Roles))
             .ForMember(dest => dest.Permissions, opt => opt.Ignore());
+
+        // Participant request to domain mappings
+        CreateMap<CreateSubjectRequest, SubjectDomain>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.LastLoginAt, opt => opt.Ignore())
+            .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+            .ForMember(dest => dest.Tenant, opt => opt.Ignore())
+            .ForMember(dest => dest.SubjectEvaluators, opt => opt.Ignore());
+
+        CreateMap<UpdateSubjectRequest, SubjectDomain>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.LastLoginAt, opt => opt.Ignore())
+            .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+            .ForMember(dest => dest.Tenant, opt => opt.Ignore())
+            .ForMember(dest => dest.SubjectEvaluators, opt => opt.Ignore());
+
+        CreateMap<CreateEvaluatorRequest, EvaluatorDomain>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.LastLoginAt, opt => opt.Ignore())
+            .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+            .ForMember(dest => dest.Tenant, opt => opt.Ignore())
+            .ForMember(dest => dest.SubjectEvaluators, opt => opt.Ignore());
+
+        CreateMap<UpdateEvaluatorRequest, EvaluatorDomain>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.LastLoginAt, opt => opt.Ignore())
+            .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+            .ForMember(dest => dest.Tenant, opt => opt.Ignore())
+            .ForMember(dest => dest.SubjectEvaluators, opt => opt.Ignore());
+
+        // Request to entity mappings for direct use
+        CreateMap<CreateSubjectRequest, Subject>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.LastLoginAt, opt => opt.Ignore())
+            .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+            .ForMember(dest => dest.Tenant, opt => opt.Ignore())
+            .ForMember(dest => dest.SubjectEvaluators, opt => opt.Ignore());
+
+        CreateMap<UpdateSubjectRequest, Subject>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.LastLoginAt, opt => opt.Ignore())
+            .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+            .ForMember(dest => dest.Tenant, opt => opt.Ignore())
+            .ForMember(dest => dest.SubjectEvaluators, opt => opt.Ignore());
+
+        CreateMap<CreateEvaluatorRequest, Evaluator>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.LastLoginAt, opt => opt.Ignore())
+            .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+            .ForMember(dest => dest.Tenant, opt => opt.Ignore())
+            .ForMember(dest => dest.SubjectEvaluators, opt => opt.Ignore());
+
+        CreateMap<UpdateEvaluatorRequest, Evaluator>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.LastLoginAt, opt => opt.Ignore())
+            .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+            .ForMember(dest => dest.Tenant, opt => opt.Ignore())
+            .ForMember(dest => dest.SubjectEvaluators, opt => opt.Ignore());
     }
 
     private void CreateEntityToResponseMaps()
@@ -133,5 +243,24 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Permissions, opt => opt.MapFrom(src => src.RolePermissions.Where(rp => rp.IsActive).Select(rp => rp.Permission)));
 
         CreateMap<Permission, PermissionResponse>();
+
+        // Direct entity to response mappings for participants
+        CreateMap<Subject, SubjectResponse>()
+            .ForMember(dest => dest.Tenant, opt => opt.MapFrom(src => src.Tenant))
+            .ForMember(dest => dest.Evaluators, opt => opt.Ignore()); // Handled in service
+
+        CreateMap<Subject, SubjectListResponse>()
+            .ForMember(dest => dest.EvaluatorCount, opt => opt.MapFrom(src => src.SubjectEvaluators.Count(se => se.IsActive)));
+
+        CreateMap<Evaluator, EvaluatorResponse>()
+            .ForMember(dest => dest.Tenant, opt => opt.MapFrom(src => src.Tenant))
+            .ForMember(dest => dest.Subjects, opt => opt.Ignore()); // Handled in service
+
+        CreateMap<Evaluator, EvaluatorListResponse>()
+            .ForMember(dest => dest.SubjectCount, opt => opt.MapFrom(src => src.SubjectEvaluators.Count(se => se.IsActive)));
+
+        CreateMap<SubjectEvaluator, SubjectEvaluatorResponse>()
+            .ForMember(dest => dest.Subject, opt => opt.Ignore()) // Handled in service
+            .ForMember(dest => dest.Evaluator, opt => opt.Ignore()); // Handled in service
     }
 }

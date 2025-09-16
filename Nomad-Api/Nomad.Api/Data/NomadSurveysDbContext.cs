@@ -25,6 +25,11 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
     public DbSet<Permission> Permissions { get; set; }
     public DbSet<RolePermission> RolePermissions { get; set; }
 
+    // Participant entities
+    public DbSet<Subject> Subjects { get; set; }
+    public DbSet<Evaluator> Evaluators { get; set; }
+    public DbSet<SubjectEvaluator> SubjectEvaluators { get; set; }
+
     // Additional DbSets will be added here as we create more entities
     // public DbSet<Question> Questions { get; set; }
     // public DbSet<Response> Responses { get; set; }
@@ -35,6 +40,7 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
 
         ConfigureIdentityTables(modelBuilder);
         ConfigureEntityRelationships(modelBuilder);
+        ConfigureParticipantRelationships(modelBuilder);
         ConfigureGlobalQueryFilters(modelBuilder);
     }
 
@@ -167,6 +173,96 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
 
     }
 
+    private void ConfigureParticipantRelationships(ModelBuilder modelBuilder)
+    {
+        // Subject configurations
+        modelBuilder.Entity<Subject>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
+
+            entity.Property(e => e.CompanyName).HasMaxLength(100);
+            entity.Property(e => e.Gender).HasMaxLength(20);
+            entity.Property(e => e.BusinessUnit).HasMaxLength(100);
+            entity.Property(e => e.Grade).HasMaxLength(50);
+            entity.Property(e => e.Designation).HasMaxLength(100);
+            entity.Property(e => e.Location).HasMaxLength(100);
+            entity.Property(e => e.Metadata1).HasMaxLength(500);
+            entity.Property(e => e.Metadata2).HasMaxLength(500);
+            entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Unique constraints within tenant
+            entity.HasIndex(e => new { e.Email, e.TenantId }).IsUnique();
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Evaluator configurations
+        modelBuilder.Entity<Evaluator>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.EvaluatorEmail).IsRequired().HasMaxLength(255);
+
+            entity.Property(e => e.CompanyName).HasMaxLength(100);
+            entity.Property(e => e.Gender).HasMaxLength(20);
+            entity.Property(e => e.BusinessUnit).HasMaxLength(100);
+            entity.Property(e => e.Grade).HasMaxLength(50);
+            entity.Property(e => e.Designation).HasMaxLength(100);
+            entity.Property(e => e.Location).HasMaxLength(100);
+            entity.Property(e => e.Metadata1).HasMaxLength(500);
+            entity.Property(e => e.Metadata2).HasMaxLength(500);
+            entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Unique constraints within tenant
+            entity.HasIndex(e => new { e.EvaluatorEmail, e.TenantId }).IsUnique();
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // SubjectEvaluator configurations (junction table)
+        modelBuilder.Entity<SubjectEvaluator>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Relationship).HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Unique constraint to prevent duplicate assignments
+            entity.HasIndex(e => new { e.SubjectId, e.EvaluatorId }).IsUnique();
+
+            // Foreign key to Subject
+            entity.HasOne(e => e.Subject)
+                .WithMany(s => s.SubjectEvaluators)
+                .HasForeignKey(e => e.SubjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Foreign key to Evaluator
+            entity.HasOne(e => e.Evaluator)
+                .WithMany(ev => ev.SubjectEvaluators)
+                .HasForeignKey(e => e.EvaluatorId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+    }
+
     private void ConfigureGlobalQueryFilters(ModelBuilder modelBuilder)
     {
         // Apply global query filters for tenant isolation
@@ -177,6 +273,11 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
 
         // Add query filter for RolePermission to match TenantRole filter
         modelBuilder.Entity<RolePermission>().HasQueryFilter(rp => CurrentTenantId == null || rp.Role.TenantId == CurrentTenantId || rp.Role.TenantId == null);
+
+        // Participant query filters for tenant isolation
+        modelBuilder.Entity<Subject>().HasQueryFilter(s => CurrentTenantId == null || s.TenantId == CurrentTenantId);
+        modelBuilder.Entity<Evaluator>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+        modelBuilder.Entity<SubjectEvaluator>().HasQueryFilter(se => CurrentTenantId == null || se.TenantId == CurrentTenantId);
     }
 
     public override int SaveChanges()

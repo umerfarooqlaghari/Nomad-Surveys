@@ -86,6 +86,11 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<SeedDataService>();
 
+// Add participant services
+builder.Services.AddScoped<ISubjectService, SubjectService>();
+builder.Services.AddScoped<IEvaluatorService, EvaluatorService>();
+builder.Services.AddScoped<ISubjectEvaluatorService, SubjectEvaluatorService>();
+
 // Add CORS
 builder.Services.AddCors(options =>
 {
@@ -199,3 +204,6 @@ app.UseMiddleware<TenantAuthorizationMiddleware>();
 app.MapControllers();
 
 app.Run();
+
+// Make Program class accessible for testing
+public partial class Program { }
