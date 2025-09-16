@@ -25,7 +25,7 @@ class AuthService {
    * Tenant admin login
    */
   async tenantAdminLogin(tenantSlug: string, credentials: LoginRequest): Promise<{ data: LoginResponse | null; error: string | null }> {
-    const response = await apiClient.post<LoginResponse>(`/${tenantSlug}/api/auth/login`, credentials);
+    const response = await apiClient.post<LoginResponse>(`/${tenantSlug}/auth/login`, credentials);
     return handleApiResponse(response);
   }
 
@@ -33,7 +33,7 @@ class AuthService {
    * Participant login
    */
   async participantLogin(tenantSlug: string, credentials: LoginRequest): Promise<{ data: LoginResponse | null; error: string | null }> {
-    const response = await apiClient.post<LoginResponse>(`/${tenantSlug}/api/auth/participant/login`, credentials);
+    const response = await apiClient.post<LoginResponse>(`/${tenantSlug}/auth/participant/login`, credentials);
     return handleApiResponse(response);
   }
 
