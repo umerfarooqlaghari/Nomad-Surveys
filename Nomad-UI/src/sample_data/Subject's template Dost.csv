@@ -1,0 +1,6 @@
+Mandatory,,,,Primary,,,,,,,Secondary,
+FirstName,LastName,Email,UniqueIdentifier,Company Name,Gender,Bussiness Unit,Grade,Designation,Tenure,Location,Metadata1,Metadata2
+John,Doe,johndoe@example.com,12345,,,,,,,,,
+Jane,Smith,janesmith@example.com,23456,,,,,,,,,
+Jeff,Brown,jeffbrown@example.com,11111,,,,,,,,,
+Jill,Davis,jilldavis@example.com,54321,,,,,,,,,

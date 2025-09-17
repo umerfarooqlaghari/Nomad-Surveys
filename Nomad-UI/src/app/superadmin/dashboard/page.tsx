@@ -6,17 +6,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import DashboardLayout from '@/components/DashboardLayout';
 import OverviewTab from '@/components/superadmin/OverviewTab';
-import CompaniesTab from '@/components/superadmin/CompaniesTab';
-import SubjectsTab from '@/components/superadmin/SubjectsTab';
-import EvaluatorsTab from '@/components/superadmin/EvaluatorsTab';
+import ProjectsTab from '@/components/superadmin/ProjectsTab';
 import SurveyBuilderTab from '@/components/superadmin/SurveyBuilderTab';
 import ReportsTab from '@/components/superadmin/ReportsTab';
 
 const tabs = [
   { id: 'overview', name: 'Overview', icon: "/Icons/yelp.svg" },
-  { id: 'companies', name: 'Companies', icon: "/Icons/buildings.svg" },
-  { id: 'subjects', name: 'Subjects', icon: "/Icons/person-add.svg" },
-  { id: 'evaluators', name: 'Evaluators', icon: "/Icons/person-gear.svg" },
+  { id: 'projects', name: 'Projects', icon: "/Icons/buildings.svg" },
   { id: 'survey-builder', name: 'Survey Builder', icon: "/Icons/wrench-adjustable-circle.svg" },
   { id: 'reports', name: 'Reports', icon: "/Icons/archive.svg" },
 ];
@@ -29,12 +25,8 @@ export default function SuperAdminDashboard() {
     switch (activeTab) {
       case 'overview':
         return <OverviewTab />;
-      case 'companies':
-        return <CompaniesTab />;
-      case 'subjects':
-        return <SubjectsTab />;
-      case 'evaluators':
-        return <EvaluatorsTab />;
+      case 'projects':
+        return <ProjectsTab />;
       case 'survey-builder':
         return <SurveyBuilderTab />;
       case 'reports':
