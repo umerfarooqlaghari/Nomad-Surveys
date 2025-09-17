@@ -64,11 +64,13 @@ public class MappingProfile : Profile
         CreateMap<PermissionDomain, PermissionResponse>();
 
         // Participant domain to response mappings
-        CreateMap<SubjectDomain, SubjectResponse>();
+        CreateMap<SubjectDomain, SubjectResponse>()
+            .ForMember(dest => dest.AssignedEvaluatorIds, opt => opt.MapFrom(src => src.SubjectEvaluators.Where(se => se.IsActive).Select(se => se.EvaluatorId).ToList()));
         CreateMap<SubjectDomain, SubjectListResponse>()
             .ForMember(dest => dest.EvaluatorCount, opt => opt.MapFrom(src => src.SubjectEvaluators.Count(se => se.IsActive)));
 
-        CreateMap<EvaluatorDomain, EvaluatorResponse>();
+        CreateMap<EvaluatorDomain, EvaluatorResponse>()
+            .ForMember(dest => dest.AssignedSubjectIds, opt => opt.MapFrom(src => src.SubjectEvaluators.Where(se => se.IsActive).Select(se => se.SubjectId).ToList()));
         CreateMap<EvaluatorDomain, EvaluatorListResponse>()
             .ForMember(dest => dest.SubjectCount, opt => opt.MapFrom(src => src.SubjectEvaluators.Count(se => se.IsActive)));
 

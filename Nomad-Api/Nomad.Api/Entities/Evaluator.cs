@@ -18,9 +18,11 @@ public class Evaluator
     [EmailAddress]
     [MaxLength(255)]
     public string EvaluatorEmail { get; set; } = string.Empty;
-    
 
-    
+    [Required]
+    [MaxLength(50)]
+    public string EmployeeId { get; set; } = string.Empty;
+
     // Primary fields from CSV
     [MaxLength(100)]
     public string? CompanyName { get; set; }

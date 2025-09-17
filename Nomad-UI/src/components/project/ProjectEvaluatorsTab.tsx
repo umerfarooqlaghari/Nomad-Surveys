@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { evaluatorService, Evaluator, CreateEvaluatorRequest } from '@/services/evaluatorService';
+import { evaluatorService, Evaluator, EvaluatorListResponse } from '@/services/evaluatorService';
+import TagInput from '@/components/common/TagInput';
 
 interface ProjectEvaluatorsTabProps {
   projectSlug: string;
@@ -13,17 +14,25 @@ interface ProjectEvaluatorsTabProps {
 
 export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsTabProps) {
   const { token } = useAuth();
-  const [evaluators, setEvaluators] = useState<Evaluator[]>([]);
+  const [evaluators, setEvaluators] = useState<EvaluatorListResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEvaluator, setEditingEvaluator] = useState<Evaluator | null>(null);
   const [formData, setFormData] = useState({
-    evaluatorFirstName: '',
-    evaluatorLastName: '',
+    firstName: '',
+    lastName: '',
     evaluatorEmail: '',
-    evaluatorPhoneNumber: '',
-    evaluatorDepartment: '',
-    evaluatorPosition: ''
+    employeeId: '',
+    companyName: '',
+    gender: '',
+    businessUnit: '',
+    grade: '',
+    designation: '',
+    tenure: '',
+    location: '',
+    metadata1: '',
+    metadata2: '',
+    relatedEmployeeIds: [] as string[]
   });
 
   useEffect(() => {
@@ -51,7 +60,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -63,9 +72,27 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
     setIsLoading(true);
 
     try {
+      // Convert camelCase form data to PascalCase for API
+      const submitData = {
+        FirstName: formData.firstName,
+        LastName: formData.lastName,
+        EvaluatorEmail: formData.evaluatorEmail,
+        EmployeeId: formData.employeeId,
+        CompanyName: formData.companyName || undefined,
+        Gender: formData.gender || undefined,
+        BusinessUnit: formData.businessUnit || undefined,
+        Grade: formData.grade || undefined,
+        Designation: formData.designation || undefined,
+        Tenure: formData.tenure ? parseInt(formData.tenure) : undefined,
+        Location: formData.location || undefined,
+        Metadata1: formData.metadata1 || undefined,
+        Metadata2: formData.metadata2 || undefined,
+        RelatedEmployeeIds: formData.relatedEmployeeIds.length > 0 ? formData.relatedEmployeeIds : undefined
+      };
+
       if (editingEvaluator) {
         // Update existing evaluator
-        const response = await evaluatorService.updateEvaluator(projectSlug, editingEvaluator.id, formData, token);
+        const response = await evaluatorService.updateEvaluator(projectSlug, editingEvaluator.Id, submitData, token);
         if (response.error) {
           toast.error(response.error);
           return;
@@ -73,7 +100,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
         toast.success('Evaluator updated successfully');
       } else {
         // Create new evaluator
-        const response = await evaluatorService.createEvaluator(projectSlug, formData, token);
+        const response = await evaluatorService.createEvaluator(projectSlug, submitData, token);
         if (response.error) {
           toast.error(response.error);
           return;
@@ -94,12 +121,20 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
   const handleEdit = (evaluator: Evaluator) => {
     setEditingEvaluator(evaluator);
     setFormData({
-      evaluatorFirstName: evaluator.evaluatorFirstName,
-      evaluatorLastName: evaluator.evaluatorLastName,
-      evaluatorEmail: evaluator.evaluatorEmail,
-      evaluatorPhoneNumber: evaluator.evaluatorPhoneNumber,
-      evaluatorDepartment: evaluator.evaluatorDepartment,
-      evaluatorPosition: evaluator.evaluatorPosition
+      firstName: evaluator.FirstName || '',
+      lastName: evaluator.LastName || '',
+      evaluatorEmail: evaluator.EvaluatorEmail || '',
+      employeeId: evaluator.EmployeeId || '',
+      companyName: evaluator.CompanyName || '',
+      gender: evaluator.Gender || '',
+      businessUnit: evaluator.BusinessUnit || '',
+      grade: evaluator.Grade || '',
+      designation: evaluator.Designation || '',
+      tenure: evaluator.Tenure?.toString() || '',
+      location: evaluator.Location || '',
+      metadata1: evaluator.Metadata1 || '',
+      metadata2: evaluator.Metadata2 || '',
+      relatedEmployeeIds: evaluator.AssignedSubjectIds || []
     });
     setShowAddForm(true);
   };
@@ -124,12 +159,20 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
 
   const resetForm = () => {
     setFormData({
-      evaluatorFirstName: '',
-      evaluatorLastName: '',
+      firstName: '',
+      lastName: '',
       evaluatorEmail: '',
-      evaluatorPhoneNumber: '',
-      evaluatorDepartment: '',
-      evaluatorPosition: ''
+      employeeId: '',
+      companyName: '',
+      gender: '',
+      businessUnit: '',
+      grade: '',
+      designation: '',
+      tenure: '',
+      location: '',
+      metadata1: '',
+      metadata2: '',
+      relatedEmployeeIds: []
     });
     setEditingEvaluator(null);
     setShowAddForm(false);
@@ -150,7 +193,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
           return;
         }
 
-        const response = await evaluatorService.bulkCreateEvaluators(projectSlug, { evaluators }, token);
+        const response = await evaluatorService.bulkCreateEvaluators(projectSlug, { Evaluators: evaluators }, token);
         if (response.error) {
           toast.error(response.error);
           return;
@@ -158,9 +201,9 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
 
         const result = response.data;
         if (result) {
-          toast.success(`Bulk import completed: ${result.successCount} created, ${result.errorCount} errors`);
-          if (result.errors.length > 0) {
-            console.error('Import errors:', result.errors);
+          toast.success(`Bulk import completed: ${result.SuccessfullyCreated} created, ${result.Failed} errors`);
+          if (result.Errors.length > 0) {
+            console.error('Import errors:', result.Errors);
           }
         }
         loadEvaluators();
@@ -198,11 +241,11 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
           <div className="flex space-x-3">
             <button
               onClick={downloadTemplate}
-              className="bg-gray-500 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+              className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
             >
               Download Template
             </button>
-            <label className="bg-green-500 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
+            <label className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
               Bulk Import CSV
               <input
                 type="file"
@@ -226,70 +269,164 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               {editingEvaluator ? 'Edit Evaluator' : 'Add New Evaluator'}
             </h3>
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-lg">
               <div>
-                <label className="block text-sm font-medium text-gray-700">First Name</label>
+                <label className="block text-sm font-medium text-gray-900">First Name</label>
                 <input
                   type="text"
-                  name="evaluatorFirstName"
-                  value={formData.evaluatorFirstName}
+                  name="firstName"
+                  value={formData.firstName}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                <label className="block text-sm font-medium text-gray-900">Last Name</label>
                 <input
                   type="text"
-                  name="evaluatorLastName"
-                  value={formData.evaluatorLastName}
+                  name="lastName"
+                  value={formData.lastName}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <label className="block text-sm font-medium text-gray-900">Email</label>
                 <input
                   type="email"
                   name="evaluatorEmail"
                   value={formData.evaluatorEmail}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+                <label className="block text-sm font-medium text-gray-900">Employee ID</label>
                 <input
-                  type="tel"
-                  name="evaluatorPhoneNumber"
-                  value={formData.evaluatorPhoneNumber}
+                  type="text"
+                  name="employeeId"
+                  value={formData.employeeId}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
+                  required
+                  maxLength={50}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Department</label>
+                <label className="block text-sm font-medium text-gray-900">Company Name</label>
                 <input
                   type="text"
-                  name="evaluatorDepartment"
-                  value={formData.evaluatorDepartment}
+                  name="companyName"
+                  value={formData.companyName}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Position</label>
+                <label className="block text-sm font-medium text-gray-900">Gender</label>
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900">Business Unit</label>
                 <input
                   type="text"
-                  name="evaluatorPosition"
-                  value={formData.evaluatorPosition}
+                  name="businessUnit"
+                  value={formData.businessUnit}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900">Grade</label>
+                <input
+                  type="text"
+                  name="grade"
+                  value={formData.grade}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900">Designation</label>
+                <input
+                  type="text"
+                  name="designation"
+                  value={formData.designation}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900">Tenure (Years)</label>
+                <input
+                  type="number"
+                  name="tenure"
+                  value={formData.tenure}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
+                  min="0"
+                  max="100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900">Location</label>
+                <input
+                  type="text"
+                  name="location"
+                  value={formData.location}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900">Metadata 1</label>
+                <input
+                  type="text"
+                  name="metadata1"
+                  value={formData.metadata1}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-900">Metadata 2</label>
+                <input
+                  type="text"
+                  name="metadata2"
+                  value={formData.metadata2}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Related Subjects Section */}
+              <div className="md:col-span-2">
+                <TagInput
+                  label="Related Subjects (Employee IDs)"
+                  placeholder="Enter subject Employee ID and press Enter..."
+                  tags={formData.relatedEmployeeIds}
+                  onTagsChange={(tags) => setFormData(prev => ({ ...prev, relatedEmployeeIds: tags }))}
+                  onValidate={async (employeeId) => {
+                    const validIds = await evaluatorService.validateSubjectIds(projectSlug, [employeeId]);
+                    return validIds.includes(employeeId);
+                  }}
+                  className="mb-4"
+                />
+              </div>
+
               <div className="md:col-span-2 flex justify-end space-x-3">
                 <button
                   type="button"
@@ -327,27 +464,31 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {evaluators.map((evaluator) => (
-                  <tr key={evaluator.id}>
+                  <tr key={evaluator.Id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {evaluator.evaluatorFirstName} {evaluator.evaluatorLastName}
+                        {evaluator.FirstName} {evaluator.LastName}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {evaluator.evaluatorEmail}
+                      {evaluator.EvaluatorEmail}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {evaluator.evaluatorDepartment}
+                      {evaluator.EmployeeId}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {evaluator.evaluatorPosition}
+                      {evaluator.CompanyName || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {evaluator.Designation || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
@@ -357,7 +498,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                         Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(evaluator.id)}
+                        onClick={() => handleDelete(evaluator.Id)}
                         className="text-red-600 hover:text-red-900"
                       >
                         Delete

@@ -7,8 +7,8 @@ public class SubjectResponse
     public string LastName { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string EmployeeId { get; set; } = string.Empty;
 
-    
     // Primary fields
     public string? CompanyName { get; set; }
     public string? Gender { get; set; }
@@ -35,6 +35,9 @@ public class SubjectResponse
     
     // Related evaluators
     public List<SubjectEvaluatorResponse> Evaluators { get; set; } = new();
+
+    // Assigned evaluator IDs for easy access
+    public List<Guid> AssignedEvaluatorIds { get; set; } = new();
 }
 
 public class SubjectListResponse
@@ -44,6 +47,7 @@ public class SubjectListResponse
     public string LastName { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string EmployeeId { get; set; } = string.Empty;
 
     public string? CompanyName { get; set; }
     public string? Designation { get; set; }
@@ -62,8 +66,8 @@ public class EvaluatorResponse
     public string LastName { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string EvaluatorEmail { get; set; } = string.Empty;
+    public string EmployeeId { get; set; } = string.Empty;
 
-    
     // Primary fields
     public string? CompanyName { get; set; }
     public string? Gender { get; set; }
@@ -90,6 +94,9 @@ public class EvaluatorResponse
     
     // Related subjects
     public List<SubjectEvaluatorResponse> Subjects { get; set; } = new();
+
+    // Assigned subject IDs for easy access
+    public List<Guid> AssignedSubjectIds { get; set; } = new();
 }
 
 public class EvaluatorListResponse
@@ -99,6 +106,7 @@ public class EvaluatorListResponse
     public string LastName { get; set; } = string.Empty;
     public string FullName { get; set; } = string.Empty;
     public string EvaluatorEmail { get; set; } = string.Empty;
+    public string EmployeeId { get; set; } = string.Empty;
 
     public string? CompanyName { get; set; }
     public string? Designation { get; set; }

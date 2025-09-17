@@ -182,6 +182,7 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
             entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.EmployeeId).IsRequired().HasMaxLength(50);
 
             entity.Property(e => e.CompanyName).HasMaxLength(100);
             entity.Property(e => e.Gender).HasMaxLength(20);
@@ -196,6 +197,7 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
 
             // Unique constraints within tenant
             entity.HasIndex(e => new { e.Email, e.TenantId }).IsUnique();
+            entity.HasIndex(e => new { e.EmployeeId, e.TenantId }).IsUnique();
 
             // Foreign key to Tenant
             entity.HasOne(e => e.Tenant)
@@ -217,6 +219,7 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
             entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.EvaluatorEmail).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.EmployeeId).IsRequired().HasMaxLength(50);
 
             entity.Property(e => e.CompanyName).HasMaxLength(100);
             entity.Property(e => e.Gender).HasMaxLength(20);
@@ -231,6 +234,7 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
 
             // Unique constraints within tenant
             entity.HasIndex(e => new { e.EvaluatorEmail, e.TenantId }).IsUnique();
+            entity.HasIndex(e => new { e.EmployeeId, e.TenantId }).IsUnique();
 
             // Foreign key to Tenant
             entity.HasOne(e => e.Tenant)

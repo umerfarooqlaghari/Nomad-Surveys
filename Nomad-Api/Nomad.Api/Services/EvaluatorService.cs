@@ -15,18 +15,21 @@ public class EvaluatorService : IEvaluatorService
     private readonly IMapper _mapper;
     private readonly ILogger<EvaluatorService> _logger;
     private readonly IAuthenticationService _authenticationService;
+    private readonly IRelationshipService _relationshipService;
     private const string DefaultPassword = "Password@123";
 
     public EvaluatorService(
         NomadSurveysDbContext context,
         IMapper mapper,
         ILogger<EvaluatorService> logger,
-        IAuthenticationService authenticationService)
+        IAuthenticationService authenticationService,
+        IRelationshipService relationshipService)
     {
         _context = context;
         _mapper = mapper;
         _logger = logger;
         _authenticationService = authenticationService;
+        _relationshipService = relationshipService;
     }
 
     public async Task<List<EvaluatorListResponse>> GetEvaluatorsAsync(Guid? tenantId = null)
@@ -197,6 +200,38 @@ public class EvaluatorService : IEvaluatorService
                 if (createdEvaluatorIds.Count > 0)
                 {
                     await _context.SaveChangesAsync();
+
+                    // Create relationships after evaluators are saved
+                    var relationshipWarnings = new List<string>();
+                    for (int i = 0; i < evaluatorsToCreate.Count; i++)
+                    {
+                        var evaluator = evaluatorsToCreate[i];
+                        var originalRequest = request.Evaluators.FirstOrDefault(r => r.EmployeeId == evaluator.EmployeeId);
+
+                        if (originalRequest?.RelatedEmployeeIds != null && originalRequest.RelatedEmployeeIds.Any())
+                        {
+                            try
+                            {
+                                var relationshipResult = await _relationshipService.CreateEvaluatorSubjectRelationshipsAsync(
+                                    evaluator.Id, originalRequest.RelatedEmployeeIds, tenantId);
+
+                                if (relationshipResult.Warnings.Any())
+                                {
+                                    relationshipWarnings.AddRange(relationshipResult.Warnings.Select(w => $"Evaluator {evaluator.EmployeeId}: {w}"));
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Failed to create relationships for evaluator {EvaluatorId}", evaluator.Id);
+                                relationshipWarnings.Add($"Evaluator {evaluator.EmployeeId}: Failed to create relationships - {ex.Message}");
+                            }
+                        }
+                    }
+
+                    if (relationshipWarnings.Any())
+                    {
+                        errors.AddRange(relationshipWarnings);
+                    }
                 }
 
                 response.SuccessfullyCreated = createdEvaluatorIds.Count;
@@ -244,6 +279,33 @@ public class EvaluatorService : IEvaluatorService
             evaluator.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            // Handle relationship updates if provided
+            if (request.RelatedEmployeeIds != null)
+            {
+                try
+                {
+                    // Remove existing relationships
+                    var existingRelationships = await _context.SubjectEvaluators
+                        .Where(se => se.EvaluatorId == evaluatorId)
+                        .ToListAsync();
+
+                    _context.SubjectEvaluators.RemoveRange(existingRelationships);
+                    await _context.SaveChangesAsync();
+
+                    // Create new relationships
+                    if (request.RelatedEmployeeIds.Any())
+                    {
+                        await _relationshipService.CreateEvaluatorSubjectRelationshipsAsync(
+                            evaluatorId, request.RelatedEmployeeIds, evaluator.TenantId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to update relationships for evaluator {EvaluatorId}", evaluatorId);
+                    // Don't throw here, just log the error as the evaluator update was successful
+                }
+            }
 
             _logger.LogInformation("Updated evaluator {EvaluatorId}", evaluatorId);
 

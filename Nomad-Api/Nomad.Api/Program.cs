@@ -90,6 +90,7 @@ builder.Services.AddScoped<SeedDataService>();
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IEvaluatorService, EvaluatorService>();
 builder.Services.AddScoped<ISubjectEvaluatorService, SubjectEvaluatorService>();
+builder.Services.AddScoped<IRelationshipService, RelationshipService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
