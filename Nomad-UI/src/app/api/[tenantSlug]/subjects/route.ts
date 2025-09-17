@@ -4,10 +4,10 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5232';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { tenantSlug: string } }
+  { params }: { params: Promise<{ tenantSlug: string }> }
 ) {
   try {
-    const { tenantSlug } = params;
+    const { tenantSlug } = await params;
     const authHeader = request.headers.get('authorization');
     
     if (!authHeader) {
@@ -41,10 +41,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tenantSlug: string } }
+  { params }: { params: Promise<{ tenantSlug: string }> }
 ) {
   try {
-    const { tenantSlug } = params;
+    const { tenantSlug } = await params;
     const authHeader = request.headers.get('authorization');
     
     if (!authHeader) {

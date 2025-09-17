@@ -4,10 +4,10 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5232';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { tenantSlug: string } }
+  { params }: { params: Promise<{ tenantSlug: string }> }
 ) {
   try {
-    const { tenantSlug } = params;
+    const { tenantSlug } = await params;
     const body = await request.json();
     const backendUrl = `${BACKEND_URL}/${tenantSlug}/api/Auth/login`;
 
