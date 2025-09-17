@@ -16,9 +16,11 @@ public class CreateSubjectRequest
     [EmailAddress]
     [StringLength(255)]
     public string Email { get; set; } = string.Empty;
-    
 
-    
+    [Required]
+    [StringLength(50, MinimumLength = 1)]
+    public string EmployeeId { get; set; } = string.Empty;
+
     // Primary fields
     [StringLength(100)]
     public string? CompanyName { get; set; }
@@ -44,9 +46,12 @@ public class CreateSubjectRequest
     // Secondary metadata fields
     [StringLength(500)]
     public string? Metadata1 { get; set; }
-    
+
     [StringLength(500)]
     public string? Metadata2 { get; set; }
+
+    // Related connections
+    public List<string>? RelatedEmployeeIds { get; set; }
 }
 
 public class UpdateSubjectRequest
@@ -63,9 +68,11 @@ public class UpdateSubjectRequest
     [EmailAddress]
     [StringLength(255)]
     public string Email { get; set; } = string.Empty;
-    
 
-    
+    [Required]
+    [StringLength(50, MinimumLength = 1)]
+    public string EmployeeId { get; set; } = string.Empty;
+
     // Primary fields
     [StringLength(100)]
     public string? CompanyName { get; set; }
@@ -91,9 +98,12 @@ public class UpdateSubjectRequest
     // Secondary metadata fields
     [StringLength(500)]
     public string? Metadata1 { get; set; }
-    
+
     [StringLength(500)]
     public string? Metadata2 { get; set; }
+
+    // Related connections
+    public List<string>? RelatedEmployeeIds { get; set; }
 }
 
 public class BulkCreateSubjectsRequest
@@ -117,9 +127,11 @@ public class CreateEvaluatorRequest
     [EmailAddress]
     [StringLength(255)]
     public string EvaluatorEmail { get; set; } = string.Empty;
-    
 
-    
+    [Required]
+    [StringLength(50, MinimumLength = 1)]
+    public string EmployeeId { get; set; } = string.Empty;
+
     // Primary fields
     [StringLength(100)]
     public string? CompanyName { get; set; }
@@ -145,9 +157,12 @@ public class CreateEvaluatorRequest
     // Secondary metadata fields
     [StringLength(500)]
     public string? Metadata1 { get; set; }
-    
+
     [StringLength(500)]
     public string? Metadata2 { get; set; }
+
+    // Related connections
+    public List<string>? RelatedEmployeeIds { get; set; }
 }
 
 public class UpdateEvaluatorRequest
@@ -164,9 +179,11 @@ public class UpdateEvaluatorRequest
     [EmailAddress]
     [StringLength(255)]
     public string EvaluatorEmail { get; set; } = string.Empty;
-    
 
-    
+    [Required]
+    [StringLength(50, MinimumLength = 1)]
+    public string EmployeeId { get; set; } = string.Empty;
+
     // Primary fields
     [StringLength(100)]
     public string? CompanyName { get; set; }
@@ -192,9 +209,12 @@ public class UpdateEvaluatorRequest
     // Secondary metadata fields
     [StringLength(500)]
     public string? Metadata1 { get; set; }
-    
+
     [StringLength(500)]
     public string? Metadata2 { get; set; }
+
+    // Related connections
+    public List<string>? RelatedEmployeeIds { get; set; }
 }
 
 public class BulkCreateEvaluatorsRequest

@@ -6,8 +6,8 @@ public class EvaluatorDomain
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public string EvaluatorEmail { get; set; } = string.Empty;
+    public string EmployeeId { get; set; } = string.Empty;
 
-    
     // Primary fields
     public string? CompanyName { get; set; }
     public string? Gender { get; set; }

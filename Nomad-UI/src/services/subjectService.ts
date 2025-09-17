@@ -1,56 +1,100 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { apiClient, ApiResponse, handleApiResponse } from './api';
+import { apiClient, handleApiResponse } from './api';
 
 // Types for Subject API
 export interface Subject {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber: string;
-  department: string;
-  position: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt?: string;
-  tenantId: string;
+  Id: string;
+  FirstName: string;
+  LastName: string;
+  FullName: string;
+  Email: string;
+  EmployeeId: string;
+  CompanyName?: string;
+  Gender?: string;
+  BusinessUnit?: string;
+  Grade?: string;
+  Designation?: string;
+  Tenure?: number;
+  Location?: string;
+  Metadata1?: string;
+  Metadata2?: string;
+  IsActive: boolean;
+  CreatedAt: string;
+  UpdatedAt?: string;
+  TenantId: string;
+  AssignedEvaluatorIds?: string[];
+}
+
+// List response has fewer fields than full subject response
+export interface SubjectListResponse {
+  Id: string;
+  FirstName: string;
+  LastName: string;
+  FullName: string;
+  Email: string;
+  EmployeeId: string;
+  CompanyName?: string;
+  Designation?: string;
+  Location?: string;
+  IsActive: boolean;
+  CreatedAt: string;
+  LastLoginAt?: string;
+  TenantId: string;
+  EvaluatorCount: number;
 }
 
 export interface CreateSubjectRequest {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber?: string;
-  department?: string;
-  position?: string;
+  FirstName: string;
+  LastName: string;
+  Email: string;
+  EmployeeId: string;
+  CompanyName?: string;
+  Gender?: string;
+  BusinessUnit?: string;
+  Grade?: string;
+  Designation?: string;
+  Tenure?: number;
+  Location?: string;
+  Metadata1?: string;
+  Metadata2?: string;
+  RelatedEmployeeIds?: string[];
 }
 
 export interface UpdateSubjectRequest {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phoneNumber?: string;
-  department?: string;
-  position?: string;
+  FirstName: string;
+  LastName: string;
+  Email: string;
+  EmployeeId: string;
+  CompanyName?: string;
+  Gender?: string;
+  BusinessUnit?: string;
+  Grade?: string;
+  Designation?: string;
+  Tenure?: number;
+  Location?: string;
+  Metadata1?: string;
+  Metadata2?: string;
+  RelatedEmployeeIds?: string[];
 }
 
 export interface BulkCreateSubjectsRequest {
-  subjects: CreateSubjectRequest[];
+  Subjects: CreateSubjectRequest[];
 }
 
 export interface BulkCreateResponse {
-  successCount: number;
-  errorCount: number;
-  errors: string[];
-  createdSubjects: Subject[];
+  TotalRequested: number;
+  SuccessfullyCreated: number;
+  Failed: number;
+  Errors: string[];
+  CreatedIds: string[];
 }
 
 class SubjectService {
   /**
    * Get all subjects for a tenant
    */
-  async getSubjects(tenantSlug: string, token: string): Promise<{ data: Subject[] | null; error: string | null }> {
-    const response = await apiClient.get<Subject[]>(`/${tenantSlug}/subjects`, token);
+  async getSubjects(tenantSlug: string, token: string): Promise<{ data: SubjectListResponse[] | null; error: string | null }> {
+    const response = await apiClient.get<SubjectListResponse[]>(`/${tenantSlug}/subjects`, token);
     return handleApiResponse(response);
   }
 
@@ -63,11 +107,29 @@ class SubjectService {
   }
 
   /**
-   * Create a new subject
+   * Create a new subject (uses bulk endpoint for single subject)
    */
   async createSubject(tenantSlug: string, subjectData: CreateSubjectRequest, token: string): Promise<{ data: Subject | null; error: string | null }> {
-    const response = await apiClient.post<Subject>(`/${tenantSlug}/subjects`, subjectData, token);
-    return handleApiResponse(response);
+    // Use bulk endpoint for single subject creation
+    const bulkRequest: BulkCreateSubjectsRequest = {
+      Subjects: [subjectData]
+    };
+
+    const response = await apiClient.post<BulkCreateResponse>(`/${tenantSlug}/subjects/bulk`, bulkRequest, token);
+    const result = handleApiResponse(response);
+
+    if (result.error) {
+      return { data: null, error: result.error };
+    }
+
+    if (result.data && result.data.SuccessfullyCreated > 0) {
+      // For single subject creation, we need to fetch the created subject
+      // Since bulk response only returns IDs, we'll return a success indicator
+      return { data: null, error: null }; // Success but no subject data returned
+    } else {
+      const errorMessage = result.data?.Errors?.[0] || 'Failed to create subject';
+      return { data: null, error: errorMessage };
+    }
   }
 
   /**
@@ -100,28 +162,67 @@ class SubjectService {
   parseCSV(csvData: string): CreateSubjectRequest[] {
     const lines = csvData.trim().split('\n');
     const headers = lines[0].split(',').map(h => h.trim());
-    
+
     const subjects: CreateSubjectRequest[] = [];
-    
+
     for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map(v => v.trim());
-      
+      // Handle CSV parsing with quoted JSON arrays
+      const line = lines[i];
+      const values: string[] = [];
+      let current = '';
+      let inQuotes = false;
+
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        if (char === '"') {
+          inQuotes = !inQuotes;
+          current += char; // Include quotes in the current value
+        } else if (char === ',' && !inQuotes) {
+          values.push(current.trim());
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current.trim());
+
       if (values.length >= headers.length) {
+        // Parse RelatedEmployeeIds JSON array
+        let relatedEmployeeIds: string[] | undefined;
+        const relatedEmployeeIdsIndex = headers.indexOf('relatedEmployeeIds');
+        if (relatedEmployeeIdsIndex !== -1 && values[relatedEmployeeIdsIndex]) {
+          try {
+            const jsonStr = values[relatedEmployeeIdsIndex].replace(/^"|"$/g, ''); // Remove outer quotes
+            relatedEmployeeIds = JSON.parse(jsonStr);
+          } catch (error) {
+            console.warn('Failed to parse RelatedEmployeeIds JSON:', values[relatedEmployeeIdsIndex]);
+            relatedEmployeeIds = undefined;
+          }
+        }
+
         const subject: CreateSubjectRequest = {
-          firstName: values[headers.indexOf('firstName')] || '',
-          lastName: values[headers.indexOf('lastName')] || '',
-          email: values[headers.indexOf('email')] || '',
-          phoneNumber: values[headers.indexOf('phoneNumber')] || '',
-          department: values[headers.indexOf('department')] || '',
-          position: values[headers.indexOf('position')] || '',
+          FirstName: values[headers.indexOf('firstName')] || '',
+          LastName: values[headers.indexOf('lastName')] || '',
+          Email: values[headers.indexOf('email')] || '',
+          EmployeeId: values[headers.indexOf('employeeId')] || '',
+          CompanyName: values[headers.indexOf('companyName')] || '',
+          Gender: values[headers.indexOf('gender')] || '',
+          BusinessUnit: values[headers.indexOf('businessUnit')] || '',
+          Grade: values[headers.indexOf('grade')] || '',
+          Designation: values[headers.indexOf('designation')] || '',
+          Tenure: parseInt(values[headers.indexOf('tenure')]) || undefined,
+          Location: values[headers.indexOf('location')] || '',
+          Metadata1: values[headers.indexOf('metadata1')] || '',
+          Metadata2: values[headers.indexOf('metadata2')] || '',
+          RelatedEmployeeIds: relatedEmployeeIds,
         };
-        
-        if (subject.firstName && subject.lastName && subject.email) {
+
+        if (subject.FirstName && subject.LastName && subject.Email && subject.EmployeeId) {
           subjects.push(subject);
         }
       }
     }
-    
+
     return subjects;
   }
 
@@ -129,7 +230,7 @@ class SubjectService {
    * Generate CSV template
    */
   generateCSVTemplate(): string {
-    return "firstName,lastName,email,phoneNumber,department,position\nJohn,Doe,john.doe@example.com,+1234567890,Engineering,Software Engineer";
+    return 'firstName,lastName,email,employeeId,companyName,gender,businessUnit,grade,designation,tenure,location,metadata1,metadata2,relatedEmployeeIds\nJohn,Doe,john.doe@example.com,SUB001,Acme Corp,Male,Engineering,Senior,Software Engineer,5,New York,Team Lead,Full Stack,"[""EVL001"", ""EVL002""]"';
   }
 
   /**
@@ -137,22 +238,42 @@ class SubjectService {
    */
   validateSubject(subject: CreateSubjectRequest): string[] {
     const errors: string[] = [];
-    
-    if (!subject.firstName?.trim()) {
+
+    if (!subject.FirstName?.trim()) {
       errors.push('First name is required');
     }
-    
-    if (!subject.lastName?.trim()) {
+
+    if (!subject.LastName?.trim()) {
       errors.push('Last name is required');
     }
-    
-    if (!subject.email?.trim()) {
+
+    if (!subject.Email?.trim()) {
       errors.push('Email is required');
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(subject.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(subject.Email)) {
       errors.push('Invalid email format');
     }
-    
+
+    if (!subject.EmployeeId?.trim()) {
+      errors.push('Employee ID is required');
+    } else if (subject.EmployeeId.length > 50) {
+      errors.push('Employee ID must be 50 characters or less');
+    }
+
     return errors;
+  }
+
+  /**
+   * Validate evaluator EmployeeIds for relationship creation
+   */
+  async validateEvaluatorIds(tenantSlug: string, employeeIds: string[]): Promise<string[]> {
+    try {
+      const response = await apiClient.post(`/${tenantSlug}/api/subjects/validate-evaluator-ids`, employeeIds);
+      const result = handleApiResponse<string[]>(response as any);
+      return result.data || [];
+    } catch (error) {
+      console.error('Error validating evaluator EmployeeIds:', error);
+      return [];
+    }
   }
 }
 

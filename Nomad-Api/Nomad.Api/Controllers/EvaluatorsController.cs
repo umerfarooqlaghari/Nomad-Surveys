@@ -3,6 +3,7 @@ using Nomad.Api.Authorization;
 using Nomad.Api.DTOs.Request;
 using Nomad.Api.DTOs.Response;
 using Nomad.Api.Services.Interfaces;
+using Nomad.Api.Services;
 
 namespace Nomad.Api.Controllers;
 
@@ -12,11 +13,13 @@ namespace Nomad.Api.Controllers;
 public class EvaluatorsController : ControllerBase
 {
     private readonly IEvaluatorService _evaluatorService;
+    private readonly IRelationshipService _relationshipService;
     private readonly ILogger<EvaluatorsController> _logger;
 
-    public EvaluatorsController(IEvaluatorService evaluatorService, ILogger<EvaluatorsController> logger)
+    public EvaluatorsController(IEvaluatorService evaluatorService, IRelationshipService relationshipService, ILogger<EvaluatorsController> logger)
     {
         _evaluatorService = evaluatorService;
+        _relationshipService = relationshipService;
         _logger = logger;
     }
 
@@ -230,6 +233,32 @@ public class EvaluatorsController : ControllerBase
         {
             _logger.LogError(ex, "Error deleting evaluator {EvaluatorId}", id);
             return StatusCode(500, new { message = "An error occurred while deleting the evaluator" });
+        }
+    }
+
+    /// <summary>
+    /// Validate subject EmployeeIds for relationship creation
+    /// </summary>
+    /// <param name="employeeIds">List of subject EmployeeIds to validate</param>
+    /// <returns>List of valid EmployeeIds</returns>
+    [HttpPost("validate-subject-ids")]
+    public async Task<ActionResult<List<string>>> ValidateSubjectIds([FromBody] List<string> employeeIds)
+    {
+        try
+        {
+            var tenantId = GetCurrentTenantId();
+            if (!tenantId.HasValue)
+            {
+                return BadRequest(new { message = "Tenant not found" });
+            }
+
+            var validIds = await _relationshipService.ValidateEmployeeIdsAsync(employeeIds, tenantId.Value, isEvaluator: false);
+            return Ok(validIds);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating subject EmployeeIds");
+            return StatusCode(500, new { message = "An error occurred while validating EmployeeIds" });
         }
     }
 }

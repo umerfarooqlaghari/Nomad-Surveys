@@ -3,6 +3,7 @@ using Nomad.Api.Authorization;
 using Nomad.Api.DTOs.Request;
 using Nomad.Api.DTOs.Response;
 using Nomad.Api.Services.Interfaces;
+using Nomad.Api.Services;
 
 namespace Nomad.Api.Controllers;
 
@@ -12,11 +13,13 @@ namespace Nomad.Api.Controllers;
 public class SubjectsController : ControllerBase
 {
     private readonly ISubjectService _subjectService;
+    private readonly IRelationshipService _relationshipService;
     private readonly ILogger<SubjectsController> _logger;
 
-    public SubjectsController(ISubjectService subjectService, ILogger<SubjectsController> logger)
+    public SubjectsController(ISubjectService subjectService, IRelationshipService relationshipService, ILogger<SubjectsController> logger)
     {
         _subjectService = subjectService;
+        _relationshipService = relationshipService;
         _logger = logger;
     }
 
@@ -230,6 +233,32 @@ public class SubjectsController : ControllerBase
         {
             _logger.LogError(ex, "Error deleting subject {SubjectId}", id);
             return StatusCode(500, new { message = "An error occurred while deleting the subject" });
+        }
+    }
+
+    /// <summary>
+    /// Validate evaluator EmployeeIds for relationship creation
+    /// </summary>
+    /// <param name="employeeIds">List of evaluator EmployeeIds to validate</param>
+    /// <returns>List of valid EmployeeIds</returns>
+    [HttpPost("validate-evaluator-ids")]
+    public async Task<ActionResult<List<string>>> ValidateEvaluatorIds([FromBody] List<string> employeeIds)
+    {
+        try
+        {
+            var tenantId = GetCurrentTenantId();
+            if (!tenantId.HasValue)
+            {
+                return BadRequest(new { message = "Tenant not found" });
+            }
+
+            var validIds = await _relationshipService.ValidateEmployeeIdsAsync(employeeIds, tenantId.Value, isEvaluator: true);
+            return Ok(validIds);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating evaluator EmployeeIds");
+            return StatusCode(500, new { message = "An error occurred while validating EmployeeIds" });
         }
     }
 }

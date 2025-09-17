@@ -15,18 +15,21 @@ public class SubjectService : ISubjectService
     private readonly IMapper _mapper;
     private readonly ILogger<SubjectService> _logger;
     private readonly IAuthenticationService _authenticationService;
+    private readonly IRelationshipService _relationshipService;
     private const string DefaultPassword = "Password@123";
 
     public SubjectService(
         NomadSurveysDbContext context,
         IMapper mapper,
         ILogger<SubjectService> logger,
-        IAuthenticationService authenticationService)
+        IAuthenticationService authenticationService,
+        IRelationshipService relationshipService)
     {
         _context = context;
         _mapper = mapper;
         _logger = logger;
         _authenticationService = authenticationService;
+        _relationshipService = relationshipService;
     }
 
     public async Task<List<SubjectListResponse>> GetSubjectsAsync(Guid? tenantId = null)
@@ -197,6 +200,48 @@ public class SubjectService : ISubjectService
                 if (createdSubjectIds.Count > 0)
                 {
                     await _context.SaveChangesAsync();
+
+                    // Create relationships after subjects are saved
+                    var relationshipWarnings = new List<string>();
+                    for (int i = 0; i < subjectsToCreate.Count; i++)
+                    {
+                        var subject = subjectsToCreate[i];
+                        var originalRequest = request.Subjects.FirstOrDefault(r => r.EmployeeId == subject.EmployeeId);
+
+                        if (originalRequest?.RelatedEmployeeIds != null && originalRequest.RelatedEmployeeIds.Any())
+                        {
+                            _logger.LogInformation("Creating relationships for subject {SubjectId} with evaluators: {EvaluatorIds}",
+                                subject.Id, string.Join(", ", originalRequest.RelatedEmployeeIds));
+
+                            try
+                            {
+                                var relationshipResult = await _relationshipService.CreateSubjectEvaluatorRelationshipsAsync(
+                                    subject.Id, originalRequest.RelatedEmployeeIds, tenantId);
+
+                                _logger.LogInformation("Relationship creation result for subject {SubjectId}: {SuccessfulConnections} successful, {FailedCount} failed",
+                                    subject.Id, relationshipResult.SuccessfulConnections, relationshipResult.FailedEmployeeIds.Count);
+
+                                if (relationshipResult.Warnings.Any())
+                                {
+                                    relationshipWarnings.AddRange(relationshipResult.Warnings.Select(w => $"Subject {subject.EmployeeId}: {w}"));
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Failed to create relationships for subject {SubjectId}", subject.Id);
+                                relationshipWarnings.Add($"Subject {subject.EmployeeId}: Failed to create relationships - {ex.Message}");
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogInformation("No related employee IDs found for subject {SubjectId}", subject.Id);
+                        }
+                    }
+
+                    if (relationshipWarnings.Any())
+                    {
+                        errors.AddRange(relationshipWarnings);
+                    }
                 }
 
                 response.SuccessfullyCreated = createdSubjectIds.Count;
@@ -244,6 +289,33 @@ public class SubjectService : ISubjectService
             subject.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            // Handle relationship updates if provided
+            if (request.RelatedEmployeeIds != null)
+            {
+                try
+                {
+                    // Remove existing relationships
+                    var existingRelationships = await _context.SubjectEvaluators
+                        .Where(se => se.SubjectId == subjectId)
+                        .ToListAsync();
+
+                    _context.SubjectEvaluators.RemoveRange(existingRelationships);
+                    await _context.SaveChangesAsync();
+
+                    // Create new relationships
+                    if (request.RelatedEmployeeIds.Any())
+                    {
+                        await _relationshipService.CreateSubjectEvaluatorRelationshipsAsync(
+                            subjectId, request.RelatedEmployeeIds, subject.TenantId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to update relationships for subject {SubjectId}", subjectId);
+                    // Don't throw here, just log the error as the subject update was successful
+                }
+            }
 
             _logger.LogInformation("Updated subject {SubjectId}", subjectId);
 
