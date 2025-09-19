@@ -28,20 +28,20 @@ export interface CreateTenantData {
 
 export interface TenantListItem {
   id: string;
-  name: string;
-  slug: string;
-  isActive: boolean;
-  createdAt: string;
-  userCount: number;
-  companyName: string;
+  Name: string;
+  Slug: string;
+  IsActive: boolean;
+  CreatedAt: string;
+  UserCount: number;
+  CompanyName: string;
 }
 
 export interface TenantResponse {
   id: string;
-  name: string;
-  slug: string;
-  description: string;
-  isActive: boolean;
+  Name: string;
+  Slug: string;
+  Description: string;
+  IsActive: boolean;
   createdAt: string;
   updatedAt?: string;
   company?: {
@@ -59,9 +59,9 @@ export interface TenantResponse {
 }
 
 export interface UpdateTenantData {
-  name: string;
-  slug: string;
-  description: string;
+  Name: string;
+  Slug: string;
+  Description: string;
   company: {
     name: string;
     numberOfEmployees: number;

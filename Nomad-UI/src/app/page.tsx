@@ -11,22 +11,32 @@ export default function Home() {
   useEffect(() => {
     if (!isLoading) {
       if (isAuthenticated && user) {
-        // Redirect to appropriate dashboard based on role
-        const role = user.roles[0];
-        switch (role) {
-          case 'SuperAdmin':
-            router.push('/superadmin/dashboard');
-            break;
-          case 'TenantAdmin':
-            router.push('/admin/dashboard');
-            break;
-          case 'Participant':
-            router.push('/participant/dashboard');
-            break;
-          default:
-            router.push('/login');
+        // Handle both camelCase and PascalCase roles
+        const roles = user.roles || user.Roles || [];
+        if (roles.length > 0) {
+          // Redirect to appropriate dashboard based on role
+          const role = roles[0];
+          console.log('Home page redirect - User role:', role, 'User:', user);
+          switch (role) {
+            case 'SuperAdmin':
+              router.push('/superadmin/dashboard');
+              break;
+            case 'TenantAdmin':
+              router.push('/admin/dashboard');
+              break;
+            case 'Participant':
+              router.push('/participant/dashboard');
+              break;
+            default:
+              console.warn('Unknown role, redirecting to login:', role);
+              router.push('/login');
+          }
+        } else {
+          console.warn('User has no roles, redirecting to login:', user);
+          router.push('/login');
         }
       } else {
+        console.log('Not authenticated, redirecting to login. isAuthenticated:', isAuthenticated, 'user:', user);
         router.push('/login');
       }
     }

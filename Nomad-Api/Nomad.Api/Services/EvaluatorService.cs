@@ -57,7 +57,7 @@ public class EvaluatorService : IEvaluatorService
                 LastName = e.LastName,
                 FullName = e.FullName,
                 EvaluatorEmail = e.EvaluatorEmail,
-
+                EmployeeId = e.EmployeeId,
                 CompanyName = e.CompanyName,
                 Designation = e.Designation,
                 Location = e.Location,
@@ -134,31 +134,126 @@ public class EvaluatorService : IEvaluatorService
         try
         {
             var evaluatorsToCreate = new List<Evaluator>();
+            var evaluatorsToUpdate = new List<(Evaluator ExistingEvaluator, CreateEvaluatorRequest UpdateRequest)>();
             var errors = new List<string>();
 
-            // Validate all evaluators first
+            _logger.LogInformation("Processing {Count} evaluators for bulk create/update", request.Evaluators.Count);
+
+            // Get all existing evaluators by EmployeeId in this tenant
+            var requestedEmployeeIds = request.Evaluators.Select(e => e.EmployeeId).ToList();
+            var existingEvaluators = await _context.Evaluators
+                .Where(e => requestedEmployeeIds.Contains(e.EmployeeId) && e.TenantId == tenantId)
+                .ToListAsync();
+
+            var existingEmployeeIds = existingEvaluators.Select(e => e.EmployeeId).ToHashSet();
+
+            _logger.LogInformation("Found {ExistingCount} existing evaluators out of {RequestedCount} requested",
+                existingEvaluators.Count, request.Evaluators.Count);
+
+            // Separate new evaluators from updates
             for (int i = 0; i < request.Evaluators.Count; i++)
             {
                 var evaluatorRequest = request.Evaluators[i];
                 var validationErrors = await ValidateEvaluatorAsync(evaluatorRequest, tenantId, null);
-                
+
                 if (validationErrors.Any())
                 {
                     errors.AddRange(validationErrors.Select(e => $"Evaluator {i + 1}: {e}"));
                     continue;
                 }
 
-                var evaluator = _mapper.Map<Evaluator>(evaluatorRequest);
-                evaluator.Id = Guid.NewGuid();
-                evaluator.TenantId = tenantId;
-                evaluator.PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword);
-                evaluator.CreatedAt = DateTime.UtcNow;
-                evaluator.IsActive = true;
+                if (existingEmployeeIds.Contains(evaluatorRequest.EmployeeId))
+                {
+                    // This is an update
+                    var existingEvaluator = existingEvaluators.First(e => e.EmployeeId == evaluatorRequest.EmployeeId);
+                    evaluatorsToUpdate.Add((existingEvaluator, evaluatorRequest));
+                    _logger.LogInformation("Evaluator {EmployeeId} exists - will update", evaluatorRequest.EmployeeId);
+                }
+                else
+                {
+                    // This is a new evaluator
+                    var evaluator = _mapper.Map<Evaluator>(evaluatorRequest);
+                    evaluator.Id = Guid.NewGuid();
+                    evaluator.TenantId = tenantId;
+                    evaluator.PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword);
+                    evaluator.CreatedAt = DateTime.UtcNow;
+                    evaluator.IsActive = true;
 
-                evaluatorsToCreate.Add(evaluator);
+                    evaluatorsToCreate.Add(evaluator);
+                    _logger.LogInformation("Evaluator {EmployeeId} is new - will create", evaluatorRequest.EmployeeId);
+                }
             }
 
-            // Create ApplicationUser accounts and evaluators
+            // Update existing evaluators
+            foreach (var (existingEvaluator, updateRequest) in evaluatorsToUpdate)
+            {
+                _logger.LogInformation("Updating existing evaluator {EmployeeId} (ID: {EvaluatorId})",
+                    existingEvaluator.EmployeeId, existingEvaluator.Id);
+
+                // Update basic fields
+                existingEvaluator.FirstName = updateRequest.FirstName;
+                existingEvaluator.LastName = updateRequest.LastName;
+                existingEvaluator.EvaluatorEmail = updateRequest.EvaluatorEmail;
+                existingEvaluator.CompanyName = updateRequest.CompanyName;
+                existingEvaluator.Gender = updateRequest.Gender;
+                existingEvaluator.BusinessUnit = updateRequest.BusinessUnit;
+                existingEvaluator.Grade = updateRequest.Grade;
+                existingEvaluator.Designation = updateRequest.Designation;
+                existingEvaluator.Tenure = updateRequest.Tenure;
+                existingEvaluator.Location = updateRequest.Location;
+                existingEvaluator.Metadata1 = updateRequest.Metadata1;
+                existingEvaluator.Metadata2 = updateRequest.Metadata2;
+                existingEvaluator.UpdatedAt = DateTime.UtcNow;
+
+                _context.Evaluators.Update(existingEvaluator);
+                response.UpdatedCount++;
+
+                // Handle relationship merging for updated evaluators
+                try
+                {
+                    if (updateRequest.SubjectRelationships != null && updateRequest.SubjectRelationships.Any())
+                    {
+                        _logger.LogInformation("Merging enhanced relationships for existing evaluator {EvaluatorId}", existingEvaluator.Id);
+
+                        var subjectRelationships = updateRequest.SubjectRelationships
+                            .Select(sr => (sr.SubjectId, sr.Relationship))
+                            .ToList();
+
+                        var relationshipResult = await _relationshipService.MergeEvaluatorSubjectRelationshipsWithTypesAsync(
+                            existingEvaluator.Id, subjectRelationships, tenantId);
+
+                        _logger.LogInformation("Enhanced relationship merge result for evaluator {EvaluatorId}: {SuccessfulConnections} successful, {FailedCount} failed",
+                            existingEvaluator.Id, relationshipResult.SuccessfulConnections, relationshipResult.FailedEmployeeIds.Count);
+
+                        if (relationshipResult.Warnings.Any())
+                        {
+                            errors.AddRange(relationshipResult.Warnings.Select(w => $"Evaluator {existingEvaluator.EmployeeId}: {w}"));
+                        }
+                    }
+                    else if (updateRequest.RelatedEmployeeIds != null && updateRequest.RelatedEmployeeIds.Any())
+                    {
+                        _logger.LogInformation("Merging simple relationships for existing evaluator {EvaluatorId}", existingEvaluator.Id);
+
+                        var relationshipResult = await _relationshipService.MergeEvaluatorSubjectRelationshipsAsync(
+                            existingEvaluator.Id, updateRequest.RelatedEmployeeIds, tenantId);
+
+                        _logger.LogInformation("Simple relationship merge result for evaluator {EvaluatorId}: {SuccessfulConnections} successful, {FailedCount} failed",
+                            existingEvaluator.Id, relationshipResult.SuccessfulConnections, relationshipResult.FailedEmployeeIds.Count);
+
+                        if (relationshipResult.Warnings.Any())
+                        {
+                            errors.AddRange(relationshipResult.Warnings.Select(w => $"Evaluator {existingEvaluator.EmployeeId}: {w}"));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to merge relationships for existing evaluator {EvaluatorId}", existingEvaluator.Id);
+                    errors.Add($"Evaluator {existingEvaluator.EmployeeId}: Failed to merge relationships - {ex.Message}");
+                }
+            }
+
+            // Create new evaluators and ApplicationUser accounts
             if (evaluatorsToCreate.Count > 0)
             {
                 var createdUserIds = new List<Guid>();
@@ -238,13 +333,15 @@ public class EvaluatorService : IEvaluatorService
                 response.CreatedIds = createdEvaluatorIds;
             }
 
-            response.Failed = response.TotalRequested - response.SuccessfullyCreated;
+            // Calculate totals including both created and updated
+            var totalProcessed = response.SuccessfullyCreated + response.UpdatedCount;
+            response.Failed = response.TotalRequested - totalProcessed;
             response.Errors = errors;
 
             await transaction.CommitAsync();
-            
-            _logger.LogInformation("Bulk created {Count} evaluators for tenant {TenantId}", 
-                response.SuccessfullyCreated, tenantId);
+
+            _logger.LogInformation("Bulk processed {TotalProcessed} evaluators for tenant {TenantId}: {Created} created, {Updated} updated",
+                totalProcessed, tenantId, response.SuccessfullyCreated, response.UpdatedCount);
 
             return response;
         }

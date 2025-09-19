@@ -20,6 +20,8 @@ builder.Services.AddControllers()
     {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+        // Use PascalCase for property names to match DTOs
+        options.JsonSerializerOptions.PropertyNamingPolicy = null; // This ensures PascalCase
     });
 
 // Add HttpContextAccessor for tenant resolution

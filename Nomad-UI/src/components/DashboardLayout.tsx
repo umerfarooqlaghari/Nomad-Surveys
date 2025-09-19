@@ -19,7 +19,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-              <Image
+               <Image
                 src="/logos/logo-small.png"
                 alt="Nomad Surveys"
                 width={150}
@@ -34,7 +34,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
             <div className="flex items-center space-x-4">
               <div className="text-sm text-black">
-                <span className="font-medium">{user?.fullName}</span>
+                <span className="font-medium">{user?.fullName || user?.FullName || 'User'}</span>
                 {tenant && (
                   <span className="ml-2 text-white opacity-75">({tenant.name})</span>
                 )}

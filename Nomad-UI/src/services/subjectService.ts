@@ -43,6 +43,31 @@ export interface SubjectListResponse {
   EvaluatorCount: number;
 }
 
+export interface EvaluatorRelationship {
+  EvaluatorId: string;
+  Relationship: string;
+}
+
+export interface ValidationResult {
+  EmployeeId: string;
+  IsValid: boolean;
+  Message?: string;
+  Data?: {
+    Id: string;
+    EmployeeId: string;
+    FullName: string;
+    Email: string;
+    IsActive: boolean;
+  };
+}
+
+export interface ValidationResponse {
+  Results: ValidationResult[];
+  TotalRequested: number;
+  ValidCount: number;
+  InvalidCount: number;
+}
+
 export interface CreateSubjectRequest {
   FirstName: string;
   LastName: string;
@@ -58,6 +83,7 @@ export interface CreateSubjectRequest {
   Metadata1?: string;
   Metadata2?: string;
   RelatedEmployeeIds?: string[];
+  EvaluatorRelationships?: EvaluatorRelationship[];
 }
 
 export interface UpdateSubjectRequest {
@@ -75,6 +101,7 @@ export interface UpdateSubjectRequest {
   Metadata1?: string;
   Metadata2?: string;
   RelatedEmployeeIds?: string[];
+  EvaluatorRelationships?: EvaluatorRelationship[];
 }
 
 export interface BulkCreateSubjectsRequest {
@@ -84,6 +111,7 @@ export interface BulkCreateSubjectsRequest {
 export interface BulkCreateResponse {
   TotalRequested: number;
   SuccessfullyCreated: number;
+  UpdatedCount: number;
   Failed: number;
   Errors: string[];
   CreatedIds: string[];
@@ -187,7 +215,7 @@ class SubjectService {
       values.push(current.trim());
 
       if (values.length >= headers.length) {
-        // Parse RelatedEmployeeIds JSON array
+        // Parse RelatedEmployeeIds JSON array (backward compatibility)
         let relatedEmployeeIds: string[] | undefined;
         const relatedEmployeeIdsIndex = headers.indexOf('relatedEmployeeIds');
         if (relatedEmployeeIdsIndex !== -1 && values[relatedEmployeeIdsIndex]) {
@@ -197,6 +225,19 @@ class SubjectService {
           } catch (error) {
             console.warn('Failed to parse RelatedEmployeeIds JSON:', values[relatedEmployeeIdsIndex]);
             relatedEmployeeIds = undefined;
+          }
+        }
+
+        // Parse EvaluatorRelationships JSON array (enhanced format)
+        let evaluatorRelationships: EvaluatorRelationship[] | undefined;
+        const evaluatorRelationshipsIndex = headers.indexOf('evaluatorRelationships');
+        if (evaluatorRelationshipsIndex !== -1 && values[evaluatorRelationshipsIndex]) {
+          try {
+            const jsonStr = values[evaluatorRelationshipsIndex].replace(/^"|"$/g, ''); // Remove outer quotes
+            evaluatorRelationships = JSON.parse(jsonStr);
+          } catch (error) {
+            console.warn('Failed to parse EvaluatorRelationships JSON:', values[evaluatorRelationshipsIndex]);
+            evaluatorRelationships = undefined;
           }
         }
 
@@ -215,6 +256,7 @@ class SubjectService {
           Metadata1: values[headers.indexOf('metadata1')] || '',
           Metadata2: values[headers.indexOf('metadata2')] || '',
           RelatedEmployeeIds: relatedEmployeeIds,
+          EvaluatorRelationships: evaluatorRelationships,
         };
 
         if (subject.FirstName && subject.LastName && subject.Email && subject.EmployeeId) {
@@ -230,7 +272,7 @@ class SubjectService {
    * Generate CSV template
    */
   generateCSVTemplate(): string {
-    return 'firstName,lastName,email,employeeId,companyName,gender,businessUnit,grade,designation,tenure,location,metadata1,metadata2,relatedEmployeeIds\nJohn,Doe,john.doe@example.com,SUB001,Acme Corp,Male,Engineering,Senior,Software Engineer,5,New York,Team Lead,Full Stack,"[""EVL001"", ""EVL002""]"';
+    return 'firstName,lastName,email,employeeId,companyName,gender,businessUnit,grade,designation,tenure,location,metadata1,metadata2,evaluatorRelationships\nJohn,Doe,john.doe@example.com,SUB001,Acme Corp,Male,Engineering,Senior,Software Engineer,5,New York,Team Lead,Full Stack,"[{""EvaluatorId"":""EVL001"",""Relationship"":""manager""},{""EvaluatorId"":""EVL002"",""Relationship"":""peer""}]"';
   }
 
   /**
@@ -265,12 +307,60 @@ class SubjectService {
   /**
    * Validate evaluator EmployeeIds for relationship creation
    */
-  async validateEvaluatorIds(tenantSlug: string, employeeIds: string[]): Promise<string[]> {
+  async validateEvaluatorIds(tenantSlug: string, employeeIds: string[], token: string): Promise<string[]> {
     try {
-      const response = await apiClient.post(`/${tenantSlug}/api/subjects/validate-evaluator-ids`, employeeIds);
-      const result = handleApiResponse<string[]>(response as any);
-      return result.data || [];
-    } catch (error) {
+      const response = await apiClient.post(`/${tenantSlug}/subjects/validate-evaluator-ids`, employeeIds, token);
+      console.log('Raw API response:', response);
+
+      // Handle different response formats based on status code
+      if (response.status === 200) {
+        // Single valid ID - response.data contains evaluator info
+        console.log('Single ID validation - returning first ID');
+        return [employeeIds[0]];
+      } else if (response.status === 207) {
+        // Multiple IDs - response.data contains ValidationResponse
+        const apiResponse = response.data as any;
+        console.log('Multi-status response received:', apiResponse);
+
+        // Extract valid Employee IDs from the response
+        const validEmployeeIds: string[] = [];
+
+        if (apiResponse && apiResponse.Results && Array.isArray(apiResponse.Results)) {
+          console.log(`Processing ${apiResponse.Results.length} results...`);
+
+          for (let i = 0; i < apiResponse.Results.length; i++) {
+            const result = apiResponse.Results[i];
+            console.log(`Result ${i}:`, {
+              EmployeeId: result.EmployeeId,
+              IsValid: result.IsValid,
+              Message: result.Message
+            });
+
+            // Check if this result is valid
+            if (result.IsValid === true) {
+              console.log(`✓ ${result.EmployeeId} is valid - adding to array`);
+              validEmployeeIds.push(result.EmployeeId);
+            } else {
+              console.log(`✗ ${result.EmployeeId} is invalid - skipping`);
+            }
+          }
+        } else {
+          console.error('Invalid response structure:', apiResponse);
+        }
+
+        console.log('Final valid Employee IDs array:', validEmployeeIds);
+        return validEmployeeIds;
+      } else {
+        // 404 or other error - no valid IDs
+        console.log(`Unexpected status code: ${response.status}`);
+        return [];
+      }
+    } catch (error: any) {
+      // Handle 404 Not Found for single invalid ID
+      if (error.response?.status === 404) {
+        console.log('404 error - no valid IDs');
+        return [];
+      }
       console.error('Error validating evaluator EmployeeIds:', error);
       return [];
     }

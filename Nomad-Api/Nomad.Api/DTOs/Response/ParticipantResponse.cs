@@ -162,6 +162,7 @@ public class BulkCreateResponse
 {
     public int TotalRequested { get; set; }
     public int SuccessfullyCreated { get; set; }
+    public int UpdatedCount { get; set; }
     public int Failed { get; set; }
     public List<string> Errors { get; set; } = new();
     public List<Guid> CreatedIds { get; set; } = new();

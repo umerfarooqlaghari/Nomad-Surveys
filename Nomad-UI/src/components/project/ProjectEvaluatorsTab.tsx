@@ -19,20 +19,20 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEvaluator, setEditingEvaluator] = useState<Evaluator | null>(null);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    evaluatorEmail: '',
-    employeeId: '',
-    companyName: '',
-    gender: '',
-    businessUnit: '',
-    grade: '',
-    designation: '',
-    tenure: '',
-    location: '',
-    metadata1: '',
-    metadata2: '',
-    relatedEmployeeIds: [] as string[]
+    FirstName: '',
+    LastName: '',
+    EvaluatorEmail: '',
+    EmployeeId: '',
+    CompanyName: '',
+    Gender: '',
+    BusinessUnit: '',
+    Grade: '',
+    Designation: '',
+    Tenure: '',
+    Location: '',
+    Metadata1: '',
+    Metadata2: '',
+    RelatedEmployeeIds: [] as string[]
   });
 
   useEffect(() => {
@@ -74,20 +74,20 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
     try {
       // Convert camelCase form data to PascalCase for API
       const submitData = {
-        FirstName: formData.firstName,
-        LastName: formData.lastName,
-        EvaluatorEmail: formData.evaluatorEmail,
-        EmployeeId: formData.employeeId,
-        CompanyName: formData.companyName || undefined,
-        Gender: formData.gender || undefined,
-        BusinessUnit: formData.businessUnit || undefined,
-        Grade: formData.grade || undefined,
-        Designation: formData.designation || undefined,
-        Tenure: formData.tenure ? parseInt(formData.tenure) : undefined,
-        Location: formData.location || undefined,
-        Metadata1: formData.metadata1 || undefined,
-        Metadata2: formData.metadata2 || undefined,
-        RelatedEmployeeIds: formData.relatedEmployeeIds.length > 0 ? formData.relatedEmployeeIds : undefined
+        FirstName: formData.FirstName,
+        LastName: formData.LastName,
+        EvaluatorEmail: formData.EvaluatorEmail,
+        EmployeeId: formData.EmployeeId,
+        CompanyName: formData.CompanyName || undefined,
+        Gender: formData.Gender || undefined,
+        BusinessUnit: formData.BusinessUnit || undefined,
+        Grade: formData.Grade || undefined,
+        Designation: formData.Designation || undefined,
+        Tenure: formData.Tenure ? parseInt(formData.Tenure) : undefined,
+        Location: formData.Location || undefined,
+        Metadata1: formData.Metadata1 || undefined,
+        Metadata2: formData.Metadata2 || undefined,
+        RelatedEmployeeIds: formData.RelatedEmployeeIds.length > 0 ? formData.RelatedEmployeeIds : undefined
       };
 
       if (editingEvaluator) {
@@ -118,23 +118,47 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
     }
   };
 
-  const handleEdit = (evaluator: Evaluator) => {
-    setEditingEvaluator(evaluator);
+  const handleEdit = (evaluator: EvaluatorListResponse) => {
+    // Convert EvaluatorListResponse to Evaluator format for editing
+    const evaluatorForEdit: Evaluator = {
+      Id: evaluator.Id,
+      FirstName: evaluator.FirstName,
+      LastName: evaluator.LastName,
+      FullName: evaluator.FullName,
+      EvaluatorEmail: evaluator.EvaluatorEmail,
+      EmployeeId: evaluator.EmployeeId,
+      CompanyName: evaluator.CompanyName,
+      Gender: '', // Not available in list response
+      BusinessUnit: '', // Not available in list response
+      Grade: '', // Not available in list response
+      Designation: evaluator.Designation,
+      Tenure: undefined, // Not available in list response
+      Location: evaluator.Location,
+      Metadata1: '', // Not available in list response
+      Metadata2: '', // Not available in list response
+      IsActive: evaluator.IsActive,
+      CreatedAt: evaluator.CreatedAt,
+      UpdatedAt: undefined,
+      TenantId: evaluator.TenantId,
+      AssignedSubjectIds: []
+    };
+
+    setEditingEvaluator(evaluatorForEdit);
     setFormData({
-      firstName: evaluator.FirstName || '',
-      lastName: evaluator.LastName || '',
-      evaluatorEmail: evaluator.EvaluatorEmail || '',
-      employeeId: evaluator.EmployeeId || '',
-      companyName: evaluator.CompanyName || '',
-      gender: evaluator.Gender || '',
-      businessUnit: evaluator.BusinessUnit || '',
-      grade: evaluator.Grade || '',
-      designation: evaluator.Designation || '',
-      tenure: evaluator.Tenure?.toString() || '',
-      location: evaluator.Location || '',
-      metadata1: evaluator.Metadata1 || '',
-      metadata2: evaluator.Metadata2 || '',
-      relatedEmployeeIds: evaluator.AssignedSubjectIds || []
+      FirstName: evaluator.FirstName || '',
+      LastName: evaluator.LastName || '',
+      EvaluatorEmail: evaluator.EvaluatorEmail || '',
+      EmployeeId: evaluator.EmployeeId || '',
+      CompanyName: evaluator.CompanyName || '',
+      Gender: '', // Not available in list response
+      BusinessUnit: '', // Not available in list response
+      Grade: '', // Not available in list response
+      Designation: evaluator.Designation || '',
+      Tenure: '', // Not available in list response
+      Location: evaluator.Location || '',
+      Metadata1: '', // Not available in list response
+      Metadata2: '', // Not available in list response
+      RelatedEmployeeIds: [] // Not available in list response
     });
     setShowAddForm(true);
   };
@@ -159,20 +183,20 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
 
   const resetForm = () => {
     setFormData({
-      firstName: '',
-      lastName: '',
-      evaluatorEmail: '',
-      employeeId: '',
-      companyName: '',
-      gender: '',
-      businessUnit: '',
-      grade: '',
-      designation: '',
-      tenure: '',
-      location: '',
-      metadata1: '',
-      metadata2: '',
-      relatedEmployeeIds: []
+      FirstName: '',
+      LastName: '',
+      EvaluatorEmail: '',
+      EmployeeId: '',
+      CompanyName: '',
+      Gender: '',
+      BusinessUnit: '',
+      Grade: '',
+      Designation: '',
+      Tenure: '',
+      Location: '',
+      Metadata1: '',
+      Metadata2: '',
+      RelatedEmployeeIds: []
     });
     setEditingEvaluator(null);
     setShowAddForm(false);
@@ -275,7 +299,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="text"
                   name="firstName"
-                  value={formData.firstName}
+                  value={formData.FirstName}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -286,7 +310,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="text"
                   name="lastName"
-                  value={formData.lastName}
+                  value={formData.LastName}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -297,7 +321,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="email"
                   name="evaluatorEmail"
-                  value={formData.evaluatorEmail}
+                  value={formData.EvaluatorEmail}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -308,7 +332,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="text"
                   name="employeeId"
-                  value={formData.employeeId}
+                  value={formData.EmployeeId}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -320,7 +344,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="text"
                   name="companyName"
-                  value={formData.companyName}
+                  value={formData.CompanyName}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -329,7 +353,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <label className="block text-sm font-medium text-gray-900">Gender</label>
                 <select
                   name="gender"
-                  value={formData.gender}
+                  value={formData.Gender}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -344,7 +368,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="text"
                   name="businessUnit"
-                  value={formData.businessUnit}
+                  value={formData.BusinessUnit}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -354,7 +378,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="text"
                   name="grade"
-                  value={formData.grade}
+                  value={formData.Grade}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -364,7 +388,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="text"
                   name="designation"
-                  value={formData.designation}
+                  value={formData.Designation}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -374,7 +398,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="number"
                   name="tenure"
-                  value={formData.tenure}
+                  value={formData.Tenure}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   min="0"
@@ -386,7 +410,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="text"
                   name="location"
-                  value={formData.location}
+                  value={formData.Location}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -396,7 +420,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="text"
                   name="metadata1"
-                  value={formData.metadata1}
+                  value={formData.Metadata1}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -406,7 +430,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 <input
                   type="text"
                   name="metadata2"
-                  value={formData.metadata2}
+                  value={formData.Metadata2}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -416,12 +440,14 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
               <div className="md:col-span-2">
                 <TagInput
                   label="Related Subjects (Employee IDs)"
-                  placeholder="Enter subject Employee ID and press Enter..."
-                  tags={formData.relatedEmployeeIds}
-                  onTagsChange={(tags) => setFormData(prev => ({ ...prev, relatedEmployeeIds: tags }))}
-                  onValidate={async (employeeId) => {
-                    const validIds = await evaluatorService.validateSubjectIds(projectSlug, [employeeId]);
-                    return validIds.includes(employeeId);
+                  placeholder="Enter subject Employee ID(s), comma-separated..."
+                  tags={formData.RelatedEmployeeIds}
+                  onTagsChange={(tags) => setFormData(prev => ({ ...prev, RelatedEmployeeIds: tags }))}
+                  onValidate={async (employeeIds) => {
+                    if (!token) return [];
+                    const idsArray = Array.isArray(employeeIds) ? employeeIds : [employeeIds];
+                    const validIds = await evaluatorService.validateSubjectIds(projectSlug, idsArray, token);
+                    return validIds;
                   }}
                   className="mb-4"
                 />

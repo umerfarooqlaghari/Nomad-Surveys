@@ -62,20 +62,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       const response = await AuthService.login(credentials);
 
-      AuthService.setToken(response.accessToken);
-      AuthService.setUser(response.user);
-      AuthService.setTokenExpiry(response.expiresAt);
+      // Handle PascalCase response from backend
+      const accessToken = response.AccessToken || response.accessToken;
+      const user = response.User || response.user;
+      const expiresAt = response.ExpiresAt || response.expiresAt;
+      const tenant = response.Tenant || response.tenant;
 
-      if (response.tenant) {
-        AuthService.setTenant(response.tenant);
-        setTenant(response.tenant);
+      if (!accessToken || !user || !expiresAt) {
+        throw new Error('Invalid login response: missing required fields');
       }
 
-      setUser(response.user);
-      setToken(response.accessToken);
+      AuthService.setToken(accessToken);
+      AuthService.setUser(user);
+      AuthService.setTokenExpiry(expiresAt);
+
+      if (tenant) {
+        AuthService.setTenant(tenant);
+        setTenant(tenant);
+      }
+
+      setUser(user);
+      setToken(accessToken);
+
+      console.log('Login successful - User:', user, 'Token:', accessToken);
 
       // Setup auto-logout timer directly
-      const expiryTime = new Date(response.expiresAt).getTime();
+      const expiryTime = new Date(expiresAt).getTime();
       const currentTime = new Date().getTime();
       const timeUntilExpiry = expiryTime - currentTime;
 
@@ -92,10 +104,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }, 30 * 60 * 1000);
       setActivityTimer(activityTimer);
 
-      // Redirect based on role
-      const dashboardRoute = AuthService.getDashboardRoute();
-      router.push(dashboardRoute);
-    } catch (error) {
+      // Don't redirect here - let the route guards handle it
+      // This prevents race conditions with state updates
+          } catch (error) {
       throw error;
     } finally {
       setIsLoading(false);
@@ -107,15 +118,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(true);
       const response = await AuthService.superAdminLogin(credentials);
 
-      AuthService.setToken(response.accessToken);
-      AuthService.setUser(response.user);
-      AuthService.setTokenExpiry(response.expiresAt);
+      // Handle PascalCase response from backend
+      const accessToken = response.AccessToken || response.accessToken;
+      const user = response.User || response.user;
+      const expiresAt = response.ExpiresAt || response.expiresAt;
 
-      setUser(response.user);
-      setToken(response.accessToken);
+      if (!accessToken || !user || !expiresAt) {
+        throw new Error('Invalid superadmin login response: missing required fields');
+      }
+
+      AuthService.setToken(accessToken);
+      AuthService.setUser(user);
+      AuthService.setTokenExpiry(expiresAt);
+
+      setUser(user);
+      setToken(accessToken);
+
+      console.log('SuperAdmin login successful - User:', user, 'Token:', accessToken);
 
       // Setup auto-logout timer directly
-      const expiryTime = new Date(response.expiresAt).getTime();
+      const expiryTime = new Date(expiresAt).getTime();
       const currentTime = new Date().getTime();
       const timeUntilExpiry = expiryTime - currentTime;
 
@@ -132,7 +154,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }, 30 * 60 * 1000);
       setActivityTimer(activityTimer);
 
-      router.push('/superadmin/dashboard');
+      // Don't redirect here - let the route guards handle it
+      // This prevents race conditions with state updates
     } catch (error) {
       throw error;
     } finally {
@@ -143,14 +166,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Initialize auth state from localStorage
   useEffect(() => {
     const initializeAuth = () => {
-      const storedToken = AuthService.getToken();
-      const storedUser = AuthService.getUser();
-      const storedTenant = AuthService.getTenant();
+      try {
+        // Clean any corrupted localStorage values first
+        AuthService.validateAndCleanAuth();
 
-      if (storedToken && storedUser && !AuthService.isTokenExpired()) {
-        setToken(storedToken);
-        setUser(storedUser);
-        if (storedTenant) setTenant(storedTenant);
+        const storedToken = AuthService.getToken();
+        const storedUser = AuthService.getUser();
+        const storedTenant = AuthService.getTenant();
+
+        if (storedToken && storedUser && !AuthService.isTokenExpired()) {
+          setToken(storedToken);
+          setUser(storedUser);
+          if (storedTenant) setTenant(storedTenant);
 
         // Setup auto-logout for existing session
         const expiry = localStorage.getItem('tokenExpiry');
@@ -176,6 +203,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }, 30 * 60 * 1000);
         setActivityTimer(activityTimer);
       } else {
+        AuthService.clearAuth();
+      }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
         AuthService.clearAuth();
       }
 
