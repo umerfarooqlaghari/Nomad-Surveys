@@ -431,7 +431,7 @@ public class SubjectService : ISubjectService
             await _context.SaveChangesAsync();
 
             // Handle relationship updates if provided
-            if (request.RelatedEmployeeIds != null)
+            if (request.EvaluatorRelationships != null)
             {
                 try
                 {
@@ -443,7 +443,36 @@ public class SubjectService : ISubjectService
                     _context.SubjectEvaluators.RemoveRange(existingRelationships);
                     await _context.SaveChangesAsync();
 
-                    // Create new relationships
+                    // Create new relationships with types
+                    if (request.EvaluatorRelationships.Any())
+                    {
+                        var evaluatorRelationships = request.EvaluatorRelationships
+                            .Select(er => (er.EvaluatorId, er.Relationship))
+                            .ToList();
+
+                        await _relationshipService.CreateSubjectEvaluatorRelationshipsWithTypesAsync(
+                            subjectId, evaluatorRelationships, subject.TenantId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to update relationships for subject {SubjectId}", subjectId);
+                    // Don't throw here, just log the error as the subject update was successful
+                }
+            }
+            else if (request.RelatedEmployeeIds != null)
+            {
+                try
+                {
+                    // Remove existing relationships
+                    var existingRelationships = await _context.SubjectEvaluators
+                        .Where(se => se.SubjectId == subjectId)
+                        .ToListAsync();
+
+                    _context.SubjectEvaluators.RemoveRange(existingRelationships);
+                    await _context.SaveChangesAsync();
+
+                    // Create new relationships (simple)
                     if (request.RelatedEmployeeIds.Any())
                     {
                         await _relationshipService.CreateSubjectEvaluatorRelationshipsAsync(
@@ -456,6 +485,7 @@ public class SubjectService : ISubjectService
                     // Don't throw here, just log the error as the subject update was successful
                 }
             }
+
 
             _logger.LogInformation("Updated subject {SubjectId}", subjectId);
 
@@ -509,7 +539,7 @@ public class SubjectService : ISubjectService
     public async Task<bool> SubjectExistsAsync(Guid subjectId, Guid? tenantId = null)
     {
         var query = _context.Subjects.Where(s => s.Id == subjectId && s.IsActive);
-        
+
         if (tenantId.HasValue)
         {
             query = query.Where(s => s.TenantId == tenantId.Value);

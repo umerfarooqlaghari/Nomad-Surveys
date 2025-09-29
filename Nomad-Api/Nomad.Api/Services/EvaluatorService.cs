@@ -378,7 +378,7 @@ public class EvaluatorService : IEvaluatorService
             await _context.SaveChangesAsync();
 
             // Handle relationship updates if provided
-            if (request.RelatedEmployeeIds != null)
+            if (request.SubjectRelationships != null)
             {
                 try
                 {
@@ -390,7 +390,36 @@ public class EvaluatorService : IEvaluatorService
                     _context.SubjectEvaluators.RemoveRange(existingRelationships);
                     await _context.SaveChangesAsync();
 
-                    // Create new relationships
+                    // Create new relationships with types
+                    if (request.SubjectRelationships.Any())
+                    {
+                        var subjectRelationships = request.SubjectRelationships
+                            .Select(sr => (sr.SubjectId, sr.Relationship))
+                            .ToList();
+
+                        await _relationshipService.CreateEvaluatorSubjectRelationshipsWithTypesAsync(
+                            evaluatorId, subjectRelationships, evaluator.TenantId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to update relationships for evaluator {EvaluatorId}", evaluatorId);
+                    // Don't throw here, just log the error as the evaluator update was successful
+                }
+            }
+            else if (request.RelatedEmployeeIds != null)
+            {
+                try
+                {
+                    // Remove existing relationships
+                    var existingRelationships = await _context.SubjectEvaluators
+                        .Where(se => se.EvaluatorId == evaluatorId)
+                        .ToListAsync();
+
+                    _context.SubjectEvaluators.RemoveRange(existingRelationships);
+                    await _context.SaveChangesAsync();
+
+                    // Create new relationships (simple)
                     if (request.RelatedEmployeeIds.Any())
                     {
                         await _relationshipService.CreateEvaluatorSubjectRelationshipsAsync(

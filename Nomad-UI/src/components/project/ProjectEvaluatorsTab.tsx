@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { evaluatorService, Evaluator, EvaluatorListResponse } from '@/services/evaluatorService';
-import TagInput from '@/components/common/TagInput';
+import RelationshipTagInput, { RelationshipTag } from '@/components/common/RelationshipTagInput';
 
 interface ProjectEvaluatorsTabProps {
   projectSlug: string;
@@ -32,7 +32,8 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
     Location: '',
     Metadata1: '',
     Metadata2: '',
-    RelatedEmployeeIds: [] as string[]
+    RelatedEmployeeIds: [] as string[],
+    SubjectRelationships: [] as RelationshipTag[],
   });
 
   useEffect(() => {
@@ -73,7 +74,10 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
 
     try {
       // Convert camelCase form data to PascalCase for API
-      const submitData = {
+      const idsFromRelationships = formData.SubjectRelationships.map(r => r.employeeId);
+      const mergedRelated = Array.from(new Set([...(formData.RelatedEmployeeIds || []), ...idsFromRelationships]));
+
+      const baseData = {
         FirstName: formData.FirstName,
         LastName: formData.LastName,
         EvaluatorEmail: formData.EvaluatorEmail,
@@ -87,8 +91,18 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
         Location: formData.Location || undefined,
         Metadata1: formData.Metadata1 || undefined,
         Metadata2: formData.Metadata2 || undefined,
-        RelatedEmployeeIds: formData.RelatedEmployeeIds.length > 0 ? formData.RelatedEmployeeIds : undefined
+        RelatedEmployeeIds: mergedRelated.length > 0 ? mergedRelated : undefined,
       };
+
+      const submitData = formData.SubjectRelationships.length > 0
+        ? {
+            ...baseData,
+            SubjectRelationships: formData.SubjectRelationships.map(rel => ({
+              SubjectId: rel.employeeId,
+              Relationship: rel.relationship,
+            })),
+          }
+        : baseData;
 
       if (editingEvaluator) {
         // Update existing evaluator
@@ -118,7 +132,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
     }
   };
 
-  const handleEdit = (evaluator: EvaluatorListResponse) => {
+  const handleEdit = async (evaluator: EvaluatorListResponse) => {
     // Convert EvaluatorListResponse to Evaluator format for editing
     const evaluatorForEdit: Evaluator = {
       Id: evaluator.Id,
@@ -158,9 +172,26 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
       Location: evaluator.Location || '',
       Metadata1: '', // Not available in list response
       Metadata2: '', // Not available in list response
-      RelatedEmployeeIds: [] // Not available in list response
+      RelatedEmployeeIds: [],
+      SubjectRelationships: []
     });
     setShowAddForm(true);
+
+    // Preload existing subject relationships for this evaluator
+    try {
+      if (!token) return;
+      const detail = await evaluatorService.getEvaluatorById(projectSlug, evaluator.Id, token);
+      const assigned = detail.data?.AssignedSubjectIds || [];
+      if (assigned.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          RelatedEmployeeIds: assigned,
+          SubjectRelationships: assigned.map(id => ({ employeeId: id, relationship: 'peer' as const })),
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to preload evaluator relationships', err);
+    }
   };
 
   const handleDelete = async (evaluatorId: string) => {
@@ -196,7 +227,8 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
       Location: '',
       Metadata1: '',
       Metadata2: '',
-      RelatedEmployeeIds: []
+      RelatedEmployeeIds: [],
+      SubjectRelationships: []
     });
     setEditingEvaluator(null);
     setShowAddForm(false);
@@ -215,6 +247,31 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
         if (evaluators.length === 0) {
           toast.error('No valid evaluators found in CSV file');
           return;
+        }
+
+        // Client-side pre-validation of related subject IDs (across entire file)
+        const allSubjectIds = new Set<string>();
+        evaluators.forEach(ev => {
+          ev.RelatedEmployeeIds?.forEach(id => allSubjectIds.add(id));
+        });
+
+        if (allSubjectIds.size > 0) {
+          const validIds = await evaluatorService.validateSubjectIds(projectSlug, Array.from(allSubjectIds), token);
+          const validSet = new Set(validIds);
+          let filteredOut = 0;
+
+          evaluators.forEach(ev => {
+            if (ev.RelatedEmployeeIds) {
+              const before = ev.RelatedEmployeeIds.length;
+              const filtered = ev.RelatedEmployeeIds.filter(id => validSet.has(id));
+              filteredOut += before - filtered.length;
+              ev.RelatedEmployeeIds = filtered.length ? filtered : undefined;
+            }
+          });
+
+          if (filteredOut > 0) {
+            console.warn(`CSV pre-validation: filtered out ${filteredOut} invalid subject IDs`);
+          }
         }
 
         const response = await evaluatorService.bulkCreateEvaluators(projectSlug, { Evaluators: evaluators }, token);
@@ -436,18 +493,17 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
                 />
               </div>
 
-              {/* Related Subjects Section */}
+              {/* Related Subjects Section (with relationship types) */}
               <div className="md:col-span-2">
-                <TagInput
-                  label="Related Subjects (Employee IDs)"
-                  placeholder="Enter subject Employee ID(s), comma-separated..."
-                  tags={formData.RelatedEmployeeIds}
-                  onTagsChange={(tags) => setFormData(prev => ({ ...prev, RelatedEmployeeIds: tags }))}
+                <RelationshipTagInput
+                  label="Related Subjects (with Relationship)"
+                  placeholder="Enter subject Emp IDs (comma-separated), pick relationship"
+                  tags={formData.SubjectRelationships}
+                  onTagsChange={(tags: RelationshipTag[]) => setFormData(prev => ({ ...prev, SubjectRelationships: tags }))}
                   onValidate={async (employeeIds) => {
-                    if (!token) return [];
+                    if (!token) return [] as string[];
                     const idsArray = Array.isArray(employeeIds) ? employeeIds : [employeeIds];
-                    const validIds = await evaluatorService.validateSubjectIds(projectSlug, idsArray, token);
-                    return validIds;
+                    return await evaluatorService.validateSubjectIds(projectSlug, idsArray, token);
                   }}
                   className="mb-4"
                 />

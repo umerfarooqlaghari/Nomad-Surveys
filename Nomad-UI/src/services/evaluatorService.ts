@@ -75,6 +75,7 @@ export interface UpdateEvaluatorRequest {
   Metadata1?: string;
   Metadata2?: string;
   RelatedEmployeeIds?: string[];
+  SubjectRelationships?: { SubjectId: string; Relationship: string }[];
 }
 
 export interface BulkCreateEvaluatorsRequest {

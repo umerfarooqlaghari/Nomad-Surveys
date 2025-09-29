@@ -74,6 +74,10 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
     setIsLoading(true);
 
     try {
+      // Merge RelatedEmployeeIds from both simple list and relationship tags
+      const idsFromTags = formData.EvaluatorRelationships.map(r => r.employeeId);
+      const mergedRelated = Array.from(new Set([...(formData.RelatedEmployeeIds || []), ...idsFromTags]));
+
       // Convert camelCase form data to PascalCase for API
       const submitData = {
         FirstName: formData.FirstName,
@@ -90,7 +94,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
         Metadata1: formData.Metadata1 || undefined,
         Metadata2: formData.Metadata2 || undefined,
         AssignedEvaluatorIds: [],
-        RelatedEmployeeIds: formData.RelatedEmployeeIds.length > 0 ? formData.RelatedEmployeeIds : undefined,
+        // Update endpoint uses RelatedEmployeeIds (no types); include tags to ensure relationships are applied
+        RelatedEmployeeIds: mergedRelated.length > 0 ? mergedRelated : undefined,
         EvaluatorRelationships: formData.EvaluatorRelationships.length > 0
           ? formData.EvaluatorRelationships.map(rel => ({
               EvaluatorId: rel.employeeId,
@@ -127,7 +132,7 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
     }
   };
 
-  const handleEdit = (subject: SubjectListResponse) => {
+  const handleEdit = async (subject: SubjectListResponse) => {
     // Convert SubjectListResponse to Subject format for editing
     const subjectForEdit: Subject = {
       Id: subject.Id,
@@ -149,7 +154,6 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
       CreatedAt: subject.CreatedAt,
       UpdatedAt: undefined,
       TenantId: subject.TenantId,
-    
     };
 
     setEditingSubject(subjectForEdit);
@@ -167,10 +171,27 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
       Location: subject.Location || '',
       Metadata1: '', // Not available in list response
       Metadata2: '', // Not available in list response
-      RelatedEmployeeIds: [], // Not available in list response
-      EvaluatorRelationships: [] // TODO: Load existing relationships from backend
+      RelatedEmployeeIds: [],
+      EvaluatorRelationships: []
     });
     setShowAddForm(true);
+
+    // Preload existing evaluator relationships for this subject
+    try {
+      if (!token) return;
+      const detail = await subjectService.getSubjectById(projectSlug, subject.Id, token);
+      const assigned = detail.data?.AssignedEvaluatorIds || [];
+      if (assigned.length > 0) {
+        const prefilled = assigned.map(id => ({ employeeId: id, relationship: 'peer' as const }));
+        setFormData(prev => ({
+          ...prev,
+          RelatedEmployeeIds: assigned,
+          EvaluatorRelationships: prefilled,
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to preload subject relationships', err);
+    }
   };
 
   const handleDelete = async (subjectId: string) => {
@@ -226,6 +247,38 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
         if (subjects.length === 0) {
           toast.error('No valid subjects found in CSV file');
           return;
+        }
+
+        // Client-side pre-validation of related evaluator IDs (across entire file)
+        const allEvaluatorIds = new Set<string>();
+        subjects.forEach(s => {
+          s.RelatedEmployeeIds?.forEach(id => allEvaluatorIds.add(id));
+          s.EvaluatorRelationships?.forEach(rel => allEvaluatorIds.add(rel.EvaluatorId));
+        });
+
+        if (allEvaluatorIds.size > 0) {
+          const validIds = await subjectService.validateEvaluatorIds(projectSlug, Array.from(allEvaluatorIds), token);
+          const validSet = new Set(validIds);
+          let filteredOut = 0;
+
+          subjects.forEach(s => {
+            if (s.RelatedEmployeeIds) {
+              const before = s.RelatedEmployeeIds.length;
+              const filtered = s.RelatedEmployeeIds.filter(id => validSet.has(id));
+              filteredOut += before - filtered.length;
+              s.RelatedEmployeeIds = filtered.length ? filtered : undefined;
+            }
+            if (s.EvaluatorRelationships) {
+              const beforeR = s.EvaluatorRelationships.length;
+              const filteredR = s.EvaluatorRelationships.filter(rel => validSet.has(rel.EvaluatorId));
+              filteredOut += beforeR - filteredR.length;
+              s.EvaluatorRelationships = filteredR.length ? filteredR : undefined;
+            }
+          });
+
+          if (filteredOut > 0) {
+            console.warn(`CSV pre-validation: filtered out ${filteredOut} invalid evaluator IDs`);
+          }
         }
 
         const response = await subjectService.bulkCreateSubjects(projectSlug, { Subjects: subjects }, token);
