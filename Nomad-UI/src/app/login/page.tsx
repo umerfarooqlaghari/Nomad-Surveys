@@ -10,23 +10,36 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      // Redirect to appropriate dashboard based on role
-      const role = user.roles[0];
-      switch (role) {
-        case 'SuperAdmin':
-          router.push('/superadmin/dashboard');
-          break;
-        case 'TenantAdmin':
-          router.push('/admin/dashboard');
-          break;
-        case 'Participant':
-          router.push('/participant/dashboard');
-          break;
-        default:
-          break;
+    // Add a small delay to ensure state is properly set
+    const timer = setTimeout(() => {
+      if (isAuthenticated && user) {
+        // Handle both camelCase and PascalCase roles
+        const roles = user.roles || user.Roles || [];
+        if (roles.length > 0) {
+          // Redirect to appropriate dashboard based on role
+          const role = roles[0];
+          console.log('Login page redirect - User role:', role, 'User:', user);
+          switch (role) {
+            case 'SuperAdmin':
+              router.push('/superadmin/dashboard');
+              break;
+            case 'TenantAdmin':
+              router.push('/admin/dashboard');
+              break;
+            case 'Participant':
+              router.push('/participant/dashboard');
+              break;
+            default:
+              console.warn('Unknown role:', role);
+              break;
+          }
+        } else {
+          console.warn('User has no roles:', user);
+        }
       }
-    }
+    }, 100); // Small delay to ensure state is set
+
+    return () => clearTimeout(timer);
   }, [isAuthenticated, user, router]);
 
   if (isAuthenticated) {

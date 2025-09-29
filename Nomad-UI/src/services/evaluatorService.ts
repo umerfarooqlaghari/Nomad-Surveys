@@ -75,15 +75,37 @@ export interface UpdateEvaluatorRequest {
   Metadata1?: string;
   Metadata2?: string;
   RelatedEmployeeIds?: string[];
+  SubjectRelationships?: { SubjectId: string; Relationship: string }[];
 }
 
 export interface BulkCreateEvaluatorsRequest {
   Evaluators: CreateEvaluatorRequest[];
 }
 
+export interface ValidationResult {
+  EmployeeId: string;
+  IsValid: boolean;
+  Message?: string;
+  Data?: {
+    Id: string;
+    EmployeeId: string;
+    FullName: string;
+    Email: string;
+    IsActive: boolean;
+  };
+}
+
+export interface ValidationResponse {
+  Results: ValidationResult[];
+  TotalRequested: number;
+  ValidCount: number;
+  InvalidCount: number;
+}
+
 export interface BulkCreateResponse {
   TotalRequested: number;
   SuccessfullyCreated: number;
+  UpdatedCount: number;
   Failed: number;
   Errors: string[];
   CreatedIds: string[];
@@ -265,12 +287,60 @@ class EvaluatorService {
   /**
    * Validate subject EmployeeIds for relationship creation
    */
-  async validateSubjectIds(tenantSlug: string, employeeIds: string[]): Promise<string[]> {
+  async validateSubjectIds(tenantSlug: string, employeeIds: string[], token: string): Promise<string[]> {
     try {
-      const response = await apiClient.post(`/${tenantSlug}/api/evaluators/validate-subject-ids`, employeeIds);
-      const result = handleApiResponse<string[]>(response as any);
-      return result.data || [];
-    } catch (error) {
+      const response = await apiClient.post(`/${tenantSlug}/evaluators/validate-subject-ids`, employeeIds, token);
+      console.log('Raw evaluator API response:', response);
+
+      // Handle different response formats based on status code
+      if (response.status === 200) {
+        // Single valid ID - response.data contains subject info
+        console.log('Single evaluator ID validation - returning first ID');
+        return [employeeIds[0]];
+      } else if (response.status === 207) {
+        // Multiple IDs - response.data contains ValidationResponse
+        const apiResponse = response.data as any;
+        console.log('Multi-status evaluator response received:', apiResponse);
+
+        // Extract valid Employee IDs from the response
+        const validEmployeeIds: string[] = [];
+
+        if (apiResponse && apiResponse.Results && Array.isArray(apiResponse.Results)) {
+          console.log(`Processing ${apiResponse.Results.length} evaluator results...`);
+
+          for (let i = 0; i < apiResponse.Results.length; i++) {
+            const result = apiResponse.Results[i];
+            console.log(`Evaluator Result ${i}:`, {
+              EmployeeId: result.EmployeeId,
+              IsValid: result.IsValid,
+              Message: result.Message
+            });
+
+            // Check if this result is valid
+            if (result.IsValid === true) {
+              console.log(`✓ ${result.EmployeeId} is valid - adding to evaluator array`);
+              validEmployeeIds.push(result.EmployeeId);
+            } else {
+              console.log(`✗ ${result.EmployeeId} is invalid - skipping`);
+            }
+          }
+        } else {
+          console.error('Invalid evaluator response structure:', apiResponse);
+        }
+
+        console.log('Final valid evaluator Employee IDs array:', validEmployeeIds);
+        return validEmployeeIds;
+      } else {
+        // 404 or other error - no valid IDs
+        console.log(`Unexpected evaluator status code: ${response.status}`);
+        return [];
+      }
+    } catch (error: any) {
+      // Handle 404 Not Found for single invalid ID
+      if (error.response?.status === 404) {
+        console.log('404 evaluator error - no valid IDs');
+        return [];
+      }
       console.error('Error validating subject EmployeeIds:', error);
       return [];
     }

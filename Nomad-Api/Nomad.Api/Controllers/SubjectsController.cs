@@ -106,8 +106,11 @@ public class SubjectsController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("Received bulk create subjects request with {Count} subjects", request?.Subjects?.Count ?? 0);
+
             if (!ModelState.IsValid)
             {
+                _logger.LogWarning("Model state is invalid: {@ModelState}", ModelState);
                 return BadRequest(ModelState);
             }
 
@@ -118,11 +121,12 @@ public class SubjectsController : ControllerBase
             }
 
             var result = await _subjectService.BulkCreateSubjectsAsync(request, currentTenantId.Value);
-            
-            _logger.LogInformation("Bulk created {SuccessCount}/{TotalCount} subjects for tenant {TenantId}", 
-                result.SuccessfullyCreated, result.TotalRequested, currentTenantId);
 
-            if (result.SuccessfullyCreated == 0)
+            var totalProcessed = result.SuccessfullyCreated + result.UpdatedCount;
+            _logger.LogInformation("Bulk processed {TotalProcessed}/{TotalRequested} subjects for tenant {TenantId}: {Created} created, {Updated} updated, {Failed} failed",
+                totalProcessed, result.TotalRequested, currentTenantId, result.SuccessfullyCreated, result.UpdatedCount, result.Failed);
+
+            if (totalProcessed == 0)
             {
                 return BadRequest(result);
             }
@@ -134,10 +138,20 @@ public class SubjectsController : ControllerBase
 
             return CreatedAtAction(nameof(GetSubjects), new { tenantId = currentTenantId }, result);
         }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid argument for bulk creating subjects");
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation for bulk creating subjects");
+            return BadRequest(new { message = ex.Message });
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error bulk creating subjects");
-            return StatusCode(500, new { message = "An error occurred while creating subjects" });
+            _logger.LogError(ex, "Error bulk creating subjects. Request: {@Request}", request);
+            return StatusCode(500, new { message = "An error occurred while creating subjects", details = ex.Message });
         }
     }
 
@@ -240,9 +254,9 @@ public class SubjectsController : ControllerBase
     /// Validate evaluator EmployeeIds for relationship creation
     /// </summary>
     /// <param name="employeeIds">List of evaluator EmployeeIds to validate</param>
-    /// <returns>List of valid EmployeeIds</returns>
+    /// <returns>Detailed validation response with evaluator information</returns>
     [HttpPost("validate-evaluator-ids")]
-    public async Task<ActionResult<List<string>>> ValidateEvaluatorIds([FromBody] List<string> employeeIds)
+    public async Task<ActionResult> ValidateEvaluatorIds([FromBody] List<string> employeeIds)
     {
         try
         {
@@ -252,8 +266,30 @@ public class SubjectsController : ControllerBase
                 return BadRequest(new { message = "Tenant not found" });
             }
 
-            var validIds = await _relationshipService.ValidateEmployeeIdsAsync(employeeIds, tenantId.Value, isEvaluator: true);
-            return Ok(validIds);
+            var validationResponse = await _relationshipService.ValidateEmployeeIdsDetailedAsync(employeeIds, tenantId.Value, isEvaluator: true);
+
+            // Handle different response scenarios
+            if (validationResponse.TotalRequested == 1)
+            {
+                var result = validationResponse.Results.First();
+                if (result.IsValid)
+                {
+                    return Ok(result.Data);
+                }
+                else
+                {
+                    return NotFound(new { message = result.Message });
+                }
+            }
+            else if (validationResponse.TotalRequested > 1)
+            {
+                // Multiple IDs - return 207 Multi-Status
+                return StatusCode(207, validationResponse);
+            }
+            else
+            {
+                return BadRequest(new { message = "No employee IDs provided" });
+            }
         }
         catch (Exception ex)
         {

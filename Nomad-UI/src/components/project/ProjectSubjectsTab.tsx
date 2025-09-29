@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { subjectService, Subject, SubjectListResponse } from '@/services/subjectService';
-import TagInput from '@/components/common/TagInput';
+import { subjectService, Subject, SubjectListResponse, EvaluatorRelationship } from '@/services/subjectService';
+import RelationshipTagInput, { RelationshipTag } from '@/components/common/RelationshipTagInput';
 
 interface ProjectSubjectsTabProps {
   projectSlug: string;
@@ -19,20 +19,21 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    employeeId: '',
-    companyName: '',
-    gender: '',
-    businessUnit: '',
-    grade: '',
-    designation: '',
-    tenure: '',
-    location: '',
-    metadata1: '',
-    metadata2: '',
-    relatedEmployeeIds: [] as string[]
+    FirstName: '',
+    LastName: '',
+    Email: '',
+    EmployeeId: '',
+    CompanyName: '',
+    Gender: '',
+    BusinessUnit: '',
+    Grade: '',
+    Designation: '',
+    Tenure: '',
+    Location: '',
+    Metadata1: '',
+    Metadata2: '',
+    RelatedEmployeeIds: [] as string[],
+    EvaluatorRelationships: [] as RelationshipTag[]
   });
 
   useEffect(() => {
@@ -45,6 +46,7 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
     setIsLoading(true);
     try {
       const response = await subjectService.getSubjects(projectSlug, token);
+
       if (response.error) {
         setSubjects([]);
         toast.error(response.error);
@@ -72,22 +74,34 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
     setIsLoading(true);
 
     try {
+      // Merge RelatedEmployeeIds from both simple list and relationship tags
+      const idsFromTags = formData.EvaluatorRelationships.map(r => r.employeeId);
+      const mergedRelated = Array.from(new Set([...(formData.RelatedEmployeeIds || []), ...idsFromTags]));
+
       // Convert camelCase form data to PascalCase for API
       const submitData = {
-        FirstName: formData.firstName,
-        LastName: formData.lastName,
-        Email: formData.email,
-        EmployeeId: formData.employeeId,
-        CompanyName: formData.companyName || undefined,
-        Gender: formData.gender || undefined,
-        BusinessUnit: formData.businessUnit || undefined,
-        Grade: formData.grade || undefined,
-        Designation: formData.designation || undefined,
-        Tenure: formData.tenure ? parseInt(formData.tenure) : undefined,
-        Location: formData.location || undefined,
-        Metadata1: formData.metadata1 || undefined,
-        Metadata2: formData.metadata2 || undefined,
-        RelatedEmployeeIds: formData.relatedEmployeeIds.length > 0 ? formData.relatedEmployeeIds : undefined
+        FirstName: formData.FirstName,
+        LastName: formData.LastName,
+        Email: formData.Email,
+        EmployeeId: formData.EmployeeId,
+        CompanyName: formData.CompanyName || undefined,
+        Gender: formData.Gender || undefined,
+        BusinessUnit: formData.BusinessUnit || undefined,
+        Grade: formData.Grade || undefined,
+        Designation: formData.Designation || undefined,
+        Tenure: formData.Tenure ? parseInt(formData.Tenure) : undefined,
+        Location: formData.Location || undefined,
+        Metadata1: formData.Metadata1 || undefined,
+        Metadata2: formData.Metadata2 || undefined,
+        AssignedEvaluatorIds: [],
+        // Update endpoint uses RelatedEmployeeIds (no types); include tags to ensure relationships are applied
+        RelatedEmployeeIds: mergedRelated.length > 0 ? mergedRelated : undefined,
+        EvaluatorRelationships: formData.EvaluatorRelationships.length > 0
+          ? formData.EvaluatorRelationships.map(rel => ({
+              EvaluatorId: rel.employeeId,
+              Relationship: rel.relationship
+            }))
+          : undefined
       };
 
       if (editingSubject) {
@@ -118,25 +132,66 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
     }
   };
 
-  const handleEdit = (subject: Subject) => {
-    setEditingSubject(subject);
+  const handleEdit = async (subject: SubjectListResponse) => {
+    // Convert SubjectListResponse to Subject format for editing
+    const subjectForEdit: Subject = {
+      Id: subject.Id,
+      FirstName: subject.FirstName,
+      LastName: subject.LastName,
+      FullName: subject.FullName,
+      Email: subject.Email,
+      EmployeeId: subject.EmployeeId,
+      CompanyName: subject.CompanyName,
+      Gender: '', // Not available in list response
+      BusinessUnit: '', // Not available in list response
+      Grade: '', // Not available in list response
+      Designation: subject.Designation,
+      Tenure: undefined, // Not available in list response
+      Location: subject.Location,
+      Metadata1: '', // Not available in list response
+      Metadata2: '', // Not available in list response
+      IsActive: subject.IsActive,
+      CreatedAt: subject.CreatedAt,
+      UpdatedAt: undefined,
+      TenantId: subject.TenantId,
+    };
+
+    setEditingSubject(subjectForEdit);
     setFormData({
-      firstName: subject.FirstName || '',
-      lastName: subject.LastName || '',
-      email: subject.Email || '',
-      employeeId: subject.EmployeeId || '',
-      companyName: subject.CompanyName || '',
-      gender: subject.Gender || '',
-      businessUnit: subject.BusinessUnit || '',
-      grade: subject.Grade || '',
-      designation: subject.Designation || '',
-      tenure: subject.Tenure?.toString() || '',
-      location: subject.Location || '',
-      metadata1: subject.Metadata1 || '',
-      metadata2: subject.Metadata2 || '',
-      relatedEmployeeIds: subject.AssignedEvaluatorIds || []
+      FirstName: subject.FirstName || '',
+      LastName: subject.LastName || '',
+      Email: subject.Email || '',
+      EmployeeId: subject.EmployeeId || '',
+      CompanyName: subject.CompanyName || '',
+      Gender: '', // Not available in list response
+      BusinessUnit: '', // Not available in list response
+      Grade: '', // Not available in list response
+      Designation: subject.Designation || '',
+      Tenure: '', // Not available in list response
+      Location: subject.Location || '',
+      Metadata1: '', // Not available in list response
+      Metadata2: '', // Not available in list response
+      RelatedEmployeeIds: [],
+      EvaluatorRelationships: []
     });
     setShowAddForm(true);
+
+    // Preload existing evaluator relationships for this subject
+    try {
+      if (!token) return;
+      const detail = await subjectService.getSubjectById(projectSlug, subject.Id, token);
+      const assigned = detail.data?.AssignedEvaluatorIds || [];
+      if (assigned.length > 0) {
+        const prefilled = assigned.map(id => ({ employeeId: id, relationship: 'peer' as const }));
+        setFormData(prev => ({
+          ...prev,
+          RelatedEmployeeIds: assigned,
+          EvaluatorRelationships: prefilled,
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to preload subject relationships', err);
+    }
   };
 
   const handleDelete = async (subjectId: string) => {
@@ -159,20 +214,21 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
 
   const resetForm = () => {
     setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      employeeId: '',
-      companyName: '',
-      gender: '',
-      businessUnit: '',
-      grade: '',
-      designation: '',
-      tenure: '',
-      location: '',
-      metadata1: '',
-      metadata2: '',
-      relatedEmployeeIds: []
+      FirstName: '',
+      LastName: '',
+      Email: '',
+      EmployeeId: '',
+      CompanyName: '',
+      Gender: '',
+      BusinessUnit: '',
+      Grade: '',
+      Designation: '',
+      Tenure: '',
+      Location: '',
+      Metadata1: '',
+      Metadata2: '',
+      RelatedEmployeeIds: [],
+      EvaluatorRelationships: [],
     });
     setEditingSubject(null);
     setShowAddForm(false);
@@ -191,6 +247,38 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
         if (subjects.length === 0) {
           toast.error('No valid subjects found in CSV file');
           return;
+        }
+
+        // Client-side pre-validation of related evaluator IDs (across entire file)
+        const allEvaluatorIds = new Set<string>();
+        subjects.forEach(s => {
+          s.RelatedEmployeeIds?.forEach(id => allEvaluatorIds.add(id));
+          s.EvaluatorRelationships?.forEach(rel => allEvaluatorIds.add(rel.EvaluatorId));
+        });
+
+        if (allEvaluatorIds.size > 0) {
+          const validIds = await subjectService.validateEvaluatorIds(projectSlug, Array.from(allEvaluatorIds), token);
+          const validSet = new Set(validIds);
+          let filteredOut = 0;
+
+          subjects.forEach(s => {
+            if (s.RelatedEmployeeIds) {
+              const before = s.RelatedEmployeeIds.length;
+              const filtered = s.RelatedEmployeeIds.filter(id => validSet.has(id));
+              filteredOut += before - filtered.length;
+              s.RelatedEmployeeIds = filtered.length ? filtered : undefined;
+            }
+            if (s.EvaluatorRelationships) {
+              const beforeR = s.EvaluatorRelationships.length;
+              const filteredR = s.EvaluatorRelationships.filter(rel => validSet.has(rel.EvaluatorId));
+              filteredOut += beforeR - filteredR.length;
+              s.EvaluatorRelationships = filteredR.length ? filteredR : undefined;
+            }
+          });
+
+          if (filteredOut > 0) {
+            console.warn(`CSV pre-validation: filtered out ${filteredOut} invalid evaluator IDs`);
+          }
         }
 
         const response = await subjectService.bulkCreateSubjects(projectSlug, { Subjects: subjects }, token);
@@ -280,8 +368,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">First Name</label>
                 <input
                   type="text"
-                  name="firstName"
-                  value={formData.firstName}
+                  name="FirstName"
+                  value={formData.FirstName}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -291,8 +379,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Last Name</label>
                 <input
                   type="text"
-                  name="lastName"
-                  value={formData.lastName}
+                  name="LastName"
+                  value={formData.LastName}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -302,8 +390,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Email</label>
                 <input
                   type="email"
-                  name="email"
-                  value={formData.email}
+                  name="Email"
+                  value={formData.Email}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -313,8 +401,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Employee ID</label>
                 <input
                   type="text"
-                  name="employeeId"
-                  value={formData.employeeId}
+                  name="EmployeeId"
+                  value={formData.EmployeeId}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   required
@@ -325,8 +413,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Company Name</label>
                 <input
                   type="text"
-                  name="companyName"
-                  value={formData.companyName}
+                  name="CompanyName"
+                  value={formData.CompanyName}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -335,7 +423,7 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Gender</label>
                 <select
                   name="gender"
-                  value={formData.gender}
+                  value={formData.Gender}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 >
@@ -349,8 +437,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Business Unit</label>
                 <input
                   type="text"
-                  name="businessUnit"
-                  value={formData.businessUnit}
+                  name="BusinessUnit"
+                  value={formData.BusinessUnit}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -359,8 +447,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Grade</label>
                 <input
                   type="text"
-                  name="grade"
-                  value={formData.grade}
+                  name="Grade"
+                  value={formData.Grade}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -369,8 +457,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Designation</label>
                 <input
                   type="text"
-                  name="designation"
-                  value={formData.designation}
+                  name="Designation"
+                  value={formData.Designation}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -379,8 +467,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Tenure (Years)</label>
                 <input
                   type="number"
-                  name="tenure"
-                  value={formData.tenure}
+                  name="Tenure"
+                  value={formData.Tenure}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                   min="0"
@@ -391,8 +479,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Location</label>
                 <input
                   type="text"
-                  name="location"
-                  value={formData.location}
+                  name="Location"
+                  value={formData.Location}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -401,8 +489,8 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Metadata 1</label>
                 <input
                   type="text"
-                  name="metadata1"
-                  value={formData.metadata1}
+                  name="Metadata1"
+                  value={formData.Metadata1}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
@@ -411,24 +499,28 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
                 <label className="block text-sm font-medium text-gray-900">Metadata 2</label>
                 <input
                   type="text"
-                  name="metadata2"
-                  value={formData.metadata2}
+                  name="Metadata2"
+                  value={formData.Metadata2}
                   onChange={handleInputChange}
                   className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
-              {/* Related Evaluators Section */}
+              {/* Enhanced Evaluator Relationships Section */}
               <div className="md:col-span-2">
-                <TagInput
-                  label="Related Evaluators (Employee IDs)"
-                  placeholder="Enter evaluator Employee ID and press Enter..."
-                  tags={formData.relatedEmployeeIds}
-                  onTagsChange={(tags) => setFormData(prev => ({ ...prev, relatedEmployeeIds: tags }))}
-                  onValidate={async (employeeId) => {
-                    const validIds = await subjectService.validateEvaluatorIds(projectSlug, [employeeId]);
-                    return validIds.includes(employeeId);
+                <RelationshipTagInput
+                  label="Evaluator Relationships"
+                  placeholder="Enter evaluator Employee ID(s), comma-separated..."
+                  tags={formData.EvaluatorRelationships}
+                  onTagsChange={(tags) => setFormData(prev => ({ ...prev, EvaluatorRelationships: tags }))}
+                  onValidate={async (employeeIds) => {
+                    if (!token) return [];
+                    const idsArray = Array.isArray(employeeIds) ? employeeIds : [employeeIds];
+                    const validIds = await subjectService.validateEvaluatorIds(projectSlug, idsArray, token);
+                    console.log('Valid IDs:', validIds);
+                    return validIds;
                   }}
+                  relationshipOptions={['manager', 'peer', 'subordinate', 'lead', 'trainee', 'mentor', 'other']}
                   className="mb-4"
                 />
               </div>

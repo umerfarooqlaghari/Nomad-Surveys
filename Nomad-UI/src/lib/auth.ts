@@ -59,7 +59,13 @@ export class AuthService {
   static getUser(): any | null {
     if (typeof window === 'undefined') return null;
     const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
+    if (!user || user === 'undefined' || user === 'null') return null;
+    try {
+      return JSON.parse(user);
+    } catch (error) {
+      console.warn('Failed to parse user from localStorage:', error);
+      return null;
+    }
   }
 
   static setTenant(tenant: any): void {
@@ -69,10 +75,17 @@ export class AuthService {
   static getTenant(): any | null {
     if (typeof window === 'undefined') return null;
     const tenant = localStorage.getItem('tenant');
-    return tenant ? JSON.parse(tenant) : null;
+    if (!tenant || tenant === 'undefined' || tenant === 'null') return null;
+    try {
+      return JSON.parse(tenant);
+    } catch (error) {
+      console.warn('Failed to parse tenant from localStorage:', error);
+      return null;
+    }
   }
 
   static clearAuth(): void {
+    if (typeof window === 'undefined') return;
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
     localStorage.removeItem('tenant');
@@ -80,10 +93,29 @@ export class AuthService {
     localStorage.removeItem('tokenExpiry');
   }
 
+  static validateAndCleanAuth(): void {
+    if (typeof window === 'undefined') return;
+
+    // Check and clean corrupted localStorage values
+    const items = ['user', 'tenant', 'tokenExpiry'];
+    items.forEach(item => {
+      const value = localStorage.getItem(item);
+      if (value === 'undefined' || value === 'null') {
+        localStorage.removeItem(item);
+      }
+    });
+  }
+
   static isTokenExpired(): boolean {
+    if (typeof window === 'undefined') return true;
     const expiry = localStorage.getItem('tokenExpiry');
-    if (!expiry) return true;
-    return new Date().getTime() > parseInt(expiry);
+    if (!expiry || expiry === 'undefined' || expiry === 'null') return true;
+    try {
+      return new Date().getTime() > parseInt(expiry);
+    } catch (error) {
+      console.warn('Failed to parse token expiry:', error);
+      return true;
+    }
   }
 
   static setTokenExpiry(expiresAt: string): void {
@@ -93,11 +125,14 @@ export class AuthService {
 
   static getUserRole(): string | null {
     const user = this.getUser();
-    return user?.roles?.[0] || null;
+    // Handle both camelCase and PascalCase
+    const roles = user?.roles || user?.Roles || [];
+    return roles[0] || null;
   }
 
-  static getDashboardRoute(): string {
-    const role = this.getUserRole();
+  static getDashboardRoute(user?: any): string {
+    // Accept user as parameter to avoid localStorage race conditions
+    const role = user?.roles?.[0] || this.getUserRole();
     switch (role) {
       case 'SuperAdmin':
         return '/superadmin/dashboard';

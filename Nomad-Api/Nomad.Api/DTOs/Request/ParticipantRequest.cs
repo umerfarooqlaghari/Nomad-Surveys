@@ -2,6 +2,44 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Nomad.Api.DTOs.Request;
 
+public class ValidationResult
+{
+    public string EmployeeId { get; set; } = string.Empty;
+    public bool IsValid { get; set; }
+    public string? Message { get; set; }
+    public object? Data { get; set; }
+}
+
+public class ValidationResponse
+{
+    public List<ValidationResult> Results { get; set; } = new();
+    public int TotalRequested { get; set; }
+    public int ValidCount { get; set; }
+    public int InvalidCount { get; set; }
+}
+
+public class EvaluatorRelationship
+{
+    [Required]
+    [StringLength(50, MinimumLength = 1)]
+    public string EvaluatorId { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(50, MinimumLength = 1)]
+    public string Relationship { get; set; } = string.Empty;
+}
+
+public class SubjectRelationship
+{
+    [Required]
+    [StringLength(50, MinimumLength = 1)]
+    public string SubjectId { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(50, MinimumLength = 1)]
+    public string Relationship { get; set; } = string.Empty;
+}
+
 public class CreateSubjectRequest
 {
     [Required]
@@ -52,6 +90,9 @@ public class CreateSubjectRequest
 
     // Related connections
     public List<string>? RelatedEmployeeIds { get; set; }
+
+    // Enhanced relationship support with types
+    public List<EvaluatorRelationship>? EvaluatorRelationships { get; set; }
 }
 
 public class UpdateSubjectRequest
@@ -104,6 +145,9 @@ public class UpdateSubjectRequest
 
     // Related connections
     public List<string>? RelatedEmployeeIds { get; set; }
+
+    // Enhanced relationship support with types
+    public List<EvaluatorRelationship>? EvaluatorRelationships { get; set; }
 }
 
 public class BulkCreateSubjectsRequest
@@ -163,6 +207,9 @@ public class CreateEvaluatorRequest
 
     // Related connections
     public List<string>? RelatedEmployeeIds { get; set; }
+
+    // Enhanced relationship support with types
+    public List<SubjectRelationship>? SubjectRelationships { get; set; }
 }
 
 public class UpdateEvaluatorRequest
@@ -215,6 +262,9 @@ public class UpdateEvaluatorRequest
 
     // Related connections
     public List<string>? RelatedEmployeeIds { get; set; }
+
+    // Enhanced relationship support with types
+    public List<SubjectRelationship>? SubjectRelationships { get; set; }
 }
 
 public class BulkCreateEvaluatorsRequest

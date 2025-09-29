@@ -1,20 +1,37 @@
 export interface User {
-  id: string;
-  userName: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  fullName: string;
-  isActive: boolean;
-  emailConfirmed: boolean;
+  // Support both camelCase and PascalCase for compatibility
+  id?: string;
+  Id?: string;
+  userName?: string;
+  UserName?: string;
+  email?: string;
+  Email?: string;
+  firstName?: string;
+  FirstName?: string;
+  lastName?: string;
+  LastName?: string;
+  fullName?: string;
+  FullName?: string;
+  isActive?: boolean;
+  IsActive?: boolean;
+  emailConfirmed?: boolean;
+  EmailConfirmed?: boolean;
   phoneNumber?: string;
-  createdAt: string;
+  PhoneNumber?: string;
+  createdAt?: string;
+  CreatedAt?: string;
   updatedAt?: string;
+  UpdatedAt?: string;
   lastLoginAt?: string;
+  LastLoginAt?: string;
   tenantId?: string;
-  roles: string[];
-  permissions: string[];
+  TenantId?: string;
+  roles?: string[];
+  Roles?: string[];
+  permissions?: string[];
+  Permissions?: string[];
   tenant?: Tenant;
+  Tenant?: Tenant;
 }
 
 export interface Tenant {
@@ -41,11 +58,17 @@ export interface SuperAdminLoginRequest {
 }
 
 export interface LoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: string;
-  user: User;
+  // Support both camelCase and PascalCase for compatibility
+  accessToken?: string;
+  AccessToken?: string;
+  refreshToken?: string;
+  RefreshToken?: string;
+  expiresAt?: string;
+  ExpiresAt?: string;
+  user?: User;
+  User?: User;
   tenant?: Tenant;
+  Tenant?: Tenant;
 }
 
 export interface AuthContextType {

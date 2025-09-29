@@ -481,22 +481,22 @@ export default function CompaniesTab() {
                           <div className={styles.logoPlaceholder}>LOGO</div>
                         </div>
                         <div className={styles.companyDetails}>
-                          <div className={styles.companyName}>{tenant.companyName || tenant.name}</div>
-                          <div className={styles.companySlug}>{tenant.name}</div>
+                          <div className={styles.companyName}>{tenant.CompanyName || tenant.Name}</div>
+                          <div className={styles.companySlug}>{tenant.Name}</div>
                         </div>
                       </div>
                     </td>
-                    <td className={styles.tableCell}>{tenant.slug}</td>
-                    <td className={styles.tableCell}>{tenant.userCount}</td>
+                    <td className={styles.tableCell}>{tenant.Slug}</td>
+                    <td className={styles.tableCell}>{tenant.UserCount}</td>
                     <td className={styles.tableCell}>
                       <span className={`${styles.statusBadge} ${
-                        tenant.isActive ? styles.statusActive : styles.statusInactive
+                        tenant.IsActive ? styles.statusActive : styles.statusInactive
                       }`}>
-                        {tenant.isActive ? 'Active' : 'Inactive'}
+                        {tenant.IsActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className={styles.tableCell}>
-                      {new Date(tenant.createdAt).toLocaleDateString()}
+                      {new Date(tenant.CreatedAt).toLocaleDateString()}
                     </td>
                     <td className={styles.tableCell}>
                       <div className={styles.actionButtons}>

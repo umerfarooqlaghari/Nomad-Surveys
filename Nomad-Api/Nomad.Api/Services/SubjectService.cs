@@ -57,7 +57,7 @@ public class SubjectService : ISubjectService
                 LastName = s.LastName,
                 FullName = s.FullName,
                 Email = s.Email,
-
+                EmployeeId = s.EmployeeId,
                 CompanyName = s.CompanyName,
                 Designation = s.Designation,
                 Location = s.Location,
@@ -134,31 +134,126 @@ public class SubjectService : ISubjectService
         try
         {
             var subjectsToCreate = new List<Subject>();
+            var subjectsToUpdate = new List<(Subject ExistingSubject, CreateSubjectRequest UpdateRequest)>();
             var errors = new List<string>();
 
-            // Validate all subjects first
+            _logger.LogInformation("Processing {Count} subjects for bulk create/update", request.Subjects.Count);
+
+            // Get all existing subjects by EmployeeId in this tenant
+            var requestedEmployeeIds = request.Subjects.Select(s => s.EmployeeId).ToList();
+            var existingSubjects = await _context.Subjects
+                .Where(s => requestedEmployeeIds.Contains(s.EmployeeId) && s.TenantId == tenantId)
+                .ToListAsync();
+
+            var existingEmployeeIds = existingSubjects.Select(s => s.EmployeeId).ToHashSet();
+
+            _logger.LogInformation("Found {ExistingCount} existing subjects out of {RequestedCount} requested",
+                existingSubjects.Count, request.Subjects.Count);
+
+            // Separate new subjects from updates
             for (int i = 0; i < request.Subjects.Count; i++)
             {
                 var subjectRequest = request.Subjects[i];
                 var validationErrors = await ValidateSubjectAsync(subjectRequest, tenantId, null);
-                
+
                 if (validationErrors.Any())
                 {
                     errors.AddRange(validationErrors.Select(e => $"Subject {i + 1}: {e}"));
                     continue;
                 }
 
-                var subject = _mapper.Map<Subject>(subjectRequest);
-                subject.Id = Guid.NewGuid();
-                subject.TenantId = tenantId;
-                subject.PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword);
-                subject.CreatedAt = DateTime.UtcNow;
-                subject.IsActive = true;
+                if (existingEmployeeIds.Contains(subjectRequest.EmployeeId))
+                {
+                    // This is an update
+                    var existingSubject = existingSubjects.First(s => s.EmployeeId == subjectRequest.EmployeeId);
+                    subjectsToUpdate.Add((existingSubject, subjectRequest));
+                    _logger.LogInformation("Subject {EmployeeId} exists - will update", subjectRequest.EmployeeId);
+                }
+                else
+                {
+                    // This is a new subject
+                    var subject = _mapper.Map<Subject>(subjectRequest);
+                    subject.Id = Guid.NewGuid();
+                    subject.TenantId = tenantId;
+                    subject.PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword);
+                    subject.CreatedAt = DateTime.UtcNow;
+                    subject.IsActive = true;
 
-                subjectsToCreate.Add(subject);
+                    subjectsToCreate.Add(subject);
+                    _logger.LogInformation("Subject {EmployeeId} is new - will create", subjectRequest.EmployeeId);
+                }
             }
 
-            // Create ApplicationUser accounts and subjects
+            // Update existing subjects
+            foreach (var (existingSubject, updateRequest) in subjectsToUpdate)
+            {
+                _logger.LogInformation("Updating existing subject {EmployeeId} (ID: {SubjectId})",
+                    existingSubject.EmployeeId, existingSubject.Id);
+
+                // Update basic fields
+                existingSubject.FirstName = updateRequest.FirstName;
+                existingSubject.LastName = updateRequest.LastName;
+                existingSubject.Email = updateRequest.Email;
+                existingSubject.CompanyName = updateRequest.CompanyName;
+                existingSubject.Gender = updateRequest.Gender;
+                existingSubject.BusinessUnit = updateRequest.BusinessUnit;
+                existingSubject.Grade = updateRequest.Grade;
+                existingSubject.Designation = updateRequest.Designation;
+                existingSubject.Tenure = updateRequest.Tenure;
+                existingSubject.Location = updateRequest.Location;
+                existingSubject.Metadata1 = updateRequest.Metadata1;
+                existingSubject.Metadata2 = updateRequest.Metadata2;
+                existingSubject.UpdatedAt = DateTime.UtcNow;
+
+                _context.Subjects.Update(existingSubject);
+                response.UpdatedCount++;
+
+                // Handle relationship merging for updated subjects
+                try
+                {
+                    if (updateRequest.EvaluatorRelationships != null && updateRequest.EvaluatorRelationships.Any())
+                    {
+                        _logger.LogInformation("Merging enhanced relationships for existing subject {SubjectId}", existingSubject.Id);
+
+                        var evaluatorRelationships = updateRequest.EvaluatorRelationships
+                            .Select(er => (er.EvaluatorId, er.Relationship))
+                            .ToList();
+
+                        var relationshipResult = await _relationshipService.MergeSubjectEvaluatorRelationshipsWithTypesAsync(
+                            existingSubject.Id, evaluatorRelationships, tenantId);
+
+                        _logger.LogInformation("Enhanced relationship merge result for subject {SubjectId}: {SuccessfulConnections} successful, {FailedCount} failed",
+                            existingSubject.Id, relationshipResult.SuccessfulConnections, relationshipResult.FailedEmployeeIds.Count);
+
+                        if (relationshipResult.Warnings.Any())
+                        {
+                            errors.AddRange(relationshipResult.Warnings.Select(w => $"Subject {existingSubject.EmployeeId}: {w}"));
+                        }
+                    }
+                    else if (updateRequest.RelatedEmployeeIds != null && updateRequest.RelatedEmployeeIds.Any())
+                    {
+                        _logger.LogInformation("Merging simple relationships for existing subject {SubjectId}", existingSubject.Id);
+
+                        var relationshipResult = await _relationshipService.MergeSubjectEvaluatorRelationshipsAsync(
+                            existingSubject.Id, updateRequest.RelatedEmployeeIds, tenantId);
+
+                        _logger.LogInformation("Simple relationship merge result for subject {SubjectId}: {SuccessfulConnections} successful, {FailedCount} failed",
+                            existingSubject.Id, relationshipResult.SuccessfulConnections, relationshipResult.FailedEmployeeIds.Count);
+
+                        if (relationshipResult.Warnings.Any())
+                        {
+                            errors.AddRange(relationshipResult.Warnings.Select(w => $"Subject {existingSubject.EmployeeId}: {w}"));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to merge relationships for existing subject {SubjectId}", existingSubject.Id);
+                    errors.Add($"Subject {existingSubject.EmployeeId}: Failed to merge relationships - {ex.Message}");
+                }
+            }
+
+            // Create new subjects and ApplicationUser accounts
             if (subjectsToCreate.Count > 0)
             {
                 var createdUserIds = new List<Guid>();
@@ -208,17 +303,35 @@ public class SubjectService : ISubjectService
                         var subject = subjectsToCreate[i];
                         var originalRequest = request.Subjects.FirstOrDefault(r => r.EmployeeId == subject.EmployeeId);
 
-                        if (originalRequest?.RelatedEmployeeIds != null && originalRequest.RelatedEmployeeIds.Any())
+                        _logger.LogInformation("Processing relationships for subject {EmployeeId} (ID: {SubjectId})",
+                            subject.EmployeeId, subject.Id);
+
+                        if (originalRequest == null)
                         {
-                            _logger.LogInformation("Creating relationships for subject {SubjectId} with evaluators: {EvaluatorIds}",
-                                subject.Id, string.Join(", ", originalRequest.RelatedEmployeeIds));
+                            _logger.LogWarning("Original request not found for subject {EmployeeId}", subject.EmployeeId);
+                            continue;
+                        }
+
+                        _logger.LogInformation("Original request found - EvaluatorRelationships: {HasEnhanced}, RelatedEmployeeIds: {HasSimple}",
+                            originalRequest.EvaluatorRelationships?.Any() ?? false,
+                            originalRequest.RelatedEmployeeIds?.Any() ?? false);
+
+                        // Handle enhanced relationships with types
+                        if (originalRequest?.EvaluatorRelationships != null && originalRequest.EvaluatorRelationships.Any())
+                        {
+                            _logger.LogInformation("Creating enhanced relationships for subject {SubjectId} with {Count} evaluators",
+                                subject.Id, originalRequest.EvaluatorRelationships.Count);
 
                             try
                             {
-                                var relationshipResult = await _relationshipService.CreateSubjectEvaluatorRelationshipsAsync(
-                                    subject.Id, originalRequest.RelatedEmployeeIds, tenantId);
+                                var evaluatorRelationships = originalRequest.EvaluatorRelationships
+                                    .Select(er => (er.EvaluatorId, er.Relationship))
+                                    .ToList();
 
-                                _logger.LogInformation("Relationship creation result for subject {SubjectId}: {SuccessfulConnections} successful, {FailedCount} failed",
+                                var relationshipResult = await _relationshipService.CreateSubjectEvaluatorRelationshipsWithTypesAsync(
+                                    subject.Id, evaluatorRelationships, tenantId);
+
+                                _logger.LogInformation("Enhanced relationship creation result for subject {SubjectId}: {SuccessfulConnections} successful, {FailedCount} failed",
                                     subject.Id, relationshipResult.SuccessfulConnections, relationshipResult.FailedEmployeeIds.Count);
 
                                 if (relationshipResult.Warnings.Any())
@@ -228,13 +341,38 @@ public class SubjectService : ISubjectService
                             }
                             catch (Exception ex)
                             {
-                                _logger.LogError(ex, "Failed to create relationships for subject {SubjectId}", subject.Id);
-                                relationshipWarnings.Add($"Subject {subject.EmployeeId}: Failed to create relationships - {ex.Message}");
+                                _logger.LogError(ex, "Failed to create enhanced relationships for subject {SubjectId}", subject.Id);
+                                relationshipWarnings.Add($"Subject {subject.EmployeeId}: Failed to create enhanced relationships - {ex.Message}");
+                            }
+                        }
+                        // Fallback to simple relationships for backward compatibility
+                        else if (originalRequest?.RelatedEmployeeIds != null && originalRequest.RelatedEmployeeIds.Any())
+                        {
+                            _logger.LogInformation("Creating simple relationships for subject {SubjectId} with evaluators: {EvaluatorIds}",
+                                subject.Id, string.Join(", ", originalRequest.RelatedEmployeeIds));
+
+                            try
+                            {
+                                var relationshipResult = await _relationshipService.CreateSubjectEvaluatorRelationshipsAsync(
+                                    subject.Id, originalRequest.RelatedEmployeeIds, tenantId);
+
+                                _logger.LogInformation("Simple relationship creation result for subject {SubjectId}: {SuccessfulConnections} successful, {FailedCount} failed",
+                                    subject.Id, relationshipResult.SuccessfulConnections, relationshipResult.FailedEmployeeIds.Count);
+
+                                if (relationshipResult.Warnings.Any())
+                                {
+                                    relationshipWarnings.AddRange(relationshipResult.Warnings.Select(w => $"Subject {subject.EmployeeId}: {w}"));
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Failed to create simple relationships for subject {SubjectId}", subject.Id);
+                                relationshipWarnings.Add($"Subject {subject.EmployeeId}: Failed to create simple relationships - {ex.Message}");
                             }
                         }
                         else
                         {
-                            _logger.LogInformation("No related employee IDs found for subject {SubjectId}", subject.Id);
+                            _logger.LogInformation("No relationship data found for subject {SubjectId}", subject.Id);
                         }
                     }
 
@@ -248,13 +386,15 @@ public class SubjectService : ISubjectService
                 response.CreatedIds = createdSubjectIds;
             }
 
-            response.Failed = response.TotalRequested - response.SuccessfullyCreated;
+            // Calculate totals including both created and updated
+            var totalProcessed = response.SuccessfullyCreated + response.UpdatedCount;
+            response.Failed = response.TotalRequested - totalProcessed;
             response.Errors = errors;
 
             await transaction.CommitAsync();
-            
-            _logger.LogInformation("Bulk created {Count} subjects for tenant {TenantId}", 
-                response.SuccessfullyCreated, tenantId);
+
+            _logger.LogInformation("Bulk processed {TotalProcessed} subjects for tenant {TenantId}: {Created} created, {Updated} updated",
+                totalProcessed, tenantId, response.SuccessfullyCreated, response.UpdatedCount);
 
             return response;
         }
@@ -291,7 +431,7 @@ public class SubjectService : ISubjectService
             await _context.SaveChangesAsync();
 
             // Handle relationship updates if provided
-            if (request.RelatedEmployeeIds != null)
+            if (request.EvaluatorRelationships != null)
             {
                 try
                 {
@@ -303,7 +443,36 @@ public class SubjectService : ISubjectService
                     _context.SubjectEvaluators.RemoveRange(existingRelationships);
                     await _context.SaveChangesAsync();
 
-                    // Create new relationships
+                    // Create new relationships with types
+                    if (request.EvaluatorRelationships.Any())
+                    {
+                        var evaluatorRelationships = request.EvaluatorRelationships
+                            .Select(er => (er.EvaluatorId, er.Relationship))
+                            .ToList();
+
+                        await _relationshipService.CreateSubjectEvaluatorRelationshipsWithTypesAsync(
+                            subjectId, evaluatorRelationships, subject.TenantId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to update relationships for subject {SubjectId}", subjectId);
+                    // Don't throw here, just log the error as the subject update was successful
+                }
+            }
+            else if (request.RelatedEmployeeIds != null)
+            {
+                try
+                {
+                    // Remove existing relationships
+                    var existingRelationships = await _context.SubjectEvaluators
+                        .Where(se => se.SubjectId == subjectId)
+                        .ToListAsync();
+
+                    _context.SubjectEvaluators.RemoveRange(existingRelationships);
+                    await _context.SaveChangesAsync();
+
+                    // Create new relationships (simple)
                     if (request.RelatedEmployeeIds.Any())
                     {
                         await _relationshipService.CreateSubjectEvaluatorRelationshipsAsync(
@@ -316,6 +485,7 @@ public class SubjectService : ISubjectService
                     // Don't throw here, just log the error as the subject update was successful
                 }
             }
+
 
             _logger.LogInformation("Updated subject {SubjectId}", subjectId);
 
@@ -369,7 +539,7 @@ public class SubjectService : ISubjectService
     public async Task<bool> SubjectExistsAsync(Guid subjectId, Guid? tenantId = null)
     {
         var query = _context.Subjects.Where(s => s.Id == subjectId && s.IsActive);
-        
+
         if (tenantId.HasValue)
         {
             query = query.Where(s => s.TenantId == tenantId.Value);
