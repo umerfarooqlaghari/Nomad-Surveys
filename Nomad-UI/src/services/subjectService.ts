@@ -4,20 +4,15 @@ import { apiClient, handleApiResponse } from './api';
 // Types for Subject API
 export interface Subject {
   Id: string;
-  FirstName: string;
-  LastName: string;
-  FullName: string;
-  Email: string;
-  EmployeeId: string;
-  CompanyName?: string;
-  Gender?: string;
-  BusinessUnit?: string;
-  Grade?: string;
-  Designation?: string;
-  Tenure?: number;
-  Location?: string;
-  Metadata1?: string;
-  Metadata2?: string;
+  EmployeeId: string; // Guid FK to Employee table
+  FirstName: string; // Computed from Employee
+  LastName: string; // Computed from Employee
+  FullName: string; // Computed from Employee
+  Email: string; // Computed from Employee
+  EmployeeIdString: string; // User-defined EmployeeId like "EMP001"
+  CompanyName?: string; // Computed from Employee
+  Designation?: string; // Computed from Employee
+  Department?: string; // Computed from Employee
   IsActive: boolean;
   CreatedAt: string;
   UpdatedAt?: string;
@@ -28,14 +23,15 @@ export interface Subject {
 // List response has fewer fields than full subject response
 export interface SubjectListResponse {
   Id: string;
-  FirstName: string;
-  LastName: string;
-  FullName: string;
-  Email: string;
-  EmployeeId: string;
-  CompanyName?: string;
-  Designation?: string;
-  Location?: string;
+  EmployeeId: string; // Guid FK to Employee table
+  FirstName: string; // Computed from Employee
+  LastName: string; // Computed from Employee
+  FullName: string; // Computed from Employee
+  Email: string; // Computed from Employee
+  EmployeeIdString: string; // User-defined EmployeeId like "EMP001"
+  CompanyName?: string; // Computed from Employee
+  Designation?: string; // Computed from Employee
+  Location?: string; // Computed from Employee
   IsActive: boolean;
   CreatedAt: string;
   LastLoginAt?: string;
@@ -44,7 +40,7 @@ export interface SubjectListResponse {
 }
 
 export interface EvaluatorRelationship {
-  EvaluatorId: string;
+  EvaluatorEmployeeId: string; // EmployeeId (NOT GUID) of the evaluator (e.g., "EMP0097")
   Relationship: string;
 }
 
@@ -69,35 +65,12 @@ export interface ValidationResponse {
 }
 
 export interface CreateSubjectRequest {
-  FirstName: string;
-  LastName: string;
-  Email: string;
-  EmployeeId: string;
-  CompanyName?: string;
-  Gender?: string;
-  BusinessUnit?: string;
-  Grade?: string;
-  Designation?: string;
-  Tenure?: number;
-  Location?: string;
-  Metadata1?: string;
-  Metadata2?: string;
-  RelatedEmployeeIds?: string[];
+  EmployeeId: string; // User-defined EmployeeId like "EMP001" (NOT the Guid)
   EvaluatorRelationships?: EvaluatorRelationship[];
 }
 
 export interface UpdateSubjectRequest {
-  FirstName: string;
-  LastName: string;
-  Email: string;
-  EmployeeId: string;
-  CompanyName?: string;
-  Gender?: string;
-  BusinessUnit?: string;
-  Grade?: string;
-  Designation?: string;
-  Tenure?: number;
-  Location?: string;
+  EmployeeId: string; // User-defined EmployeeId like "EMP001" (NOT the Guid)
   Metadata1?: string;
   Metadata2?: string;
   RelatedEmployeeIds?: string[];
@@ -177,123 +150,257 @@ class SubjectService {
   }
 
   /**
-   * Bulk create subjects
+   * Bulk create subjects with relationships
    */
-  async bulkCreateSubjects(tenantSlug: string, request: BulkCreateSubjectsRequest, token: string): Promise<{ data: BulkCreateResponse | null; error: string | null }> {
-    const response = await apiClient.post<BulkCreateResponse>(`/${tenantSlug}/subjects/bulk`, request, token);
-    return handleApiResponse(response);
+  async bulkCreateSubjects(
+    tenantSlug: string,
+    request: BulkCreateSubjectsRequest,
+    token: string
+  ): Promise<{ data: BulkCreateResponse | null; error: string | null }> {
+    try {
+      console.log('🔵 [SERVICE] bulkCreateSubjects called');
+      console.log('🔵 [SERVICE] tenantSlug:', tenantSlug);
+      console.log('🔵 [SERVICE] request.Subjects.length:', request.Subjects.length);
+      console.log('🔵 [SERVICE] token exists:', !!token);
+
+      const response = await apiClient.post<BulkCreateResponse>(
+        `/${tenantSlug}/subjects/bulk`,
+        request,
+        token
+      );
+
+      console.log('✅ [SERVICE] API response status:', response.status);
+      console.log('✅ [SERVICE] API response data:', response.data);
+
+      return handleApiResponse(response);
+    } catch (error: any) {
+      console.error('❌ [SERVICE] Error in bulkCreateSubjects:', error);
+      return { data: null, error: error.message || 'Failed to bulk create subjects' };
+    }
   }
 
   /**
-   * Parse CSV data into subjects array
+   * Parse CSV data into subjects array with comprehensive validation
    */
-  parseCSV(csvData: string): CreateSubjectRequest[] {
-    const lines = csvData.trim().split('\n');
-    const headers = lines[0].split(',').map(h => h.trim());
-
+  parseCSV(csvData: string): { subjects: CreateSubjectRequest[]; errors: string[] } {
+    const errors: string[] = [];
     const subjects: CreateSubjectRequest[] = [];
 
-    for (let i = 1; i < lines.length; i++) {
-      // Handle CSV parsing with quoted JSON arrays
-      const line = lines[i];
-      const values: string[] = [];
-      let current = '';
-      let inQuotes = false;
+    try {
+      const lines = csvData.trim().split('\n');
 
-      for (let j = 0; j < line.length; j++) {
-        const char = line[j];
-        if (char === '"') {
-          inQuotes = !inQuotes;
-          current += char; // Include quotes in the current value
-        } else if (char === ',' && !inQuotes) {
-          values.push(current.trim());
-          current = '';
-        } else {
-          current += char;
+      if (lines.length === 0) {
+        errors.push('CSV file is empty');
+        return { subjects, errors };
+      }
+
+      // Parse headers (case-insensitive)
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+
+      // Validate required headers
+      const requiredHeaders = ['firstname', 'lastname', 'email', 'employeeid'];
+      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+
+      if (missingHeaders.length > 0) {
+        errors.push(`Missing required columns: ${missingHeaders.join(', ')}`);
+        return { subjects, errors };
+      }
+
+      // Track duplicate EmployeeIds within the CSV
+      const seenEmployeeIds = new Set<string>();
+
+      // Parse data rows
+      for (let i = 1; i < lines.length; i++) {
+        const lineNumber = i + 1;
+
+        // Skip empty lines
+        if (!lines[i].trim()) {
+          continue;
+        }
+
+        try {
+          // Parse CSV line handling quoted fields with commas and JSON
+          const values = this.parseCSVLine(lines[i]);
+
+          if (values.length < headers.length) {
+            errors.push(`Row ${lineNumber}: Insufficient columns (expected ${headers.length}, got ${values.length})`);
+            continue;
+          }
+
+          // Extract field values
+          const getField = (fieldName: string): string => {
+            const index = headers.indexOf(fieldName.toLowerCase());
+            return index !== -1 ? values[index].trim() : '';
+          };
+
+          const employeeId = getField('employeeid');
+
+          // Validate required fields
+          if (!employeeId) {
+            errors.push(`Row ${lineNumber}: EmployeeId is required`);
+            continue;
+          }
+
+          // Check for duplicate EmployeeId within CSV
+          if (seenEmployeeIds.has(employeeId.toLowerCase())) {
+            errors.push(`Row ${lineNumber}: Duplicate EmployeeId "${employeeId}" found in CSV (only first occurrence will be processed)`);
+            continue;
+          }
+          seenEmployeeIds.add(employeeId.toLowerCase());
+
+          // Parse EvaluatorRelationships JSON array
+          let evaluatorRelationships: EvaluatorRelationship[] | undefined;
+          const relationshipsStr = getField('evaluatorrelationships');
+
+          if (relationshipsStr) {
+            try {
+              // Remove outer quotes if present and unescape doubled quotes
+              const jsonStr = relationshipsStr
+                .replace(/^"|"$/g, '')
+                .replace(/""/g, '"');
+
+              const parsedData = JSON.parse(jsonStr);
+
+              if (!Array.isArray(parsedData)) {
+                errors.push(`Row ${lineNumber}: EvaluatorRelationships must be a JSON array`);
+              } else {
+                // Normalize property names (case-insensitive)
+                evaluatorRelationships = parsedData.map((item: any, idx: number) => {
+                  const lowerMap: Record<string, any> = {};
+                  Object.keys(item).forEach(k => { lowerMap[k.toLowerCase()] = item[k]; });
+
+                  const evaluatorEmployeeId = lowerMap['evaluatoremployeeid'] ?? lowerMap['evaluatorid'] ?? '';
+                  const relationship = lowerMap['relationship'] ?? '';
+
+                  if (!evaluatorEmployeeId) {
+                    errors.push(`Row ${lineNumber}: EvaluatorRelationships[${idx}] missing EvaluatorEmployeeId`);
+                  }
+                  if (!relationship) {
+                    errors.push(`Row ${lineNumber}: EvaluatorRelationships[${idx}] missing Relationship`);
+                  }
+
+                  return {
+                    EvaluatorEmployeeId: String(evaluatorEmployeeId),
+                    Relationship: String(relationship)
+                  };
+                });
+              }
+            } catch (parseError: any) {
+              errors.push(`Row ${lineNumber}: Failed to parse EvaluatorRelationships JSON - ${parseError.message}`);
+              evaluatorRelationships = undefined;
+            }
+          }
+
+          // Create subject request object
+          const subject: CreateSubjectRequest = {
+            EmployeeId: employeeId,
+            EvaluatorRelationships: evaluatorRelationships
+          };
+
+          subjects.push(subject);
+        } catch (rowError: any) {
+          errors.push(`Row ${lineNumber}: ${rowError.message}`);
         }
       }
-      values.push(current.trim());
 
-      if (values.length >= headers.length) {
-        // Parse RelatedEmployeeIds JSON array (backward compatibility)
-        let relatedEmployeeIds: string[] | undefined;
-        const relatedEmployeeIdsIndex = headers.indexOf('relatedEmployeeIds');
-        if (relatedEmployeeIdsIndex !== -1 && values[relatedEmployeeIdsIndex]) {
-          try {
-            const jsonStr = values[relatedEmployeeIdsIndex].replace(/^"|"$/g, ''); // Remove outer quotes
-            relatedEmployeeIds = JSON.parse(jsonStr);
-          } catch (error) {
-            console.warn('Failed to parse RelatedEmployeeIds JSON:', values[relatedEmployeeIdsIndex]);
-            relatedEmployeeIds = undefined;
-          }
+      if (subjects.length === 0 && errors.length === 0) {
+        errors.push('No valid data rows found in CSV');
+      }
+
+    } catch (error: any) {
+      errors.push(`CSV parsing error: ${error.message}`);
+    }
+
+    return { subjects, errors };
+  }
+
+  /**
+   * Parse a single CSV line handling quoted fields with commas and escaped quotes
+   */
+  private parseCSVLine(line: string): string[] {
+    const values: string[] = [];
+    let current = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const nextChar = i < line.length - 1 ? line[i + 1] : '';
+
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          // Escaped quote (doubled quotes)
+          current += '"';
+          i++; // Skip next quote
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
         }
-
-        // Parse EvaluatorRelationships JSON array (enhanced format)
-        let evaluatorRelationships: EvaluatorRelationship[] | undefined;
-        const evaluatorRelationshipsIndex = headers.indexOf('evaluatorRelationships');
-        if (evaluatorRelationshipsIndex !== -1 && values[evaluatorRelationshipsIndex]) {
-          try {
-            const jsonStr = values[evaluatorRelationshipsIndex].replace(/^"|"$/g, ''); // Remove outer quotes
-            evaluatorRelationships = JSON.parse(jsonStr);
-          } catch (error) {
-            console.warn('Failed to parse EvaluatorRelationships JSON:', values[evaluatorRelationshipsIndex]);
-            evaluatorRelationships = undefined;
-          }
-        }
-
-        const subject: CreateSubjectRequest = {
-          FirstName: values[headers.indexOf('firstName')] || '',
-          LastName: values[headers.indexOf('lastName')] || '',
-          Email: values[headers.indexOf('email')] || '',
-          EmployeeId: values[headers.indexOf('employeeId')] || '',
-          CompanyName: values[headers.indexOf('companyName')] || '',
-          Gender: values[headers.indexOf('gender')] || '',
-          BusinessUnit: values[headers.indexOf('businessUnit')] || '',
-          Grade: values[headers.indexOf('grade')] || '',
-          Designation: values[headers.indexOf('designation')] || '',
-          Tenure: parseInt(values[headers.indexOf('tenure')]) || undefined,
-          Location: values[headers.indexOf('location')] || '',
-          Metadata1: values[headers.indexOf('metadata1')] || '',
-          Metadata2: values[headers.indexOf('metadata2')] || '',
-          RelatedEmployeeIds: relatedEmployeeIds,
-          EvaluatorRelationships: evaluatorRelationships,
-        };
-
-        if (subject.FirstName && subject.LastName && subject.Email && subject.EmployeeId) {
-          subjects.push(subject);
-        }
+      } else if (char === ',' && !inQuotes) {
+        // Field separator
+        values.push(current);
+        current = '';
+      } else {
+        current += char;
       }
     }
 
-    return subjects;
+    // Add last field
+    values.push(current);
+
+    return values;
   }
 
   /**
-   * Generate CSV template
+   * Generate CSV template with sample data
    */
   generateCSVTemplate(): string {
-    return 'firstName,lastName,email,employeeId,companyName,gender,businessUnit,grade,designation,tenure,location,metadata1,metadata2,evaluatorRelationships\nJohn,Doe,john.doe@example.com,SUB001,Acme Corp,Male,Engineering,Senior,Software Engineer,5,New York,Team Lead,Full Stack,"[{""EvaluatorId"":""EVL001"",""Relationship"":""manager""},{""EvaluatorId"":""EVL002"",""Relationship"":""peer""}]"';
+    const headers = [
+      'firstName',
+      'lastName',
+      'email',
+      'employeeId',
+      'companyName',
+      'gender',
+      'businessUnit',
+      'grade',
+      'designation',
+      'tenure',
+      'location',
+      'metadata1',
+      'metadata2',
+      'evaluatorRelationships'
+    ];
+
+    const sampleRow = [
+      'John',
+      'Doe',
+      'john.doe@example.com',
+      'SUB001',
+      'Acme Corp',
+      'Male',
+      'Engineering',
+      'Senior',
+      'Software Engineer',
+      '5',
+      'New York',
+      'Team Lead',
+      'Full Stack',
+      '"[{""EvaluatorEmployeeId"":""EMP001"",""Relationship"":""manager""},{""EvaluatorEmployeeId"":""EMP002"",""Relationship"":""peer""}]"'
+    ];
+
+    return `${headers.join(',')}\n${sampleRow.join(',')}`;
   }
+
+
+
+
+
 
   /**
    * Validate subject data
    */
   validateSubject(subject: CreateSubjectRequest): string[] {
     const errors: string[] = [];
-
-    if (!subject.FirstName?.trim()) {
-      errors.push('First name is required');
-    }
-
-    if (!subject.LastName?.trim()) {
-      errors.push('Last name is required');
-    }
-
-    if (!subject.Email?.trim()) {
-      errors.push('Email is required');
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(subject.Email)) {
-      errors.push('Invalid email format');
-    }
 
     if (!subject.EmployeeId?.trim()) {
       errors.push('Employee ID is required');
@@ -304,65 +411,100 @@ class SubjectService {
     return errors;
   }
 
+
+
   /**
-   * Validate evaluator EmployeeIds for relationship creation
+   * Get existing evaluator relationships for a subject
    */
-  async validateEvaluatorIds(tenantSlug: string, employeeIds: string[], token: string): Promise<string[]> {
+  async getSubjectEvaluators(tenantSlug: string, subjectId: string, token: string): Promise<{ data: any[] | null; error: string | null }> {
     try {
-      const response = await apiClient.post(`/${tenantSlug}/subjects/validate-evaluator-ids`, employeeIds, token);
-      console.log('Raw API response:', response);
-
-      // Handle different response formats based on status code
-      if (response.status === 200) {
-        // Single valid ID - response.data contains evaluator info
-        console.log('Single ID validation - returning first ID');
-        return [employeeIds[0]];
-      } else if (response.status === 207) {
-        // Multiple IDs - response.data contains ValidationResponse
-        const apiResponse = response.data as any;
-        console.log('Multi-status response received:', apiResponse);
-
-        // Extract valid Employee IDs from the response
-        const validEmployeeIds: string[] = [];
-
-        if (apiResponse && apiResponse.Results && Array.isArray(apiResponse.Results)) {
-          console.log(`Processing ${apiResponse.Results.length} results...`);
-
-          for (let i = 0; i < apiResponse.Results.length; i++) {
-            const result = apiResponse.Results[i];
-            console.log(`Result ${i}:`, {
-              EmployeeId: result.EmployeeId,
-              IsValid: result.IsValid,
-              Message: result.Message
-            });
-
-            // Check if this result is valid
-            if (result.IsValid === true) {
-              console.log(`✓ ${result.EmployeeId} is valid - adding to array`);
-              validEmployeeIds.push(result.EmployeeId);
-            } else {
-              console.log(`✗ ${result.EmployeeId} is invalid - skipping`);
-            }
-          }
-        } else {
-          console.error('Invalid response structure:', apiResponse);
-        }
-
-        console.log('Final valid Employee IDs array:', validEmployeeIds);
-        return validEmployeeIds;
-      } else {
-        // 404 or other error - no valid IDs
-        console.log(`Unexpected status code: ${response.status}`);
-        return [];
-      }
+      const response = await apiClient.get<any[]>(`/${tenantSlug}/subject-evaluators/subjects/${subjectId}/evaluators`, token);
+      return handleApiResponse(response);
     } catch (error: any) {
-      // Handle 404 Not Found for single invalid ID
-      if (error.response?.status === 404) {
-        console.log('404 error - no valid IDs');
-        return [];
+      console.error('Error fetching subject evaluators:', error);
+      return { data: null, error: error.message || 'Failed to fetch subject evaluators' };
+    }
+  }
+
+  /**
+   * Assign evaluators to a subject
+   */
+  async assignEvaluatorsToSubject(
+    tenantSlug: string,
+    subjectId: string,
+    evaluators: { EvaluatorId: string; Relationship: string }[],
+    token: string
+  ): Promise<{ success: boolean; data?: any; error: string | null }> {
+    try {
+      const payload = {
+        Evaluators: evaluators.map(e => ({
+          EvaluatorId: e.EvaluatorId,
+          Relationship: e.Relationship
+        }))
+      };
+
+      console.log('assignEvaluatorsToSubject payload:', payload);
+
+      const response = await apiClient.post(
+        `/${tenantSlug}/subject-evaluators/subjects/${subjectId}/evaluators`,
+        payload,
+        token
+      );
+
+      if (response.status === 200 && response.data) {
+        return { success: true, data: response.data, error: null };
       }
-      console.error('Error validating evaluator EmployeeIds:', error);
-      return [];
+
+      return { success: false, error: (response.data as any)?.Message || 'Failed to assign evaluators' };
+    } catch (error: any) {
+      console.error('Error assigning evaluators to subject:', error);
+      return { success: false, error: error.message || 'Failed to assign evaluators' };
+    }
+  }
+
+  /**
+   * Update an evaluator relationship for a subject
+   */
+  async updateSubjectEvaluator(
+    tenantSlug: string,
+    subjectId: string,
+    evaluatorId: string,
+    relationship: string,
+    token: string
+  ): Promise<{ success: boolean; data?: any; error: string | null }> {
+    try {
+      const payload = { Relationship: relationship };
+
+      const response = await apiClient.put(
+        `/${tenantSlug}/subject-evaluators/subjects/${subjectId}/evaluators/${evaluatorId}`,
+        payload,
+        token
+      );
+
+      if (response.status === 200 && response.data) {
+        return { success: true, data: response.data, error: null };
+      }
+
+      return { success: false, error: (response.data as any)?.Message || 'Failed to update relationship' };
+    } catch (error: any) {
+      console.error('Error updating subject evaluator:', error);
+      return { success: false, error: error.message || 'Failed to update relationship' };
+    }
+  }
+
+  /**
+   * Remove an evaluator relationship from a subject
+   */
+  async removeSubjectEvaluator(tenantSlug: string, subjectId: string, evaluatorId: string, token: string): Promise<{ success: boolean; error: string | null }> {
+    try {
+      const response = await apiClient.delete(`/${tenantSlug}/subject-evaluators/subjects/${subjectId}/evaluators/${evaluatorId}`, token);
+      if (response.status === 204) {
+        return { success: true, error: null };
+      }
+      return { success: false, error: 'Failed to remove relationship' };
+    } catch (error: any) {
+      console.error('Error removing subject evaluator:', error);
+      return { success: false, error: error.message || 'Failed to remove relationship' };
     }
   }
 }

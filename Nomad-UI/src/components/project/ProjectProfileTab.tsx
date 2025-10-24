@@ -49,82 +49,66 @@ export default function ProjectProfileTab({ projectSlug }: ProjectProfileTabProp
         <h2 className="text-2xl font-bold text-gray-900 mb-4">
           Project Profile
         </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Project Name</dt>
-                <dd className="text-sm text-gray-900">{projectData.name}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Project Slug</dt>
-                <dd className="text-sm text-gray-900">{projectData.slug}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Organization</dt>
-                <dd className="text-sm text-gray-900">{projectData.organizationName}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Admin Email</dt>
-                <dd className="text-sm text-gray-900">{projectData.adminEmail}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Status</dt>
-                <dd className="text-sm text-gray-900">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {projectData.status}
-                  </span>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Created</dt>
-                <dd className="text-sm text-gray-900">
-                  {new Date(projectData.createdAt).toLocaleDateString()}
-                </dd>
-              </div>
-            </dl>
-          </div>
+<div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+  <h2 className="text-2xl font-semibold text-gray-900 mb-6">Project Profile</h2>
 
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Project Statistics</h3>
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Total Subjects</dt>
-                <dd className="text-2xl font-bold text-blue-600">{projectData.totalSubjects}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Total Evaluators</dt>
-                <dd className="text-2xl font-bold text-green-600">{projectData.totalEvaluators}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Total Surveys</dt>
-                <dd className="text-2xl font-bold text-purple-600">{projectData.totalSurveys}</dd>
-              </div>
-            </dl>
-          </div>
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+    {/* Basic Information */}
+    <div className="space-y-5">
+      <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Basic Information</h3>
+      <div className="grid grid-cols-2 gap-y-4 text-sm">
+        <div className="text-gray-500 font-medium">Project Name</div>
+        <div className="text-gray-900 font-semibold">{projectData.name}</div>
+
+        <div className="text-gray-500 font-medium">Project Slug</div>
+        <div className="text-gray-900 font-semibold">{projectData.slug}</div>
+
+        <div className="text-gray-500 font-medium">Organization</div>
+        <div className="text-gray-900 font-semibold">{projectData.organizationName}</div>
+
+        <div className="text-gray-500 font-medium">Admin Email</div>
+        <div className="text-gray-900 font-semibold">{projectData.adminEmail}</div>
+
+        <div className="text-gray-500 font-medium">Status</div>
+        <div>
+          <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold 
+            ${projectData.status === 'Active' 
+              ? 'bg-green-100 text-green-700' 
+              : 'bg-gray-100 text-gray-700'}`}>
+            {projectData.status}
+          </span>
+        </div>
+
+        <div className="text-gray-500 font-medium">Created</div>
+        <div className="text-gray-900 font-semibold">
+          {new Date(projectData.createdAt).toLocaleDateString()}
         </div>
       </div>
+    </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button className="bg-blue-50 hover:bg-blue-100 p-4 rounded-lg text-left transition-colors">
-            <div className="text-blue-600 font-medium">Add Subjects</div>
-            <div className="text-sm text-blue-500">Import or add new subjects</div>
-          </button>
-          <button className="bg-green-50 hover:bg-green-100 p-4 rounded-lg text-left transition-colors">
-            <div className="text-green-600 font-medium">Add Evaluators</div>
-            <div className="text-sm text-green-500">Import or add new evaluators</div>
-          </button>
-          <button className="bg-purple-50 hover:bg-purple-100 p-4 rounded-lg text-left transition-colors">
-            <div className="text-purple-600 font-medium">Create Survey</div>
-            <div className="text-sm text-purple-500">Build a new survey</div>
-          </button>
+    {/* Project Statistics */}
+    <div className="space-y-5">
+      <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Project Statistics</h3>
+      <div className="grid grid-cols-3 gap-6 text-center">
+        <div className="p-4 rounded-xl bg-white border border-blue-900">
+          <div className="text-sm text-black font-medium">Subjects</div>
+          <div className="text-3xl font-bold text-black">{projectData.totalSubjects}</div>
+        </div>
+        <div className="p-4 rounded-xl bg-white border border-blue-900">
+          <div className="text-sm text-black font-medium">Evaluators</div>
+          <div className="text-3xl font-bold text-black">{projectData.totalEvaluators}</div>
+        </div>
+        <div className="p-4 rounded-xl bg-white border border-blue-900">
+          <div className="text-sm text-black font-medium">Surveys</div>
+          <div className="text-3xl font-bold text-black">{projectData.totalSurveys}</div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+</div>
+
+
 
       {/* Recent Activity */}
       <div className="bg-white shadow rounded-lg p-6">

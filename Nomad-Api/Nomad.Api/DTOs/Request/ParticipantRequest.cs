@@ -20,9 +20,12 @@ public class ValidationResponse
 
 public class EvaluatorRelationship
 {
+    /// <summary>
+    /// The EmployeeId (NOT GUID) of the evaluator (e.g., "EMP0097")
+    /// </summary>
     [Required]
     [StringLength(50, MinimumLength = 1)]
-    public string EvaluatorId { get; set; } = string.Empty;
+    public string EvaluatorEmployeeId { get; set; } = string.Empty;
 
     [Required]
     [StringLength(50, MinimumLength = 1)]
@@ -31,9 +34,12 @@ public class EvaluatorRelationship
 
 public class SubjectRelationship
 {
+    /// <summary>
+    /// The EmployeeId (NOT GUID) of the subject (e.g., "SUB001")
+    /// </summary>
     [Required]
     [StringLength(50, MinimumLength = 1)]
-    public string SubjectId { get; set; } = string.Empty;
+    public string SubjectEmployeeId { get; set; } = string.Empty;
 
     [Required]
     [StringLength(50, MinimumLength = 1)]
@@ -42,112 +48,26 @@ public class SubjectRelationship
 
 public class CreateSubjectRequest
 {
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
-    public string FirstName { get; set; } = string.Empty;
-    
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
-    public string LastName { get; set; } = string.Empty;
-    
-    [Required]
-    [EmailAddress]
-    [StringLength(255)]
-    public string Email { get; set; } = string.Empty;
-
+    /// <summary>
+    /// The EmployeeId (NOT GUID) from the Employees table (e.g., "EMP001")
+    /// </summary>
     [Required]
     [StringLength(50, MinimumLength = 1)]
     public string EmployeeId { get; set; } = string.Empty;
 
-    // Primary fields
-    [StringLength(100)]
-    public string? CompanyName { get; set; }
-    
-    [StringLength(20)]
-    public string? Gender { get; set; }
-    
-    [StringLength(100)]
-    public string? BusinessUnit { get; set; }
-    
-    [StringLength(50)]
-    public string? Grade { get; set; }
-    
-    [StringLength(100)]
-    public string? Designation { get; set; }
-    
-    [Range(0, 100)]
-    public int? Tenure { get; set; }
-    
-    [StringLength(100)]
-    public string? Location { get; set; }
-    
-    // Secondary metadata fields
-    [StringLength(500)]
-    public string? Metadata1 { get; set; }
-
-    [StringLength(500)]
-    public string? Metadata2 { get; set; }
-
-    // Related connections
-    public List<string>? RelatedEmployeeIds { get; set; }
-
-    // Enhanced relationship support with types
+    // Enhanced relationship support with types (optional - can be added later)
     public List<EvaluatorRelationship>? EvaluatorRelationships { get; set; }
 }
 
 public class UpdateSubjectRequest
 {
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
-    public string FirstName { get; set; } = string.Empty;
-    
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
-    public string LastName { get; set; } = string.Empty;
-    
-    [Required]
-    [EmailAddress]
-    [StringLength(255)]
-    public string Email { get; set; } = string.Empty;
-
+    /// <summary>
+    /// The EmployeeId (NOT GUID) from the Employees table (e.g., "EMP001")
+    /// Can be updated to link to a different employee
+    /// </summary>
     [Required]
     [StringLength(50, MinimumLength = 1)]
     public string EmployeeId { get; set; } = string.Empty;
-
-    // Primary fields
-    [StringLength(100)]
-    public string? CompanyName { get; set; }
-    
-    [StringLength(20)]
-    public string? Gender { get; set; }
-    
-    [StringLength(100)]
-    public string? BusinessUnit { get; set; }
-    
-    [StringLength(50)]
-    public string? Grade { get; set; }
-    
-    [StringLength(100)]
-    public string? Designation { get; set; }
-    
-    [Range(0, 100)]
-    public int? Tenure { get; set; }
-    
-    [StringLength(100)]
-    public string? Location { get; set; }
-    
-    // Secondary metadata fields
-    [StringLength(500)]
-    public string? Metadata1 { get; set; }
-
-    [StringLength(500)]
-    public string? Metadata2 { get; set; }
-
-    // Related connections
-    public List<string>? RelatedEmployeeIds { get; set; }
-
-    // Enhanced relationship support with types
-    public List<EvaluatorRelationship>? EvaluatorRelationships { get; set; }
 }
 
 public class BulkCreateSubjectsRequest
@@ -159,112 +79,26 @@ public class BulkCreateSubjectsRequest
 
 public class CreateEvaluatorRequest
 {
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
-    public string FirstName { get; set; } = string.Empty;
-    
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
-    public string LastName { get; set; } = string.Empty;
-    
-    [Required]
-    [EmailAddress]
-    [StringLength(255)]
-    public string EvaluatorEmail { get; set; } = string.Empty;
-
+    /// <summary>
+    /// The EmployeeId (NOT GUID) from the Employees table (e.g., "EMP001")
+    /// </summary>
     [Required]
     [StringLength(50, MinimumLength = 1)]
     public string EmployeeId { get; set; } = string.Empty;
 
-    // Primary fields
-    [StringLength(100)]
-    public string? CompanyName { get; set; }
-    
-    [StringLength(20)]
-    public string? Gender { get; set; }
-    
-    [StringLength(100)]
-    public string? BusinessUnit { get; set; }
-    
-    [StringLength(50)]
-    public string? Grade { get; set; }
-    
-    [StringLength(100)]
-    public string? Designation { get; set; }
-    
-    [Range(0, 100)]
-    public int? Tenure { get; set; }
-    
-    [StringLength(100)]
-    public string? Location { get; set; }
-    
-    // Secondary metadata fields
-    [StringLength(500)]
-    public string? Metadata1 { get; set; }
-
-    [StringLength(500)]
-    public string? Metadata2 { get; set; }
-
-    // Related connections
-    public List<string>? RelatedEmployeeIds { get; set; }
-
-    // Enhanced relationship support with types
+    // Enhanced relationship support with types (optional - can be added later)
     public List<SubjectRelationship>? SubjectRelationships { get; set; }
 }
 
 public class UpdateEvaluatorRequest
 {
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
-    public string FirstName { get; set; } = string.Empty;
-    
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
-    public string LastName { get; set; } = string.Empty;
-    
-    [Required]
-    [EmailAddress]
-    [StringLength(255)]
-    public string EvaluatorEmail { get; set; } = string.Empty;
-
+    /// <summary>
+    /// The EmployeeId (NOT GUID) from the Employees table (e.g., "EMP001")
+    /// Can be updated to link to a different employee
+    /// </summary>
     [Required]
     [StringLength(50, MinimumLength = 1)]
     public string EmployeeId { get; set; } = string.Empty;
-
-    // Primary fields
-    [StringLength(100)]
-    public string? CompanyName { get; set; }
-    
-    [StringLength(20)]
-    public string? Gender { get; set; }
-    
-    [StringLength(100)]
-    public string? BusinessUnit { get; set; }
-    
-    [StringLength(50)]
-    public string? Grade { get; set; }
-    
-    [StringLength(100)]
-    public string? Designation { get; set; }
-    
-    [Range(0, 100)]
-    public int? Tenure { get; set; }
-    
-    [StringLength(100)]
-    public string? Location { get; set; }
-    
-    // Secondary metadata fields
-    [StringLength(500)]
-    public string? Metadata1 { get; set; }
-
-    [StringLength(500)]
-    public string? Metadata2 { get; set; }
-
-    // Related connections
-    public List<string>? RelatedEmployeeIds { get; set; }
-
-    // Enhanced relationship support with types
-    public List<SubjectRelationship>? SubjectRelationships { get; set; }
 }
 
 public class BulkCreateEvaluatorsRequest
@@ -301,7 +135,14 @@ public class SubjectAssignmentRequest
 {
     [Required]
     public Guid SubjectId { get; set; }
-    
+
     [StringLength(50)]
     public string? Relationship { get; set; }
+}
+
+public class UpdateRelationshipRequest
+{
+    [Required]
+    [StringLength(50, MinimumLength = 1)]
+    public string Relationship { get; set; } = string.Empty;
 }

@@ -30,6 +30,9 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
     public DbSet<Evaluator> Evaluators { get; set; }
     public DbSet<SubjectEvaluator> SubjectEvaluators { get; set; }
 
+    // Employee entity
+    public DbSet<Employee> Employees { get; set; }
+
     // Additional DbSets will be added here as we create more entities
     // public DbSet<Question> Questions { get; set; }
     // public DbSet<Response> Responses { get; set; }
@@ -99,11 +102,23 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         {
             entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Gender).HasMaxLength(20);
+            entity.Property(e => e.Designation).HasMaxLength(100);
+            entity.Property(e => e.Department).HasMaxLength(100);
+            entity.Property(e => e.Grade).HasMaxLength(50);
+            entity.Property(e => e.Location).HasMaxLength(100);
+            entity.Property(e => e.Metadata1).HasMaxLength(255);
+            entity.Property(e => e.Metadata2).HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.HasOne(e => e.Tenant)
                   .WithMany(t => t.Users)
                   .HasForeignKey(e => e.TenantId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Employee)
+                  .WithMany(emp => emp.Users)
+                  .HasForeignKey(e => e.EmployeeId)
                   .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -179,24 +194,10 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         modelBuilder.Entity<Subject>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
-            entity.Property(e => e.EmployeeId).IsRequired().HasMaxLength(50);
-
-            entity.Property(e => e.CompanyName).HasMaxLength(100);
-            entity.Property(e => e.Gender).HasMaxLength(20);
-            entity.Property(e => e.BusinessUnit).HasMaxLength(100);
-            entity.Property(e => e.Grade).HasMaxLength(50);
-            entity.Property(e => e.Designation).HasMaxLength(100);
-            entity.Property(e => e.Location).HasMaxLength(100);
-            entity.Property(e => e.Metadata1).HasMaxLength(500);
-            entity.Property(e => e.Metadata2).HasMaxLength(500);
             entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-            // Unique constraints within tenant
-            entity.HasIndex(e => new { e.Email, e.TenantId }).IsUnique();
+            // Unique constraint: one employee can only be a subject once per tenant
             entity.HasIndex(e => new { e.EmployeeId, e.TenantId }).IsUnique();
 
             // Foreign key to Tenant
@@ -204,6 +205,12 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
                 .WithMany()
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Foreign key to Employee
+            entity.HasOne(e => e.Employee)
+                .WithOne(emp => emp.Subject)
+                .HasForeignKey<Subject>(e => e.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Foreign key to ApplicationUser (optional)
             entity.HasOne(e => e.User)
@@ -216,24 +223,10 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         modelBuilder.Entity<Evaluator>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.EvaluatorEmail).IsRequired().HasMaxLength(255);
-            entity.Property(e => e.EmployeeId).IsRequired().HasMaxLength(50);
-
-            entity.Property(e => e.CompanyName).HasMaxLength(100);
-            entity.Property(e => e.Gender).HasMaxLength(20);
-            entity.Property(e => e.BusinessUnit).HasMaxLength(100);
-            entity.Property(e => e.Grade).HasMaxLength(50);
-            entity.Property(e => e.Designation).HasMaxLength(100);
-            entity.Property(e => e.Location).HasMaxLength(100);
-            entity.Property(e => e.Metadata1).HasMaxLength(500);
-            entity.Property(e => e.Metadata2).HasMaxLength(500);
             entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(255);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
 
-            // Unique constraints within tenant
-            entity.HasIndex(e => new { e.EvaluatorEmail, e.TenantId }).IsUnique();
+            // Unique constraint: one employee can only be an evaluator once per tenant
             entity.HasIndex(e => new { e.EmployeeId, e.TenantId }).IsUnique();
 
             // Foreign key to Tenant
@@ -241,6 +234,12 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
                 .WithMany()
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Foreign key to Employee
+            entity.HasOne(e => e.Employee)
+                .WithOne(emp => emp.Evaluator)
+                .HasForeignKey<Evaluator>(e => e.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // Foreign key to ApplicationUser (optional)
             entity.HasOne(e => e.User)
@@ -277,6 +276,35 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
                 .HasForeignKey(e => e.TenantId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
+
+        // Employee configurations
+        modelBuilder.Entity<Employee>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Number).HasMaxLength(20);
+            entity.Property(e => e.EmployeeId).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.CompanyName).HasMaxLength(100);
+            entity.Property(e => e.Designation).HasMaxLength(100);
+            entity.Property(e => e.Department).HasMaxLength(100);
+            entity.Property(e => e.Grade).HasMaxLength(50);
+            entity.Property(e => e.Gender).HasMaxLength(20);
+            entity.Property(e => e.ManagerId).HasMaxLength(50);
+            entity.Property(e => e.MoreInfo).HasColumnType("jsonb");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Unique constraints within tenant
+            entity.HasIndex(e => new { e.Email, e.TenantId }).IsUnique();
+            entity.HasIndex(e => new { e.EmployeeId, e.TenantId }).IsUnique();
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 
     private void ConfigureGlobalQueryFilters(ModelBuilder modelBuilder)
@@ -294,6 +322,9 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         modelBuilder.Entity<Subject>().HasQueryFilter(s => CurrentTenantId == null || s.TenantId == CurrentTenantId);
         modelBuilder.Entity<Evaluator>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
         modelBuilder.Entity<SubjectEvaluator>().HasQueryFilter(se => CurrentTenantId == null || se.TenantId == CurrentTenantId);
+
+        // Employee query filter for tenant isolation
+        modelBuilder.Entity<Employee>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
     }
 
     public override int SaveChanges()

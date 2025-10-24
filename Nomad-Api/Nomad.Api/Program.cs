@@ -27,9 +27,18 @@ builder.Services.AddControllers()
 // Add HttpContextAccessor for tenant resolution
 builder.Services.AddHttpContextAccessor();
 
-// Add Entity Framework
+// Configure Npgsql Data Source with dynamic JSON support (required for EF Core 8 + Npgsql 8.x)
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
+var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
+// Enable dynamic JSON serialization for JSONB columns with complex types
+dataSourceBuilder.EnableDynamicJson();
+var dataSource = dataSourceBuilder.Build();
+
+// Add Entity Framework with configured data source
 builder.Services.AddDbContext<NomadSurveysDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(dataSource));
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, TenantRole>(options =>
@@ -93,6 +102,9 @@ builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IEvaluatorService, EvaluatorService>();
 builder.Services.AddScoped<ISubjectEvaluatorService, SubjectEvaluatorService>();
 builder.Services.AddScoped<IRelationshipService, RelationshipService>();
+
+// Add employee service
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 
 // Add CORS
 builder.Services.AddCors(options =>

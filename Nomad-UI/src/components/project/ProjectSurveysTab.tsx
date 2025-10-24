@@ -22,9 +22,6 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
             <button className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
               Create Survey
             </button>
-            <button className="bg-green-500 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium">
-              Import Survey
-            </button>
           </div>
         </div>
 
@@ -35,22 +32,6 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
             <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
               <h4 className="font-medium text-gray-900 mb-2">360 Feedback Survey</h4>
               <p className="text-sm text-gray-600 mb-3">Comprehensive 360-degree feedback assessment</p>
-              <button className="bg-blue-500 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
-                Use Template
-              </button>
-            </div>
-            
-            <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <h4 className="font-medium text-gray-900 mb-2">Employee Satisfaction</h4>
-              <p className="text-sm text-gray-600 mb-3">Measure employee satisfaction and engagement</p>
-              <button className="bg-blue-500 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
-                Use Template
-              </button>
-            </div>
-            
-            <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <h4 className="font-medium text-gray-900 mb-2">Performance Review</h4>
-              <p className="text-sm text-gray-600 mb-3">Annual performance review questionnaire</p>
               <button className="bg-blue-500 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
                 Use Template
               </button>

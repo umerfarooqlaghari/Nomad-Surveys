@@ -19,28 +19,28 @@ export default function ProjectAnalyticsTab({ projectSlug }: ProjectAnalyticsTab
         
         {/* Analytics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-blue-50 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-blue-900 mb-2">Total Surveys</h3>
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold text-black mb-2">Total Surveys</h3>
             <p className="text-3xl font-bold text-blue-600">0</p>
-            <p className="text-sm text-blue-500">Active surveys</p>
+            <p className="text-sm text-black">Active surveys</p>
           </div>
           
-          <div className="bg-green-50 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-green-900 mb-2">Responses</h3>
-            <p className="text-3xl font-bold text-green-600">0</p>
-            <p className="text-sm text-green-500">Total responses</p>
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold text-black mb-2">Responses</h3>
+            <p className="text-3xl font-bold text-blue-600">0</p>
+            <p className="text-sm text-black">Total responses</p>
           </div>
           
-          <div className="bg-yellow-50 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-yellow-900 mb-2">Completion Rate</h3>
-            <p className="text-3xl font-bold text-yellow-600">0%</p>
-            <p className="text-sm text-yellow-500">Average completion</p>
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold text-black mb-2">Completion Rate</h3>
+            <p className="text-3xl font-bold text-blue-600">0%</p>
+            <p className="text-sm text-black">Average completion</p>
           </div>
           
-          <div className="bg-purple-50 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-purple-900 mb-2">Participants</h3>
-            <p className="text-3xl font-bold text-purple-600">0</p>
-            <p className="text-sm text-purple-500">Active participants</p>
+          <div className="bg-gray-50 p-6 rounded-lg">
+            <h3 className="text-lg font-semibold text-black mb-2">Participants</h3>
+            <p className="text-3xl font-bold text-blue-600">0</p>
+            <p className="text-sm text-black">Active participants</p>
           </div>
         </div>
 

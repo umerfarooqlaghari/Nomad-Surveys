@@ -242,6 +242,41 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
         }
     }
 
+    public async Task<SubjectEvaluatorResponse?> UpdateAssignmentAsync(Guid subjectId, Guid evaluatorId, string relationship)
+    {
+        try
+        {
+            var assignment = await _context.SubjectEvaluators
+                .FirstOrDefaultAsync(se => se.SubjectId == subjectId &&
+                                         se.EvaluatorId == evaluatorId &&
+                                         se.IsActive);
+
+            if (assignment == null)
+            {
+                _logger.LogWarning("Assignment not found for subject {SubjectId} and evaluator {EvaluatorId}",
+                    subjectId, evaluatorId);
+                return null;
+            }
+
+            assignment.Relationship = relationship;
+            assignment.UpdatedAt = DateTime.UtcNow;
+
+            _context.SubjectEvaluators.Update(assignment);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Updated assignment {AssignmentId} relationship to {Relationship}",
+                assignment.Id, relationship);
+
+            return await GetSubjectEvaluatorResponseAsync(assignment.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating assignment for subject {SubjectId} and evaluator {EvaluatorId}",
+                subjectId, evaluatorId);
+            throw;
+        }
+    }
+
     public async Task<bool> RemoveAssignmentAsync(Guid subjectId, Guid evaluatorId)
     {
         try
@@ -279,7 +314,9 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
         {
             var assignments = await _context.SubjectEvaluators
                 .Include(se => se.Subject)
+                    .ThenInclude(s => s.Employee)
                 .Include(se => se.Evaluator)
+                    .ThenInclude(e => e.Employee)
                 .Where(se => se.SubjectId == subjectId && se.IsActive)
                 .ToListAsync();
 
@@ -296,23 +333,26 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
                 Subject = se.Subject != null ? new SubjectSummaryResponse
                 {
                     Id = se.Subject.Id,
-                    FirstName = se.Subject.FirstName,
-                    LastName = se.Subject.LastName,
-                    FullName = se.Subject.FullName,
-                    Email = se.Subject.Email,
-
-                    Designation = se.Subject.Designation,
+                    EmployeeId = se.Subject.EmployeeId,
+                    FirstName = se.Subject.Employee.FirstName,
+                    LastName = se.Subject.Employee.LastName,
+                    FullName = se.Subject.Employee.FullName,
+                    Email = se.Subject.Employee.Email,
+                    EmployeeIdString = se.Subject.Employee.EmployeeId,
+                    Designation = se.Subject.Employee.Designation,
                     IsActive = se.Subject.IsActive
                 } : null,
                 Evaluator = se.Evaluator != null ? new EvaluatorSummaryResponse
                 {
                     Id = se.Evaluator.Id,
-                    FirstName = se.Evaluator.FirstName,
-                    LastName = se.Evaluator.LastName,
-                    FullName = se.Evaluator.FullName,
-                    EvaluatorEmail = se.Evaluator.EvaluatorEmail,
-
-                    Designation = se.Evaluator.Designation,
+                    EmployeeId = se.Evaluator.EmployeeId,
+                    FirstName = se.Evaluator.Employee.FirstName,
+                    LastName = se.Evaluator.Employee.LastName,
+                    FullName = se.Evaluator.Employee.FullName,
+                    Email = se.Evaluator.Employee.Email,
+                    EvaluatorEmail = se.Evaluator.Employee.Email,
+                    EmployeeIdString = se.Evaluator.Employee.EmployeeId,
+                    Designation = se.Evaluator.Employee.Designation,
                     IsActive = se.Evaluator.IsActive
                 } : null
             }).ToList();
@@ -330,7 +370,9 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
         {
             var assignments = await _context.SubjectEvaluators
                 .Include(se => se.Subject)
+                    .ThenInclude(s => s.Employee)
                 .Include(se => se.Evaluator)
+                    .ThenInclude(e => e.Employee)
                 .Where(se => se.EvaluatorId == evaluatorId && se.IsActive)
                 .ToListAsync();
 
@@ -347,23 +389,26 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
                 Subject = se.Subject != null ? new SubjectSummaryResponse
                 {
                     Id = se.Subject.Id,
-                    FirstName = se.Subject.FirstName,
-                    LastName = se.Subject.LastName,
-                    FullName = se.Subject.FullName,
-                    Email = se.Subject.Email,
-
-                    Designation = se.Subject.Designation,
+                    EmployeeId = se.Subject.EmployeeId,
+                    FirstName = se.Subject.Employee.FirstName,
+                    LastName = se.Subject.Employee.LastName,
+                    FullName = se.Subject.Employee.FullName,
+                    Email = se.Subject.Employee.Email,
+                    EmployeeIdString = se.Subject.Employee.EmployeeId,
+                    Designation = se.Subject.Employee.Designation,
                     IsActive = se.Subject.IsActive
                 } : null,
                 Evaluator = se.Evaluator != null ? new EvaluatorSummaryResponse
                 {
                     Id = se.Evaluator.Id,
-                    FirstName = se.Evaluator.FirstName,
-                    LastName = se.Evaluator.LastName,
-                    FullName = se.Evaluator.FullName,
-                    EvaluatorEmail = se.Evaluator.EvaluatorEmail,
-
-                    Designation = se.Evaluator.Designation,
+                    EmployeeId = se.Evaluator.EmployeeId,
+                    FirstName = se.Evaluator.Employee.FirstName,
+                    LastName = se.Evaluator.Employee.LastName,
+                    FullName = se.Evaluator.Employee.FullName,
+                    Email = se.Evaluator.Employee.Email,
+                    EvaluatorEmail = se.Evaluator.Employee.Email,
+                    EmployeeIdString = se.Evaluator.Employee.EmployeeId,
+                    Designation = se.Evaluator.Employee.Designation,
                     IsActive = se.Evaluator.IsActive
                 } : null
             }).ToList();
@@ -385,7 +430,9 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
     {
         var assignment = await _context.SubjectEvaluators
             .Include(se => se.Subject)
+                .ThenInclude(s => s.Employee)
             .Include(se => se.Evaluator)
+                .ThenInclude(e => e.Employee)
             .FirstOrDefaultAsync(se => se.Id == assignmentId);
 
         if (assignment == null)
@@ -404,23 +451,26 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
             Subject = assignment.Subject != null ? new SubjectSummaryResponse
             {
                 Id = assignment.Subject.Id,
-                FirstName = assignment.Subject.FirstName,
-                LastName = assignment.Subject.LastName,
-                FullName = assignment.Subject.FullName,
-                Email = assignment.Subject.Email,
-
-                Designation = assignment.Subject.Designation,
+                EmployeeId = assignment.Subject.EmployeeId,
+                FirstName = assignment.Subject.Employee.FirstName,
+                LastName = assignment.Subject.Employee.LastName,
+                FullName = assignment.Subject.Employee.FullName,
+                Email = assignment.Subject.Employee.Email,
+                EmployeeIdString = assignment.Subject.Employee.EmployeeId,
+                Designation = assignment.Subject.Employee.Designation,
                 IsActive = assignment.Subject.IsActive
             } : null,
             Evaluator = assignment.Evaluator != null ? new EvaluatorSummaryResponse
             {
                 Id = assignment.Evaluator.Id,
-                FirstName = assignment.Evaluator.FirstName,
-                LastName = assignment.Evaluator.LastName,
-                FullName = assignment.Evaluator.FullName,
-                EvaluatorEmail = assignment.Evaluator.EvaluatorEmail,
-
-                Designation = assignment.Evaluator.Designation,
+                EmployeeId = assignment.Evaluator.EmployeeId,
+                FirstName = assignment.Evaluator.Employee.FirstName,
+                LastName = assignment.Evaluator.Employee.LastName,
+                FullName = assignment.Evaluator.Employee.FullName,
+                Email = assignment.Evaluator.Employee.Email,
+                EvaluatorEmail = assignment.Evaluator.Employee.Email,
+                EmployeeIdString = assignment.Evaluator.Employee.EmployeeId,
+                Designation = assignment.Evaluator.Employee.Designation,
                 IsActive = assignment.Evaluator.IsActive
             } : null
         };

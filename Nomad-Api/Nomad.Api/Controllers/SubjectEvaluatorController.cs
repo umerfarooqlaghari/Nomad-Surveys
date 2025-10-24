@@ -133,6 +133,67 @@ public class SubjectEvaluatorController : ControllerBase
     }
 
     /// <summary>
+    /// Update relationship type between a subject and evaluator
+    /// </summary>
+    /// <param name="subjectId">Subject ID</param>
+    /// <param name="evaluatorId">Evaluator ID</param>
+    /// <param name="request">Update request with new relationship type</param>
+    /// <returns>Updated assignment</returns>
+    [HttpPut("subjects/{subjectId}/evaluators/{evaluatorId}")]
+    [AuthorizeTenantAdmin]
+    public async Task<ActionResult<SubjectEvaluatorResponse>> UpdateAssignment(
+        Guid subjectId,
+        Guid evaluatorId,
+        [FromBody] UpdateRelationshipRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Verify both subject and evaluator exist and user has access
+            var subject = await _subjectService.GetSubjectByIdAsync(subjectId);
+            if (subject == null)
+            {
+                return NotFound(new { message = "Subject not found" });
+            }
+
+            var evaluator = await _evaluatorService.GetEvaluatorByIdAsync(evaluatorId);
+            if (evaluator == null)
+            {
+                return NotFound(new { message = "Evaluator not found" });
+            }
+
+            var currentTenantId = GetCurrentTenantId();
+            if (currentTenantId.HasValue &&
+                (subject.TenantId != currentTenantId || evaluator.TenantId != currentTenantId))
+            {
+                return Forbid("You can only update assignments within your own tenant");
+            }
+
+            var updated = await _subjectEvaluatorService.UpdateAssignmentAsync(subjectId, evaluatorId, request.Relationship);
+
+            if (updated == null)
+            {
+                return NotFound(new { message = "Assignment not found" });
+            }
+
+            _logger.LogInformation("Updated assignment between subject {SubjectId} and evaluator {EvaluatorId} to relationship {Relationship}",
+                subjectId, evaluatorId, request.Relationship);
+
+            return Ok(updated);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating assignment between subject {SubjectId} and evaluator {EvaluatorId}",
+                subjectId, evaluatorId);
+            return StatusCode(500, new { message = "An error occurred while updating the assignment" });
+        }
+    }
+
+    /// <summary>
     /// Remove assignment between a subject and evaluator
     /// </summary>
     /// <param name="subjectId">Subject ID</param>
