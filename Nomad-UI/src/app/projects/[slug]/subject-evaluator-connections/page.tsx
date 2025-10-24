@@ -8,46 +8,49 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import toast from 'react-hot-toast';
 
 interface Subject {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  department: string;
-  position: string;
+  Id: string;
+  FullName: string;
+  Email: string;
+  EmployeeIdString: string;
+  Designation?: string;
+  IsActive: boolean;
 }
 
 interface Evaluator {
-  id: string;
-  evaluatorFirstName: string;
-  evaluatorLastName: string;
-  evaluatorEmail: string;
-  evaluatorDepartment: string;
-  evaluatorPosition: string;
+  Id: string;
+  FullName: string;
+  Email: string;
+  EmployeeIdString: string;
+  Designation?: string;
+  IsActive: boolean;
 }
 
 interface Connection {
-  id: string;
-  subjectId: string;
-  evaluatorId: string;
-  relationship: string;
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  subject?: Subject;
-  evaluator?: Evaluator;
+  Id: string;
+  SubjectId: string;
+  EvaluatorId: string;
+  Relationship: string;
+  SubjectFullName?: string;
+  SubjectEmail?: string;
+  EvaluatorFullName?: string;
+  EvaluatorEmail?: string;
 }
 
 const relationshipTypes = [
-  'DirectReport',
-  'Manager', 
+  'Manager',
+  'Direct Report',
+  'Peer',
   'Colleague',
+  'Team Lead',
+  'Supervisor',
   'Other'
 ];
 
 export default function SubjectEvaluatorConnections() {
   const params = useParams();
-  const { user, logout } = useAuth();
+  const { user, logout, token } = useAuth();
   const projectSlug = params.slug as string;
-  
+
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [evaluators, setEvaluators] = useState<Evaluator[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -57,19 +60,44 @@ export default function SubjectEvaluatorConnections() {
   const [selectedEvaluator, setSelectedEvaluator] = useState('');
   const [selectedRelationship, setSelectedRelationship] = useState('');
 
+  // Search states
+  const [subjectSearch, setSubjectSearch] = useState('');
+  const [evaluatorSearch, setEvaluatorSearch] = useState('');
+
   useEffect(() => {
-    loadData();
-  }, [projectSlug]);
+    if (token) {
+      loadData();
+    }
+  }, [projectSlug, token]);
 
   const loadData = async () => {
+    if (!token) return;
+
     setIsLoading(true);
     try {
-      // Load subjects, evaluators, and existing connections
-      // These would be API calls in a real implementation
-      setSubjects([]);
-      setEvaluators([]);
+      // Load subjects
+      const subjectsResponse = await fetch(`/api/${projectSlug}/subjects`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (subjectsResponse.ok) {
+        const subjectsData = await subjectsResponse.json();
+        setSubjects(subjectsData || []);
+      }
+
+      // Load evaluators
+      const evaluatorsResponse = await fetch(`/api/${projectSlug}/evaluators`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (evaluatorsResponse.ok) {
+        const evaluatorsData = await evaluatorsResponse.json();
+        setEvaluators(evaluatorsData || []);
+      }
+
+      // Load existing connections (if you have an endpoint for this)
+      // For now, we'll leave connections empty
       setConnections([]);
     } catch (error) {
+      console.error('Error loading data:', error);
       toast.error('Failed to load data');
     } finally {
       setIsLoading(false);
@@ -78,51 +106,65 @@ export default function SubjectEvaluatorConnections() {
 
   const handleCreateConnection = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSubject || !selectedEvaluator || !selectedRelationship) {
+    if (!selectedSubject || !selectedEvaluator || !selectedRelationship || !token) {
       toast.error('Please fill all fields');
       return;
     }
 
+    setIsLoading(true);
     try {
-      // API call to create connection
-      toast.success('Connection request created successfully');
-      setShowCreateForm(false);
-      resetForm();
-      loadData();
+      const response = await fetch(`/api/${projectSlug}/subject-evaluators/subjects/${selectedSubject}/evaluators`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          Evaluators: [{
+            EvaluatorId: selectedEvaluator,
+            Relationship: selectedRelationship
+          }]
+        })
+      });
+
+      if (response.ok) {
+        toast.success('Connection created successfully');
+        setShowCreateForm(false);
+        resetForm();
+        loadData();
+      } else {
+        const error = await response.json();
+        toast.error(error.message || 'Failed to create connection');
+      }
     } catch (error) {
+      console.error('Error creating connection:', error);
       toast.error('Failed to create connection');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleApproveConnection = async (connectionId: string) => {
-    try {
-      // API call to approve connection
-      toast.success('Connection approved');
-      loadData();
-    } catch (error) {
-      toast.error('Failed to approve connection');
-    }
-  };
+  const handleDeleteConnection = async (connectionId: string, subjectId: string, evaluatorId: string) => {
+    if (!confirm('Are you sure you want to delete this connection?') || !token) return;
 
-  const handleRejectConnection = async (connectionId: string) => {
+    setIsLoading(true);
     try {
-      // API call to reject connection
-      toast.success('Connection rejected');
-      loadData();
-    } catch (error) {
-      toast.error('Failed to reject connection');
-    }
-  };
+      const response = await fetch(`/api/${projectSlug}/subject-evaluators/subjects/${subjectId}/evaluators/${evaluatorId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-  const handleDeleteConnection = async (connectionId: string) => {
-    if (!confirm('Are you sure you want to delete this connection?')) return;
-
-    try {
-      // API call to delete connection
-      toast.success('Connection deleted');
-      loadData();
+      if (response.ok) {
+        toast.success('Connection deleted');
+        loadData();
+      } else {
+        toast.error('Failed to delete connection');
+      }
     } catch (error) {
+      console.error('Error deleting connection:', error);
       toast.error('Failed to delete connection');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -130,20 +172,8 @@ export default function SubjectEvaluatorConnections() {
     setSelectedSubject('');
     setSelectedEvaluator('');
     setSelectedRelationship('');
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusClasses = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      approved: 'bg-green-100 text-green-800',
-      rejected: 'bg-red-100 text-red-800'
-    };
-    
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClasses[status as keyof typeof statusClasses]}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
+    setSubjectSearch('');
+    setEvaluatorSearch('');
   };
 
   return (
@@ -213,61 +243,93 @@ export default function SubjectEvaluatorConnections() {
 
               {/* Create Connection Form */}
               {showCreateForm && (
-                <div className="border-t pt-6 mt-6">
+                <div className="border-t pt-6 mt-6 bg-gray-50 p-6 rounded-lg">
                   <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Connection</h3>
-                  <form onSubmit={handleCreateConnection} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Subject</label>
-                      <select
-                        value={selectedSubject}
-                        onChange={(e) => setSelectedSubject(e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                        required
-                      >
-                        <option value="">Select Subject</option>
-                        {subjects.map((subject) => (
-                          <option key={subject.id} value={subject.id}>
-                            {subject.firstName} {subject.lastName} ({subject.email})
-                          </option>
-                        ))}
-                      </select>
+                  <form onSubmit={handleCreateConnection} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                        <input
+                          type="text"
+                          placeholder="Search subjects..."
+                          value={subjectSearch}
+                          onChange={(e) => setSubjectSearch(e.target.value)}
+                          className="mb-2 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        />
+                        <select
+                          value={selectedSubject}
+                          onChange={(e) => setSelectedSubject(e.target.value)}
+                          className="block w-full border border-gray-300 rounded-md px-3 py-2 bg-white"
+                          required
+                          size={5}
+                        >
+                          <option value="">Select Subject</option>
+                          {subjects
+                            .filter(subject =>
+                              subjectSearch === '' ||
+                              subject.FullName.toLowerCase().includes(subjectSearch.toLowerCase()) ||
+                              subject.Email.toLowerCase().includes(subjectSearch.toLowerCase()) ||
+                              subject.EmployeeIdString.toLowerCase().includes(subjectSearch.toLowerCase())
+                            )
+                            .map((subject) => (
+                              <option key={subject.Id} value={subject.Id}>
+                                {subject.FullName} ({subject.EmployeeIdString})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Evaluator</label>
+                        <input
+                          type="text"
+                          placeholder="Search evaluators..."
+                          value={evaluatorSearch}
+                          onChange={(e) => setEvaluatorSearch(e.target.value)}
+                          className="mb-2 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        />
+                        <select
+                          value={selectedEvaluator}
+                          onChange={(e) => setSelectedEvaluator(e.target.value)}
+                          className="block w-full border border-gray-300 rounded-md px-3 py-2 bg-white"
+                          required
+                          size={5}
+                        >
+                          <option value="">Select Evaluator</option>
+                          {evaluators
+                            .filter(evaluator =>
+                              evaluatorSearch === '' ||
+                              evaluator.FullName.toLowerCase().includes(evaluatorSearch.toLowerCase()) ||
+                              evaluator.Email.toLowerCase().includes(evaluatorSearch.toLowerCase()) ||
+                              evaluator.EmployeeIdString.toLowerCase().includes(evaluatorSearch.toLowerCase())
+                            )
+                            .map((evaluator) => (
+                              <option key={evaluator.Id} value={evaluator.Id}>
+                                {evaluator.FullName} ({evaluator.EmployeeIdString})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Relationship</label>
+                        <select
+                          value={selectedRelationship}
+                          onChange={(e) => setSelectedRelationship(e.target.value)}
+                          className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 bg-white"
+                          required
+                        >
+                          <option value="">Select Relationship</option>
+                          {relationshipTypes.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Evaluator</label>
-                      <select
-                        value={selectedEvaluator}
-                        onChange={(e) => setSelectedEvaluator(e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                        required
-                      >
-                        <option value="">Select Evaluator</option>
-                        {evaluators.map((evaluator) => (
-                          <option key={evaluator.id} value={evaluator.id}>
-                            {evaluator.evaluatorFirstName} {evaluator.evaluatorLastName} ({evaluator.evaluatorEmail})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Relationship</label>
-                      <select
-                        value={selectedRelationship}
-                        onChange={(e) => setSelectedRelationship(e.target.value)}
-                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                        required
-                      >
-                        <option value="">Select Relationship</option>
-                        {relationshipTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div className="md:col-span-3 flex justify-end space-x-3">
+
+                    <div className="flex justify-end space-x-3">
                       <button
                         type="button"
                         onClick={() => {
@@ -307,54 +369,32 @@ export default function SubjectEvaluatorConnections() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluator</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Relationship</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {connections.map((connection) => (
-                        <tr key={connection.id}>
+                        <tr key={connection.Id}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
-                              {connection.subject?.firstName} {connection.subject?.lastName}
+                              {connection.SubjectFullName}
                             </div>
-                            <div className="text-sm text-gray-500">{connection.subject?.email}</div>
+                            <div className="text-sm text-gray-500">{connection.SubjectEmail}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
-                              {connection.evaluator?.evaluatorFirstName} {connection.evaluator?.evaluatorLastName}
+                              {connection.EvaluatorFullName}
                             </div>
-                            <div className="text-sm text-gray-500">{connection.evaluator?.evaluatorEmail}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {connection.relationship}
+                            <div className="text-sm text-gray-500">{connection.EvaluatorEmail}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            {getStatusBadge(connection.status)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(connection.createdAt).toLocaleDateString()}
+                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800">
+                              {connection.Relationship}
+                            </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {connection.status === 'pending' && (
-                              <>
-                                <button
-                                  onClick={() => handleApproveConnection(connection.id)}
-                                  className="text-green-600 hover:text-green-900 mr-3"
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  onClick={() => handleRejectConnection(connection.id)}
-                                  className="text-red-600 hover:text-red-900 mr-3"
-                                >
-                                  Reject
-                                </button>
-                              </>
-                            )}
                             <button
-                              onClick={() => handleDeleteConnection(connection.id)}
+                              onClick={() => handleDeleteConnection(connection.Id, connection.SubjectId, connection.EvaluatorId)}
                               className="text-red-600 hover:text-red-900"
                             >
                               Delete
@@ -369,13 +409,18 @@ export default function SubjectEvaluatorConnections() {
             </div>
 
             {/* Information Panel */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="text-lg font-medium text-blue-900 mb-2">How Subject-Evaluator Connections Work</h3>
-              <div className="text-sm text-blue-700 space-y-2">
-                <p><strong>1. Create Connections:</strong> Link subjects with their evaluators based on workplace relationships.</p>
-                <p><strong>2. Admin Approval:</strong> All connections require admin approval before becoming active.</p>
-                <p><strong>3. Relationship Types:</strong> DirectReport, Manager, Colleague, or Other - each affects survey questions.</p>
-                <p><strong>4. 360 Feedback:</strong> Approved connections enable comprehensive 360-degree feedback collection.</p>
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-6">
+              <h3 className="text-lg font-medium text-indigo-900 mb-3 flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                How Subject-Evaluator Connections Work
+              </h3>
+              <div className="text-sm text-indigo-700 space-y-2">
+                <p><strong>1. Create Connections:</strong> Link subjects with their evaluators based on workplace relationships (Manager, Peer, Direct Report, etc.).</p>
+                <p><strong>2. Searchable Dropdowns:</strong> Use the search boxes to quickly find subjects and evaluators by name, email, or employee ID.</p>
+                <p><strong>3. Manage Relationships:</strong> Click &quot;Manage&quot; on any subject or evaluator to view, edit, or delete their relationships.</p>
+                <p><strong>4. 360 Feedback:</strong> These connections enable comprehensive 360-degree feedback collection for performance reviews.</p>
               </div>
             </div>
           </div>

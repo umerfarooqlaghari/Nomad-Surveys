@@ -16,7 +16,6 @@ export default function Home() {
         if (roles.length > 0) {
           // Redirect to appropriate dashboard based on role
           const role = roles[0];
-          console.log('Home page redirect - User role:', role, 'User:', user);
           switch (role) {
             case 'SuperAdmin':
               router.push('/superadmin/dashboard');

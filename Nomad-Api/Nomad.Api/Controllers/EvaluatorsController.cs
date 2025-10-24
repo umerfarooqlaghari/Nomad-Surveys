@@ -136,7 +136,7 @@ public class EvaluatorsController : ControllerBase
                 return StatusCode(207, result); // Multi-Status for partial success
             }
 
-            return CreatedAtAction(nameof(GetEvaluators), new { tenantId = currentTenantId }, result);
+            return Ok(result);
         }
         catch (ArgumentException ex)
         {

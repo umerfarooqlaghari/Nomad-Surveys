@@ -45,6 +45,9 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.SubjectEvaluators, opt => opt.MapFrom(src => src.SubjectEvaluators));
 
         CreateMap<SubjectEvaluator, SubjectEvaluatorDomain>();
+
+        // Employee mappings
+        CreateMap<Employee, EmployeeDomain>();
     }
 
     private void CreateDomainToResponseMaps()
@@ -75,6 +78,10 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.SubjectCount, opt => opt.MapFrom(src => src.SubjectEvaluators.Count(se => se.IsActive)));
 
         CreateMap<SubjectEvaluatorDomain, SubjectEvaluatorResponse>();
+
+        // Employee domain to response mappings
+        CreateMap<EmployeeDomain, EmployeeResponse>();
+        CreateMap<EmployeeDomain, EmployeeListResponse>();
     }
 
     private void CreateRequestToDomainMaps()
@@ -200,6 +207,30 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.TenantId, opt => opt.Ignore())
             .ForMember(dest => dest.Tenant, opt => opt.Ignore())
             .ForMember(dest => dest.SubjectEvaluators, opt => opt.Ignore());
+
+        // Employee request to entity mappings
+        CreateMap<CreateEmployeeRequest, Employee>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.MapFrom(src => true))
+            .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+            .ForMember(dest => dest.Tenant, opt => opt.Ignore())
+            .ForMember(dest => dest.Subject, opt => opt.Ignore())
+            .ForMember(dest => dest.Evaluator, opt => opt.Ignore());
+
+        CreateMap<UpdateEmployeeRequest, Employee>()
+            .ForMember(dest => dest.Id, opt => opt.Ignore())
+            .ForMember(dest => dest.IsActive, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+            .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+            .ForMember(dest => dest.TenantId, opt => opt.Ignore())
+            .ForMember(dest => dest.Tenant, opt => opt.Ignore())
+            .ForMember(dest => dest.Subject, opt => opt.Ignore())
+            .ForMember(dest => dest.Evaluator, opt => opt.Ignore());
+
+        // UpdateEmployeeRequest to CreateEmployeeRequest for validation
+        CreateMap<UpdateEmployeeRequest, CreateEmployeeRequest>();
     }
 
     private void CreateEntityToResponseMaps()
@@ -264,5 +295,9 @@ public class MappingProfile : Profile
         CreateMap<SubjectEvaluator, SubjectEvaluatorResponse>()
             .ForMember(dest => dest.Subject, opt => opt.Ignore()) // Handled in service
             .ForMember(dest => dest.Evaluator, opt => opt.Ignore()); // Handled in service
+
+        // Direct entity to response mappings for employees
+        CreateMap<Employee, EmployeeResponse>();
+        CreateMap<Employee, EmployeeListResponse>();
     }
 }

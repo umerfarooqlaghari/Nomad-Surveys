@@ -41,10 +41,19 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      
+
+      // Treat 207 Multi-Status as a success case with a response body
+      if (response.status === 207) {
+        const data = await response.json();
+        return {
+          data,
+          status: response.status,
+        };
+      }
+
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        
+
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorMessage;
@@ -191,6 +200,7 @@ export const HTTP_STATUS = {
   OK: 200,
   CREATED: 201,
   NO_CONTENT: 204,
+  MULTI_STATUS: 207,
   BAD_REQUEST: 400,
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
