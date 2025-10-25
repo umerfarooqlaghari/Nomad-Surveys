@@ -14,7 +14,10 @@
     "postcss": "^8.5.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-hot-toast": "^2.6.0"
+    "react-hot-toast": "^2.6.0",
+    "survey-core": "^2.3.12",
+    "survey-creator-core": "^2.3.12",
+    "survey-creator-react": "^2.3.12"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
