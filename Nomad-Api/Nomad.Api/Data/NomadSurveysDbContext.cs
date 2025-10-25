@@ -33,6 +33,9 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
     // Employee entity
     public DbSet<Employee> Employees { get; set; }
 
+    // Survey entity
+    public DbSet<Survey> Surveys { get; set; }
+
     // Additional DbSets will be added here as we create more entities
     // public DbSet<Question> Questions { get; set; }
     // public DbSet<Response> Responses { get; set; }
@@ -44,6 +47,7 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         ConfigureIdentityTables(modelBuilder);
         ConfigureEntityRelationships(modelBuilder);
         ConfigureParticipantRelationships(modelBuilder);
+        ConfigureSurveyRelationships(modelBuilder);
         ConfigureGlobalQueryFilters(modelBuilder);
     }
 
@@ -307,6 +311,29 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         });
     }
 
+    private void ConfigureSurveyRelationships(ModelBuilder modelBuilder)
+    {
+        // Survey configurations
+        modelBuilder.Entity<Survey>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.Schema).IsRequired().HasColumnType("jsonb");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Index for better query performance
+            entity.HasIndex(e => new { e.TenantId, e.IsActive });
+            entity.HasIndex(e => e.CreatedAt);
+        });
+    }
+
     private void ConfigureGlobalQueryFilters(ModelBuilder modelBuilder)
     {
         // Apply global query filters for tenant isolation
@@ -325,6 +352,9 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
 
         // Employee query filter for tenant isolation
         modelBuilder.Entity<Employee>().HasQueryFilter(e => CurrentTenantId == null || e.TenantId == CurrentTenantId);
+
+        // Survey query filter for tenant isolation
+        modelBuilder.Entity<Survey>().HasQueryFilter(s => CurrentTenantId == null || s.TenantId == CurrentTenantId);
     }
 
     public override int SaveChanges()

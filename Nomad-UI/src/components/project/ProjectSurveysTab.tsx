@@ -1,14 +1,133 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import SurveyBuilder from '@/components/survey/SurveyBuilder';
+import toast from 'react-hot-toast';
 
 interface ProjectSurveysTabProps {
   projectSlug: string;
 }
 
+interface Survey {
+  Id: string;
+  Title: string;
+  Description?: string;
+  IsActive: boolean;
+  CreatedAt: string;
+  UpdatedAt?: string;
+  QuestionCount: number;
+}
+
 export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProps) {
-  const [surveys, setSurveys] = useState<any[]>([]);
+  const { token } = useAuth();
+  const [surveys, setSurveys] = useState<Survey[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showBuilder, setShowBuilder] = useState(false);
+  const [editingSurvey, setEditingSurvey] = useState<any>(null);
+
+  useEffect(() => {
+    fetchSurveys();
+  }, []);
+
+  const fetchSurveys = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/${projectSlug}/surveys`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch surveys');
+      }
+
+      const data = await response.json();
+      setSurveys(data);
+    } catch (error) {
+      console.error('Error fetching surveys:', error);
+      toast.error('Failed to load surveys');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateSurvey = () => {
+    setEditingSurvey(null);
+    setShowBuilder(true);
+  };
+
+  const handleEditSurvey = async (surveyId: string) => {
+    try {
+      const response = await fetch(`/api/${projectSlug}/surveys/${surveyId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch survey');
+      }
+
+      const survey = await response.json();
+      setEditingSurvey(survey);
+      setShowBuilder(true);
+    } catch (error) {
+      console.error('Error fetching survey:', error);
+      toast.error('Failed to load survey');
+    }
+  };
+
+  const handleDeleteSurvey = async (surveyId: string) => {
+    if (!confirm('Are you sure you want to delete this survey?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/${projectSlug}/surveys/${surveyId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete survey');
+      }
+
+      toast.success('Survey deleted successfully');
+      fetchSurveys();
+    } catch (error) {
+      console.error('Error deleting survey:', error);
+      toast.error('Failed to delete survey');
+    }
+  };
+
+  const handleSaveSurvey = () => {
+    setShowBuilder(false);
+    setEditingSurvey(null);
+    fetchSurveys();
+  };
+
+  const handleCancelBuilder = () => {
+    setShowBuilder(false);
+    setEditingSurvey(null);
+  };
+
+  if (showBuilder) {
+    return (
+      <SurveyBuilder
+        tenantSlug={projectSlug}
+        token={token || ''}
+        initialSurvey={editingSurvey}
+        surveyId={editingSurvey?.Id}
+        onSave={handleSaveSurvey}
+        onCancel={handleCancelBuilder}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -19,33 +138,33 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
             <p className="text-gray-600">Manage surveys for project: {projectSlug}</p>
           </div>
           <div className="flex space-x-3">
-            <button className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+            <button
+              onClick={handleCreateSurvey}
+              className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            >
               Create Survey
             </button>
           </div>
         </div>
 
-        {/* Survey Templates */}
-        <div className="mb-8">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Survey Templates</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <h4 className="font-medium text-gray-900 mb-2">360 Feedback Survey</h4>
-              <p className="text-sm text-gray-600 mb-3">Comprehensive 360-degree feedback assessment</p>
-              <button className="bg-blue-500 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
-                Use Template
-              </button>
-            </div>
-          </div>
-        </div>
-
         {/* Active Surveys */}
         <div>
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Active Surveys</h3>
-          {surveys.length === 0 ? (
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            {loading ? 'Loading surveys...' : `Surveys (${surveys.length})`}
+          </h3>
+          {loading ? (
+            <div className="bg-gray-50 rounded-lg p-8 text-center">
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-300 rounded w-1/4 mx-auto"></div>
+              </div>
+            </div>
+          ) : surveys.length === 0 ? (
             <div className="bg-gray-50 rounded-lg p-8 text-center">
               <p className="text-gray-500 mb-4">No surveys created yet</p>
-              <button className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm">
+              <button
+                onClick={handleCreateSurvey}
+                className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm"
+              >
                 Create Your First Survey
               </button>
             </div>
@@ -55,16 +174,16 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Survey Name
+                      Survey Title
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Questions
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Responses
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Created
@@ -76,32 +195,43 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {surveys.map((survey) => (
-                    <tr key={survey.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{survey.name}</div>
+                    <tr key={survey.Id}>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900">{survey.Title}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-500 max-w-xs truncate">
+                          {survey.Description || 'No description'}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {survey.type}
+                        {survey.QuestionCount}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {survey.status}
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            survey.IsActive
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {survey.IsActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {survey.responses}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {survey.createdAt}
+                        {new Date(survey.CreatedAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">
+                        <button
+                          onClick={() => handleEditSurvey(survey.Id)}
+                          className="text-blue-600 hover:text-blue-900 mr-3"
+                        >
                           Edit
                         </button>
-                        <button className="text-green-600 hover:text-green-900 mr-3">
-                          View
-                        </button>
-                        <button className="text-red-600 hover:text-red-900">
+                        <button
+                          onClick={() => handleDeleteSurvey(survey.Id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
                           Delete
                         </button>
                       </td>
