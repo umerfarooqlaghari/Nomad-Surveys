@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nomad.Api.DTOs.Common;
 using Nomad.Api.Data;
@@ -14,9 +15,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Nomad.Api.Migrations
 {
     [DbContext(typeof(NomadSurveysDbContext))]
-    partial class NomadSurveysDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251029202838_AddIsSelfEvaluationToSurvey")]
+    partial class AddIsSelfEvaluationToSurvey
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -626,44 +629,6 @@ namespace Nomad.Api.Migrations
                     b.ToTable("SubjectEvaluators");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.SubjectEvaluatorSurvey", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("SubjectEvaluatorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("SurveyId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SurveyId");
-
-                    b.HasIndex("TenantId");
-
-                    b.HasIndex("SubjectEvaluatorId", "SurveyId")
-                        .IsUnique();
-
-                    b.ToTable("SubjectEvaluatorSurveys");
-                });
-
             modelBuilder.Entity("Nomad.Api.Entities.Survey", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1023,33 +988,6 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Evaluator");
 
                     b.Navigation("Subject");
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("Nomad.Api.Entities.SubjectEvaluatorSurvey", b =>
-                {
-                    b.HasOne("Nomad.Api.Entities.SubjectEvaluator", "SubjectEvaluator")
-                        .WithMany()
-                        .HasForeignKey("SubjectEvaluatorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Nomad.Api.Entities.Survey", "Survey")
-                        .WithMany()
-                        .HasForeignKey("SurveyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("SubjectEvaluator");
-
-                    b.Navigation("Survey");
 
                     b.Navigation("Tenant");
                 });

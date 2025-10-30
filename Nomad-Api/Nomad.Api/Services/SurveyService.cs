@@ -39,6 +39,7 @@ public class SurveyService : ISurveyService
                 Id = s.Id,
                 Title = s.Title,
                 Description = s.Description,
+                IsSelfEvaluation = s.IsSelfEvaluation,
                 IsActive = s.IsActive,
                 CreatedAt = s.CreatedAt,
                 UpdatedAt = s.UpdatedAt,
@@ -70,6 +71,7 @@ public class SurveyService : ISurveyService
                 Title = survey.Title,
                 Description = survey.Description,
                 Schema = survey.Schema,
+                IsSelfEvaluation = survey.IsSelfEvaluation,
                 IsActive = survey.IsActive,
                 CreatedAt = survey.CreatedAt,
                 UpdatedAt = survey.UpdatedAt,
@@ -97,6 +99,7 @@ public class SurveyService : ISurveyService
                 Title = request.Title,
                 Description = request.Description,
                 Schema = schemaDocument,
+                IsSelfEvaluation = request.IsSelfEvaluation,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 TenantId = tenantId
@@ -113,6 +116,7 @@ public class SurveyService : ISurveyService
                 Title = survey.Title,
                 Description = survey.Description,
                 Schema = survey.Schema,
+                IsSelfEvaluation = survey.IsSelfEvaluation,
                 IsActive = survey.IsActive,
                 CreatedAt = survey.CreatedAt,
                 UpdatedAt = survey.UpdatedAt,
@@ -144,6 +148,11 @@ public class SurveyService : ISurveyService
             var schemaJson = JsonSerializer.Serialize(request.Schema);
             survey.Schema = JsonDocument.Parse(schemaJson);
 
+            if (request.IsSelfEvaluation.HasValue)
+            {
+                survey.IsSelfEvaluation = request.IsSelfEvaluation.Value;
+            }
+
             if (request.IsActive.HasValue)
             {
                 survey.IsActive = request.IsActive.Value;
@@ -161,6 +170,7 @@ public class SurveyService : ISurveyService
                 Title = survey.Title,
                 Description = survey.Description,
                 Schema = survey.Schema,
+                IsSelfEvaluation = survey.IsSelfEvaluation,
                 IsActive = survey.IsActive,
                 CreatedAt = survey.CreatedAt,
                 UpdatedAt = survey.UpdatedAt,

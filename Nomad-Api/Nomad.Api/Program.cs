@@ -105,6 +105,7 @@ builder.Services.AddScoped<IRelationshipService, RelationshipService>();
 
 // Add survey services
 builder.Services.AddScoped<ISurveyService, SurveyService>();
+builder.Services.AddScoped<ISurveyAssignmentService, SurveyAssignmentService>();
 
 // Add employee service
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();

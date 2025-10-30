@@ -9,6 +9,7 @@ public class SurveyResponse
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public object Schema { get; set; } = new { };
+    public bool IsSelfEvaluation { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
@@ -23,10 +24,11 @@ public class SurveyListResponse
     public Guid Id { get; set; }
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
+    public bool IsSelfEvaluation { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    
+
     /// <summary>
     /// Count of questions in the survey (calculated from schema)
     /// </summary>

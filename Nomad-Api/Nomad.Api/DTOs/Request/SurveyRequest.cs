@@ -20,6 +20,11 @@ public class CreateSurveyRequest
     /// </summary>
     [Required]
     public object Schema { get; set; } = new { };
+
+    /// <summary>
+    /// Indicates if this survey is for self-evaluation (Subject = Evaluator)
+    /// </summary>
+    public bool IsSelfEvaluation { get; set; } = false;
 }
 
 /// <summary>
@@ -40,7 +45,12 @@ public class UpdateSurveyRequest
     /// </summary>
     [Required]
     public object Schema { get; set; } = new { };
-    
+
+    /// <summary>
+    /// Indicates if this survey is for self-evaluation (Subject = Evaluator)
+    /// </summary>
+    public bool? IsSelfEvaluation { get; set; }
+
     public bool? IsActive { get; set; }
 }
 

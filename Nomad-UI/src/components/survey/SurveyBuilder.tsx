@@ -26,6 +26,7 @@ export default function SurveyBuilder({
 }: SurveyBuilderProps) {
   const [creator, setCreator] = useState<SurveyCreator | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSelfEvaluation, setIsSelfEvaluation] = useState(false);
 
   useEffect(() => {
     const options = {
@@ -39,6 +40,7 @@ export default function SurveyBuilder({
     // Set initial survey if provided
     if (initialSurvey) {
       surveyCreator.JSON = initialSurvey.Schema || {};
+      setIsSelfEvaluation(initialSurvey.IsSelfEvaluation || false);
     } else {
       // Default empty survey
       surveyCreator.JSON = {
@@ -78,6 +80,7 @@ export default function SurveyBuilder({
         title: surveyTitle,
         description: surveyDescription,
         schema: surveyJSON,
+        isSelfEvaluation: isSelfEvaluation,
       };
 
       let response;
@@ -164,15 +167,66 @@ export default function SurveyBuilder({
     <div className="survey-builder-container">
       {/* Action Buttons */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-        <div>
+        <div className="flex-1">
           <h2 className="text-xl font-semibold text-gray-900">
             {surveyId ? 'Edit Survey' : 'Create New Survey'}
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
+
+          {/* Survey Type Toggle */}
+          <div className="flex items-center gap-6 mt-3 mb-3" style={{ zIndex: 1000, position: 'relative' }}>
+            <span className="text-sm font-medium text-gray-700">Survey Type:</span>
+            <div className="flex items-center gap-4">
+              <div
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => setIsSelfEvaluation(false)}
+              >
+                <input
+                  type="radio"
+                  id="radio-360"
+                  name="surveyType"
+                  value="360"
+                  checked={!isSelfEvaluation}
+                  onChange={() => setIsSelfEvaluation(false)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                  style={{ pointerEvents: 'auto' }}
+                />
+                <label htmlFor="radio-360" className="text-sm text-gray-700 select-none cursor-pointer">
+                  360-Degree Evaluation
+                </label>
+              </div>
+              <div
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => setIsSelfEvaluation(true)}
+              >
+                <input
+                  type="radio"
+                  id="radio-self"
+                  name="surveyType"
+                  value="self"
+                  checked={isSelfEvaluation}
+                  onChange={() => setIsSelfEvaluation(true)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                  style={{ pointerEvents: 'auto' }}
+                />
+                <label htmlFor="radio-self" className="text-sm text-gray-700 select-none cursor-pointer">
+                  Self-Evaluation
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Conditional Placeholder Instructions */}
+          <p className="text-sm text-gray-600">
             Use drag & drop to build your survey. You can include placeholders like{' '}
-            <code className="bg-gray-100 px-1 rounded">{'{subjectName}'}</code> or{' '}
-            <code className="bg-gray-100 px-1 rounded">{'{evaluatorName}'}</code> in
-            question text.
+            {isSelfEvaluation ? (
+              <code className="bg-gray-100 px-1 rounded">{'{employeeName}'}</code>
+            ) : (
+              <>
+                <code className="bg-gray-100 px-1 rounded">{'{subjectName}'}</code> or{' '}
+                <code className="bg-gray-100 px-1 rounded">{'{evaluatorName}'}</code>
+              </>
+            )}{' '}
+            in question text.
           </p>
         </div>
         <div className="flex space-x-3">
@@ -235,6 +289,156 @@ export default function SurveyBuilder({
         code {
           font-family: 'Courier New', monospace;
           font-size: 0.875rem;
+        }
+
+        /* SurveyJS Form Theme - Blue and White with Black Text */
+
+        /* Question text - Black */
+        .sd-question__title,
+        .sd-question__header,
+        .sd-element__title,
+        .sd-title,
+        .sd-page__title,
+        .sd-survey__title {
+          color: #000000 !important;
+        }
+
+        /* Question description - Dark gray */
+        .sd-question__description,
+        .sd-element__description {
+          color: #374151 !important;
+        }
+
+        /* Input fields - White background with black text */
+        .sd-input,
+        .sd-text,
+        .sd-comment,
+        .sd-dropdown,
+        .sd-selectbase,
+        input[type="text"],
+        input[type="number"],
+        input[type="email"],
+        textarea,
+        select {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+          border: 1px solid #d1d5db !important;
+        }
+
+        /* Input focus - Blue border */
+        .sd-input:focus,
+        .sd-text:focus,
+        .sd-comment:focus,
+        .sd-dropdown:focus,
+        input:focus,
+        textarea:focus,
+        select:focus {
+          border-color: #3b82f6 !important;
+          outline: none !important;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        }
+
+        /* Radio buttons and checkboxes - Blue when selected */
+        .sd-radio__control,
+        .sd-checkbox__control {
+          border-color: #d1d5db !important;
+        }
+
+        .sd-radio__control:checked,
+        .sd-checkbox__control:checked {
+          background-color: #3b82f6 !important;
+          border-color: #3b82f6 !important;
+        }
+
+        /* Radio and checkbox labels - Black text */
+        .sd-radio__label,
+        .sd-checkbox__label,
+        .sd-item__control-label {
+          color: #000000 !important;
+        }
+
+        /* Buttons - Blue theme */
+        .sd-btn,
+        .sd-navigation__complete-btn,
+        .sd-navigation__next-btn,
+        .sd-navigation__prev-btn {
+          background-color: #3b82f6 !important;
+          color: #ffffff !important;
+          border: none !important;
+        }
+
+        .sd-btn:hover,
+        .sd-navigation__complete-btn:hover,
+        .sd-navigation__next-btn:hover {
+          background-color: #2563eb !important;
+        }
+
+        .sd-navigation__prev-btn {
+          background-color: #ffffff !important;
+          color: #3b82f6 !important;
+          border: 1px solid #3b82f6 !important;
+        }
+
+        .sd-navigation__prev-btn:hover {
+          background-color: #eff6ff !important;
+        }
+
+        /* Page background - White */
+        .sd-page,
+        .sd-body,
+        .sd-container-modern {
+          background-color: #ffffff !important;
+        }
+
+        /* Panel background - Light gray */
+        .sd-panel,
+        .sd-question {
+          background-color: #f9fafb !important;
+          border: 1px solid #e5e7eb !important;
+        }
+
+        /* Progress bar - Blue */
+        .sd-progress__bar {
+          background-color: #3b82f6 !important;
+        }
+
+        /* Rating stars - Blue */
+        .sd-rating__item--selected {
+          color: #3b82f6 !important;
+        }
+
+        /* Matrix cells - White background, black text */
+        .sd-matrix__cell,
+        .sd-table__cell {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+          border-color: #e5e7eb !important;
+        }
+
+        /* Dropdown options - Black text */
+        .sd-dropdown__item,
+        option {
+          color: #000000 !important;
+          background-color: #ffffff !important;
+        }
+
+        .sd-dropdown__item:hover {
+          background-color: #eff6ff !important;
+        }
+
+        /* Error messages - Red */
+        .sd-question__erbox,
+        .sd-question--error {
+          color: #dc2626 !important;
+        }
+
+        /* Placeholder text - Gray */
+        .sd-input::placeholder,
+        .sd-text::placeholder,
+        .sd-comment::placeholder,
+        input::placeholder,
+        textarea::placeholder {
+          color: #9ca3af !important;
         }
       `}</style>
     </div>

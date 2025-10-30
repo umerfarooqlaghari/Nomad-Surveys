@@ -36,6 +36,9 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
     // Survey entity
     public DbSet<Survey> Surveys { get; set; }
 
+    // Survey assignment entity
+    public DbSet<SubjectEvaluatorSurvey> SubjectEvaluatorSurveys { get; set; }
+
     // Additional DbSets will be added here as we create more entities
     // public DbSet<Question> Questions { get; set; }
     // public DbSet<Response> Responses { get; set; }
@@ -332,6 +335,34 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
             entity.HasIndex(e => new { e.TenantId, e.IsActive });
             entity.HasIndex(e => e.CreatedAt);
         });
+
+        // SubjectEvaluatorSurvey configurations (junction table for survey assignments)
+        modelBuilder.Entity<SubjectEvaluatorSurvey>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Unique constraint to prevent duplicate assignments
+            entity.HasIndex(e => new { e.SubjectEvaluatorId, e.SurveyId }).IsUnique();
+
+            // Foreign key to SubjectEvaluator
+            entity.HasOne(e => e.SubjectEvaluator)
+                .WithMany()
+                .HasForeignKey(e => e.SubjectEvaluatorId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Foreign key to Survey
+            entity.HasOne(e => e.Survey)
+                .WithMany()
+                .HasForeignKey(e => e.SurveyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
     }
 
     private void ConfigureGlobalQueryFilters(ModelBuilder modelBuilder)
@@ -355,6 +386,9 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
 
         // Survey query filter for tenant isolation
         modelBuilder.Entity<Survey>().HasQueryFilter(s => CurrentTenantId == null || s.TenantId == CurrentTenantId);
+
+        // Survey assignment query filter for tenant isolation
+        modelBuilder.Entity<SubjectEvaluatorSurvey>().HasQueryFilter(ses => CurrentTenantId == null || ses.TenantId == CurrentTenantId);
     }
 
     public override int SaveChanges()

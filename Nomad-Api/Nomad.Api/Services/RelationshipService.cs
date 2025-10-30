@@ -190,6 +190,17 @@ public class RelationshipService : IRelationshipService
             return result;
         }
 
+        // Get subject's employee information for self-evaluation validation
+        var subject = await _context.Subjects
+            .Include(s => s.Employee)
+            .FirstOrDefaultAsync(s => s.Id == subjectId && s.TenantId == tenantId);
+
+        if (subject == null)
+        {
+            _logger.LogWarning("Subject {SubjectId} not found in tenant {TenantId}", subjectId, tenantId);
+            return result;
+        }
+
         var employeeIds = evaluatorRelationships.Select(er => er.EmployeeId).ToList();
 
         _logger.LogInformation("🔍 Searching for evaluators with EmployeeIds: {EmployeeIds} in tenant {TenantId}",
@@ -244,6 +255,18 @@ public class RelationshipService : IRelationshipService
             }
 
             _logger.LogInformation("✅ Found evaluator: {EvaluatorId} with EmployeeId: {EmployeeId}", evaluator.Id, evaluator.EmployeeIdString);
+
+            // Validate self-evaluation: if relationship is "Self", subject and evaluator must reference the same employee
+            if (string.Equals(evaluatorRelationship.RelationshipType, "Self", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.Equals(subject.Employee.EmployeeId, evaluator.EmployeeIdString, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("❌ Self-evaluation validation failed: Subject EmployeeId {SubjectEmployeeId} != Evaluator EmployeeId {EvaluatorEmployeeId}",
+                        subject.Employee.EmployeeId, evaluator.EmployeeIdString);
+                    result.FailedEmployeeIds.Add(evaluator.EmployeeIdString);
+                    continue;
+                }
+            }
 
             if (existingRelationships.Contains(evaluator.Id))
             {
@@ -371,6 +394,17 @@ public class RelationshipService : IRelationshipService
             return result;
         }
 
+        // Get evaluator's employee information for self-evaluation validation
+        var evaluator = await _context.Evaluators
+            .Include(e => e.Employee)
+            .FirstOrDefaultAsync(e => e.Id == evaluatorId && e.TenantId == tenantId);
+
+        if (evaluator == null)
+        {
+            _logger.LogWarning("Evaluator {EvaluatorId} not found in tenant {TenantId}", evaluatorId, tenantId);
+            return result;
+        }
+
         var employeeIds = subjectRelationships.Select(sr => sr.EmployeeId).ToList();
 
         _logger.LogInformation("🔍 Searching for subjects with EmployeeIds: {EmployeeIds} in tenant {TenantId}",
@@ -425,6 +459,18 @@ public class RelationshipService : IRelationshipService
             }
 
             _logger.LogInformation("✅ Found subject: {SubjectId} with EmployeeId: {EmployeeId}", subject.Id, subject.EmployeeIdString);
+
+            // Validate self-evaluation: if relationship is "Self", subject and evaluator must reference the same employee
+            if (string.Equals(subjectRelationship.RelationshipType, "Self", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!string.Equals(subject.EmployeeIdString, evaluator.Employee.EmployeeId, StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("❌ Self-evaluation validation failed: Subject EmployeeId {SubjectEmployeeId} != Evaluator EmployeeId {EvaluatorEmployeeId}",
+                        subject.EmployeeIdString, evaluator.Employee.EmployeeId);
+                    result.FailedEmployeeIds.Add(subject.EmployeeIdString);
+                    continue;
+                }
+            }
 
             if (existingRelationships.Contains(subject.Id))
             {

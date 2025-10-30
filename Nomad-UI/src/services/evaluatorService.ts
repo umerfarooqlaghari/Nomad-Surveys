@@ -277,6 +277,11 @@ class EvaluatorService {
                     errors.push(`Row ${lineNumber}: SubjectRelationships[${idx}] missing Relationship`);
                   }
 
+                  // Validate self-evaluation: if relationship is "Self", SubjectEmployeeId must equal EvaluatorEmployeeId
+                  if (relationship.toLowerCase() === 'self' && subjectEmployeeId.toLowerCase() !== employeeId.toLowerCase()) {
+                    errors.push(`Row ${lineNumber}: SubjectRelationships[${idx}] - Relationship "Self" requires SubjectEmployeeId and EvaluatorEmployeeId to match (EvaluatorEmployeeId: ${employeeId}, SubjectEmployeeId: ${subjectEmployeeId})`);
+                  }
+
                   return {
                     SubjectEmployeeId: String(subjectEmployeeId),
                     Relationship: String(relationship)
