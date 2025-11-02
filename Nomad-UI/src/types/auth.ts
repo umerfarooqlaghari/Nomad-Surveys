@@ -35,13 +35,21 @@ export interface User {
 }
 
 export interface Tenant {
-  id: string;
-  name: string;
-  slug: string;
+  // Support both camelCase and PascalCase for compatibility
+  id?: string;
+  Id?: string;
+  name?: string;
+  Name?: string;
+  slug?: string;
+  Slug?: string;
   description?: string;
-  isActive: boolean;
-  createdAt: string;
+  Description?: string;
+  isActive?: boolean;
+  IsActive?: boolean;
+  createdAt?: string;
+  CreatedAt?: string;
   updatedAt?: string;
+  UpdatedAt?: string;
 }
 
 export interface LoginRequest {

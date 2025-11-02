@@ -20,7 +20,7 @@ export async function POST(
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       return NextResponse.json(data, { status: response.status });
     }

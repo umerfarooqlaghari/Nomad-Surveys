@@ -110,6 +110,9 @@ builder.Services.AddScoped<ISurveyAssignmentService, SurveyAssignmentService>();
 // Add employee service
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 
+// Add participant portal service
+builder.Services.AddScoped<IParticipantService, ParticipantService>();
+
 // Add CORS
 builder.Services.AddCors(options =>
 {
