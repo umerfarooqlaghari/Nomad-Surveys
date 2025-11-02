@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import toast, { Toaster } from 'react-hot-toast';
 import styles from './LoginForm.module.css';
+import Link from 'next/link';
 
 interface LoginFormProps {
   isSuperAdmin?: boolean;
@@ -242,9 +243,9 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
             <div className={styles.linkSection}>
               <p className={styles.linkText}>
                 Need SuperAdmin access?{' '}
-                <a href="/superadmin/login" className={styles.link}>
+                <Link href="/superadmin/login" className={styles.link}>
                   SuperAdmin Login
-                </a>
+                </Link>
               </p>
             </div>
           )}
@@ -253,9 +254,9 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
             <div className={styles.linkSection}>
               <p className={styles.linkText}>
                 Regular user?{' '}
-                <a href="/login" className={styles.link}>
+                <Link href="/login" className={styles.link}>
                   User Login
-                </a>
+                </Link>
               </p>
             </div>
           )}
