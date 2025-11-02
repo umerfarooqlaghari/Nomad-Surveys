@@ -16,6 +16,9 @@ export default function Home() {
         if (roles.length > 0) {
           // Redirect to appropriate dashboard based on role
           const role = roles[0];
+          // Get tenant slug for tenant-specific routes
+          const tenantSlug = user.Tenant?.Slug || user.Tenant?.slug || user.tenant?.Slug || user.tenant?.slug;
+
           switch (role) {
             case 'SuperAdmin':
               router.push('/superadmin/dashboard');
@@ -24,7 +27,12 @@ export default function Home() {
               router.push('/admin/dashboard');
               break;
             case 'Participant':
-              router.push('/participant/dashboard');
+              if (tenantSlug) {
+                router.push(`/${tenantSlug}/participant/dashboard`);
+              } else {
+                console.warn('Participant user has no tenant, redirecting to login');
+                router.push('/login');
+              }
               break;
             default:
               console.warn('Unknown role, redirecting to login:', role);

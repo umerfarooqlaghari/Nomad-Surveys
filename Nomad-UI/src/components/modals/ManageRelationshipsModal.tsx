@@ -43,6 +43,7 @@ interface Relationship {
 
 interface AvailableOption {
   Id: string;
+  EmployeeId: string;
   FullName: string;
   Email: string;
   EmployeeIdString: string;
@@ -60,6 +61,7 @@ interface ManageRelationshipsModalProps {
 }
 
 const relationshipTypes = [
+  'Self',
   'Manager',
   'Direct Report',
   'Peer',
@@ -86,11 +88,13 @@ export default function ManageRelationshipsModal({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRelationships, setSelectedRelationships] = useState<{ [key: string]: string }>({});
   const [editingRelationship, setEditingRelationship] = useState<{ id: string; relationship: string } | null>(null);
+  const [currentEntity, setCurrentEntity] = useState<AvailableOption | null>(null);
 
   useEffect(() => {
     if (isOpen && entityId) {
       loadExistingRelationships();
       loadAvailableOptions();
+      loadCurrentEntity();
     }
   }, [isOpen, entityId]);
 
@@ -118,6 +122,34 @@ export default function ManageRelationshipsModal({
       toast.error('Failed to load relationships');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadCurrentEntity = async () => {
+    if (!token || !entityId) return;
+
+    try {
+      const endpoint = entityType === 'subject'
+        ? `/api/${projectSlug}/subjects/${entityId}`
+        : `/api/${projectSlug}/evaluators/${entityId}`;
+
+      const response = await fetch(endpoint, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentEntity({
+          Id: data.Id,
+          EmployeeId: data.EmployeeId,
+          FullName: data.FullName,
+          Email: data.Email,
+          EmployeeIdString: data.EmployeeIdString,
+          Designation: data.Designation
+        });
+      }
+    } catch (error) {
+      console.error('Error loading current entity:', error);
     }
   };
 
@@ -278,7 +310,13 @@ export default function ManageRelationshipsModal({
     entityType === 'subject' ? r.EvaluatorId : r.SubjectId
   );
 
-  const filteredAvailableOptions = availableOptions
+  // Include current entity in available options for self-evaluation
+  // Check by EmployeeId to avoid duplicates (same employee can be both subject and evaluator with different IDs)
+  const allAvailableOptions = currentEntity && !availableOptions.some(opt => opt.EmployeeId === currentEntity.EmployeeId)
+    ? [...availableOptions, currentEntity]
+    : availableOptions;
+
+  const filteredAvailableOptions = allAvailableOptions
     .filter(option => !existingIds.includes(option.Id))
     .filter(option =>
       searchTerm === '' ||
@@ -286,6 +324,20 @@ export default function ManageRelationshipsModal({
       option.Email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       option.EmployeeIdString.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+  // Auto-select "Self" relationship for current entity
+  // Find the option that matches the current entity's EmployeeId (could be different Id if same person is both subject and evaluator)
+  useEffect(() => {
+    if (currentEntity && availableOptions.length > 0) {
+      const matchingOption = allAvailableOptions.find(opt => opt.EmployeeId === currentEntity.EmployeeId);
+      if (matchingOption && !selectedRelationships[matchingOption.Id] && !existingIds.includes(matchingOption.Id)) {
+        setSelectedRelationships(prev => ({
+          ...prev,
+          [matchingOption.Id]: 'Self'
+        }));
+      }
+    }
+  }, [currentEntity, availableOptions, existingRelationships]);
 
   if (!isOpen) return null;
 
@@ -489,6 +541,11 @@ export default function ManageRelationshipsModal({
                         <div className="px-4 py-3 border-r border-gray-200">
                           <div className="font-medium text-gray-900">
                             {option.FullName}
+                            {currentEntity && option.EmployeeId === currentEntity.EmployeeId && (
+                              <span className="ml-2 text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                                Self
+                              </span>
+                            )}
                           </div>
                           <div className="text-sm text-gray-600">
                             {option.EmployeeIdString} • {option.Email}
@@ -503,9 +560,10 @@ export default function ManageRelationshipsModal({
                         {/* Relationship Dropdown Column */}
                         <div className="px-4 py-3 flex items-center">
                           <select
-                            value={selectedRelationships[option.Id] || ''}
+                            value={selectedRelationships[option.Id] || (currentEntity && option.EmployeeId === currentEntity.EmployeeId ? 'Self' : '')}
                             onChange={(e) => handleRelationshipChange(option.Id, e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            disabled={!!(currentEntity && option.EmployeeId === currentEntity.EmployeeId)}
+                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed"
                           >
                             <option value="">Select Relationship</option>
                             {relationshipTypes.map(type => (

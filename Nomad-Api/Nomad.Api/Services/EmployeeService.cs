@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Nomad.Api.Data;
 using Nomad.Api.DTOs.Request;
@@ -13,15 +14,22 @@ public class EmployeeService : IEmployeeService
     private readonly NomadSurveysDbContext _context;
     private readonly IMapper _mapper;
     private readonly ILogger<EmployeeService> _logger;
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly RoleManager<TenantRole> _roleManager;
+    private const string DefaultPassword = "Password@123";
 
     public EmployeeService(
         NomadSurveysDbContext context,
         IMapper mapper,
-        ILogger<EmployeeService> logger)
+        ILogger<EmployeeService> logger,
+        UserManager<ApplicationUser> userManager,
+        RoleManager<TenantRole> roleManager)
     {
         _context = context;
         _mapper = mapper;
         _logger = logger;
+        _userManager = userManager;
+        _roleManager = roleManager;
     }
 
     public async Task<List<EmployeeListResponse>> GetEmployeesAsync(
@@ -261,6 +269,9 @@ public class EmployeeService : IEmployeeService
 
             await _context.SaveChangesAsync();
 
+            // Sync to User table
+            await SyncEmployeesToUsersAsync(new List<Employee> { employee }, employee.TenantId);
+
             return await GetEmployeeByIdAsync(employeeId);
         }
         catch (Exception ex)
@@ -344,7 +355,7 @@ public class EmployeeService : IEmployeeService
     }
 
     /// <summary>
-    /// Syncs employee data to User table for employees that have matching email addresses
+    /// Syncs employee data to User table - creates new users or updates existing ones
     /// </summary>
     private async Task SyncEmployeesToUsersAsync(List<Employee> employees, Guid tenantId)
     {
@@ -360,6 +371,17 @@ public class EmployeeService : IEmployeeService
                 .Where(u => employeeEmails.Contains(u.Email!.ToLower()) && u.TenantId == tenantId)
                 .ToListAsync();
 
+            // Get Participant role
+            var participantRole = await _roleManager.FindByNameAsync("Participant");
+            if (participantRole == null)
+            {
+                _logger.LogError("Participant role not found - cannot sync employees to users");
+                return;
+            }
+
+            var createdCount = 0;
+            var updatedCount = 0;
+
             foreach (var employee in employees)
             {
                 var matchingUser = matchingUsers.FirstOrDefault(u =>
@@ -367,7 +389,7 @@ public class EmployeeService : IEmployeeService
 
                 if (matchingUser != null)
                 {
-                    // Sync employee data to user
+                    // Update existing user
                     matchingUser.FirstName = employee.FirstName;
                     matchingUser.LastName = employee.LastName;
                     matchingUser.Gender = employee.Gender;
@@ -378,13 +400,62 @@ public class EmployeeService : IEmployeeService
                     matchingUser.EmployeeId = employee.Id; // FK to Employee
                     matchingUser.UpdatedAt = DateTime.UtcNow;
 
-                    _logger.LogInformation("Synced employee {EmployeeId} data to user {UserId}",
-                        employee.EmployeeId, matchingUser.Id);
+                    _logger.LogInformation("Updated user {UserId} from employee {EmployeeId}",
+                        matchingUser.Id, employee.EmployeeId);
+                    updatedCount++;
+                }
+                else
+                {
+                    // Create new user for this employee
+                    var newUser = new ApplicationUser
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = employee.Email,
+                        Email = employee.Email,
+                        FirstName = employee.FirstName,
+                        LastName = employee.LastName,
+                        Gender = employee.Gender,
+                        Designation = employee.Designation,
+                        Department = employee.Department,
+                        Tenure = employee.Tenure,
+                        Grade = employee.Grade,
+                        EmployeeId = employee.Id, // FK to Employee
+                        EmailConfirmed = true,
+                        IsActive = true,
+                        TenantId = tenantId,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    var result = await _userManager.CreateAsync(newUser, DefaultPassword);
+                    if (result.Succeeded)
+                    {
+                        // Assign Participant role
+                        var userTenantRole = new UserTenantRole
+                        {
+                            Id = Guid.NewGuid(),
+                            UserId = newUser.Id,
+                            RoleId = participantRole.Id,
+                            TenantId = tenantId,
+                            IsActive = true
+                        };
+
+                        _context.UserTenantRoles.Add(userTenantRole);
+
+                        _logger.LogInformation("Created user {UserId} for employee {EmployeeId} with default password",
+                            newUser.Id, employee.EmployeeId);
+                        createdCount++;
+                    }
+                    else
+                    {
+                        _logger.LogError("Failed to create user for employee {EmployeeId}: {Errors}",
+                            employee.EmployeeId, string.Join(", ", result.Errors.Select(e => e.Description)));
+                    }
                 }
             }
 
             await _context.SaveChangesAsync();
-            _logger.LogInformation("Synced {Count} employees to users", matchingUsers.Count);
+            _logger.LogInformation("Synced employees to users: {Created} created, {Updated} updated",
+                createdCount, updatedCount);
         }
         catch (Exception ex)
         {

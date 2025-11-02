@@ -38,6 +38,7 @@ interface RelationshipModalProps {
 }
 
 const RELATIONSHIP_TYPES = [
+  { value: 'self', label: 'Self' },
   { value: 'manager', label: 'Manager' },
   { value: 'peer', label: 'Peer' },
   { value: 'subordinate', label: 'Subordinate' },

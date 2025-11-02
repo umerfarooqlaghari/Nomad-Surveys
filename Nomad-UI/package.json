@@ -4,20 +4,21 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "autoprefixer": "^10.4.21",
     "next": "^15.5.2",
     "postcss": "^8.5.6",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hot-toast": "^2.6.0",
-    "survey-core": "^2.3.12",
-    "survey-creator-core": "^2.3.12",
-    "survey-creator-react": "^2.3.12"
+    "survey-core": "^1.12.16",
+    "survey-creator-core": "^1.12.16",
+    "survey-creator-react": "^1.12.16"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

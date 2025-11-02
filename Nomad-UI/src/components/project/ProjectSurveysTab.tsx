@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import SurveyBuilder from '@/components/survey/SurveyBuilder';
+import AssignSurveyModal from '@/components/modals/AssignSurveyModal';
 import toast from 'react-hot-toast';
 
 interface ProjectSurveysTabProps {
@@ -18,6 +19,8 @@ interface Survey {
   CreatedAt: string;
   UpdatedAt?: string;
   QuestionCount: number;
+  IsSelfEvaluation: boolean;
+  AssignmentCount?: number;
 }
 
 export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProps) {
@@ -26,6 +29,9 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
   const [loading, setLoading] = useState(true);
   const [showBuilder, setShowBuilder] = useState(false);
   const [editingSurvey, setEditingSurvey] = useState<any>(null);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedSurvey, setSelectedSurvey] = useState<Survey | null>(null);
+  const [assignmentCounts, setAssignmentCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchSurveys();
@@ -46,11 +52,46 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
 
       const data = await response.json();
       setSurveys(data);
+
+      // Fetch assignment counts for all surveys
+      await fetchAssignmentCounts(data);
     } catch (error) {
       console.error('Error fetching surveys:', error);
       toast.error('Failed to load surveys');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAssignmentCounts = async (surveyList: Survey[]) => {
+    try {
+      const counts: Record<string, number> = {};
+
+      await Promise.all(
+        surveyList.map(async (survey) => {
+          try {
+            const response = await fetch(
+              `/api/${projectSlug}/surveys/${survey.Id}/assignment-count`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (response.ok) {
+              const count = await response.json();
+              counts[survey.Id] = count;
+            }
+          } catch (error) {
+            console.error(`Error fetching assignment count for survey ${survey.Id}:`, error);
+          }
+        })
+      );
+
+      setAssignmentCounts(counts);
+    } catch (error) {
+      console.error('Error fetching assignment counts:', error);
     }
   };
 
@@ -114,6 +155,15 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
   const handleCancelBuilder = () => {
     setShowBuilder(false);
     setEditingSurvey(null);
+  };
+
+  const handleAssignSurvey = (survey: Survey) => {
+    setSelectedSurvey(survey);
+    setShowAssignModal(true);
+  };
+
+  const handleAssignmentUpdated = () => {
+    fetchSurveys();
   };
 
   if (showBuilder) {
@@ -183,6 +233,9 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
                       Questions
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Assignments
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -197,7 +250,14 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
                   {surveys.map((survey) => (
                     <tr key={survey.Id}>
                       <td className="px-6 py-4">
-                        <div className="text-sm font-medium text-gray-900">{survey.Title}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium text-gray-900">{survey.Title}</div>
+                          {survey.IsSelfEvaluation && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                              Self-Evaluation
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-500 max-w-xs truncate">
@@ -206,6 +266,19 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {survey.QuestionCount}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-900 font-medium">
+                            {assignmentCounts[survey.Id] || 0}
+                          </span>
+                          <button
+                            onClick={() => handleAssignSurvey(survey)}
+                            className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded hover:bg-indigo-200"
+                          >
+                            Assign Form
+                          </button>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -243,6 +316,22 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
           )}
         </div>
       </div>
+
+      {/* Assign Survey Modal */}
+      {showAssignModal && selectedSurvey && (
+        <AssignSurveyModal
+          isOpen={showAssignModal}
+          onClose={() => {
+            setShowAssignModal(false);
+            setSelectedSurvey(null);
+          }}
+          surveyId={selectedSurvey.Id}
+          surveyTitle={selectedSurvey.Title}
+          isSelfEvaluation={selectedSurvey.IsSelfEvaluation}
+          projectSlug={projectSlug}
+          onAssignmentUpdated={handleAssignmentUpdated}
+        />
+      )}
     </div>
   );
 }

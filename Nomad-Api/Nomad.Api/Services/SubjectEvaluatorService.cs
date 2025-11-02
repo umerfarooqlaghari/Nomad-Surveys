@@ -55,14 +55,29 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
             {
                 // Verify evaluator exists and belongs to same tenant
                 var evaluator = await _context.Evaluators
-                    .FirstOrDefaultAsync(e => e.Id == evaluatorRequest.EvaluatorId && 
-                                            e.TenantId == subject.TenantId && 
+                    .Include(e => e.Employee)
+                    .FirstOrDefaultAsync(e => e.Id == evaluatorRequest.EvaluatorId &&
+                                            e.TenantId == subject.TenantId &&
                                             e.IsActive);
 
                 if (evaluator == null)
                 {
                     errors.Add($"Evaluator {evaluatorRequest.EvaluatorId} not found or not in same tenant");
                     continue;
+                }
+
+                // Validate self-evaluation: if relationship is "Self", subject and evaluator must reference the same employee
+                if (string.Equals(evaluatorRequest.Relationship, "Self", StringComparison.OrdinalIgnoreCase))
+                {
+                    var subjectWithEmployee = await _context.Subjects
+                        .Include(s => s.Employee)
+                        .FirstOrDefaultAsync(s => s.Id == subjectId);
+
+                    if (subjectWithEmployee?.EmployeeId != evaluator.EmployeeId)
+                    {
+                        errors.Add($"Relationship type 'Self' requires subject and evaluator to reference the same employee. Subject EmployeeId: {subjectWithEmployee?.EmployeeId}, Evaluator EmployeeId: {evaluator.EmployeeId}");
+                        continue;
+                    }
                 }
 
                 // Check if assignment already exists
@@ -161,14 +176,29 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
             {
                 // Verify subject exists and belongs to same tenant
                 var subject = await _context.Subjects
-                    .FirstOrDefaultAsync(s => s.Id == subjectRequest.SubjectId && 
-                                            s.TenantId == evaluator.TenantId && 
+                    .Include(s => s.Employee)
+                    .FirstOrDefaultAsync(s => s.Id == subjectRequest.SubjectId &&
+                                            s.TenantId == evaluator.TenantId &&
                                             s.IsActive);
 
                 if (subject == null)
                 {
                     errors.Add($"Subject {subjectRequest.SubjectId} not found or not in same tenant");
                     continue;
+                }
+
+                // Validate self-evaluation: if relationship is "Self", subject and evaluator must reference the same employee
+                if (string.Equals(subjectRequest.Relationship, "Self", StringComparison.OrdinalIgnoreCase))
+                {
+                    var evaluatorWithEmployee = await _context.Evaluators
+                        .Include(e => e.Employee)
+                        .FirstOrDefaultAsync(e => e.Id == evaluatorId);
+
+                    if (subject.EmployeeId != evaluatorWithEmployee?.EmployeeId)
+                    {
+                        errors.Add($"Relationship type 'Self' requires subject and evaluator to reference the same employee. Subject EmployeeId: {subject.EmployeeId}, Evaluator EmployeeId: {evaluatorWithEmployee?.EmployeeId}");
+                        continue;
+                    }
                 }
 
                 // Check if assignment already exists

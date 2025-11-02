@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
@@ -6,6 +7,96 @@ import { SurveyCreatorComponent, SurveyCreator } from 'survey-creator-react';
 import 'survey-core/survey-core.min.css';
 import 'survey-creator-core/survey-creator-core.min.css';
 import toast from 'react-hot-toast';
+
+// Sky-Blue Custom Theme Configuration
+const SKY_BLUE_THEME = {
+  isPanelless: true,
+  cssVariables: {
+    // Primary Colors - Sky Blue Theme
+    '--sjs-primary-backcolor': 'rgba(2, 132, 199, 1)', // #0284C7
+    '--sjs-primary-backcolor-light': 'rgba(2, 132, 199, 0.1)',
+    '--sjs-primary-backcolor-dark': 'rgba(3, 105, 161, 1)', // Darker sky blue
+    '--sjs-primary-forecolor': 'rgba(255, 255, 255, 1)',
+    '--sjs-primary-forecolor-light': 'rgba(255, 255, 255, 0.25)',
+
+    // Secondary Colors - Light Sky Blue
+    '--sjs-secondary-backcolor': 'rgba(224, 242, 254, 1)', // #E0F2FE
+    '--sjs-secondary-backcolor-light': 'rgba(224, 242, 254, 0.5)',
+    '--sjs-secondary-backcolor-semi-light': 'rgba(224, 242, 254, 0.75)',
+    '--sjs-secondary-forecolor': 'rgba(15, 23, 42, 1)', // #0F172A - Black text
+    '--sjs-secondary-forecolor-light': 'rgba(15, 23, 42, 0.6)',
+
+    // General Background Colors - Gray instead of black
+    '--sjs-general-backcolor': 'rgba(249, 250, 251, 1)', // #F9FAFB - Light gray
+    '--sjs-general-backcolor-dark': 'rgba(229, 231, 235, 1)', // #E5E7EB - Gray-200
+    '--sjs-general-backcolor-dim': 'rgba(243, 244, 246, 1)', // #F3F4F6 - Gray-100
+    '--sjs-general-backcolor-dim-light': 'rgba(249, 250, 251, 1)', // #F9FAFB
+    '--sjs-general-backcolor-dim-dark': 'rgba(229, 231, 235, 1)', // #E5E7EB
+
+    // General Foreground Colors - Black text
+    '--sjs-general-forecolor': 'rgba(0, 0, 0, 1)', // #000000 - Black text
+    '--sjs-general-forecolor-light': 'rgba(75, 85, 99, 1)', // #4B5563 - Gray-600
+    '--sjs-general-dim-forecolor': 'rgba(0, 0, 0, 1)', // #000000 - Black text
+    '--sjs-general-dim-forecolor-light': 'rgba(75, 85, 99, 1)', // #4B5563
+
+    // Font Colors - Black text everywhere
+    '--sjs-font-editorfont-color': 'rgba(0, 0, 0, 1)', // #000000 - Black
+    '--sjs-font-editorfont-placeholdercolor': 'rgba(107, 114, 128, 1)', // Gray-500
+    '--sjs-font-questiontitle-color': 'rgba(0, 0, 0, 1)', // #000000 - Black
+    '--sjs-font-questiondescription-color': 'rgba(55, 65, 81, 1)', // Gray-700
+    '--sjs-font-questiontitle-weight': '600',
+    '--sjs-font-questiondescription-size': '14px',
+
+    // Editor and Question Backgrounds - White/Light Gray
+    '--sjs-editor-background': 'rgba(255, 255, 255, 1)', // White
+    '--sjs-editorpanel-backcolor': 'rgba(249, 250, 251, 1)', // #F9FAFB - Light gray
+    '--sjs-editorpanel-hovercolor': 'rgba(243, 244, 246, 1)', // #F3F4F6 - Gray-100
+    '--sjs-question-background': 'rgba(255, 255, 255, 1)', // White
+    '--sjs-questionpanel-backcolor': 'rgba(249, 250, 251, 1)', // #F9FAFB - Light gray
+    '--sjs-questionpanel-hovercolor': 'rgba(243, 244, 246, 1)', // #F3F4F6 - Gray-100
+
+    // Border and Shadow
+    '--sjs-border-light': 'rgba(226, 232, 240, 1)', // Slate-200
+    '--sjs-border-default': 'rgba(203, 213, 225, 1)', // Slate-300
+    '--sjs-border-inside': 'rgba(203, 213, 225, 1)',
+    '--sjs-shadow-small': '0px 0px 0px 1px rgba(226, 232, 240, 1)',
+    '--sjs-shadow-medium': '0px 2px 8px 0px rgba(0, 0, 0, 0.08)',
+    '--sjs-shadow-large': '0px 8px 16px 0px rgba(0, 0, 0, 0.1)',
+    '--sjs-shadow-inner': '0px 0px 0px 1px rgba(226, 232, 240, 1)',
+
+    // Corner Radius
+    '--sjs-corner-radius': '0.75rem', // 12px - Tailwind rounded-xl
+    '--sjs-base-unit': '8px',
+
+    // Special Colors
+    '--sjs-special-red': 'rgba(239, 68, 68, 1)', // Red-500
+    '--sjs-special-red-light': 'rgba(152, 142, 142, 0.1)',
+    '--sjs-special-red-forecolor': 'rgba(255, 255, 255, 1)',
+    '--sjs-special-green': 'rgba(34, 197, 94, 1)', // Green-500
+    '--sjs-special-green-light': 'rgba(34, 197, 94, 0.1)',
+    '--sjs-special-green-forecolor': 'rgba(255, 255, 255, 1)',
+    '--sjs-special-blue': 'rgba(2, 132, 199, 1)', // Sky-600
+    '--sjs-special-blue-light': 'rgba(2, 132, 199, 0.1)',
+    '--sjs-special-blue-forecolor': 'rgba(255, 255, 255, 1)',
+    '--sjs-special-yellow': 'rgba(234, 179, 8, 1)', // Yellow-500
+    '--sjs-special-yellow-light': 'rgba(234, 179, 8, 0.1)',
+    '--sjs-special-yellow-forecolor': 'rgba(255, 255, 255, 1)',
+
+    // Article Font Sizes (Optional - for modern look)
+    '--sjs-article-font-xx-large-fontWeight': '700',
+    '--sjs-article-font-xx-large-lineHeight': '64px',
+    '--sjs-article-font-x-large-fontWeight': '700',
+    '--sjs-article-font-x-large-lineHeight': '56px',
+    '--sjs-article-font-large-fontWeight': '600',
+    '--sjs-article-font-large-lineHeight': '40px',
+    '--sjs-article-font-medium-fontWeight': '600',
+    '--sjs-article-font-medium-lineHeight': '32px',
+    '--sjs-article-font-default-fontWeight': '400',
+    '--sjs-article-font-default-lineHeight': '28px',
+  },
+  themeName: 'sky-blue-custom',
+  colorPalette: 'light',
+};
 
 interface SurveyBuilderProps {
   tenantSlug: string;
@@ -26,6 +117,20 @@ export default function SurveyBuilder({
 }: SurveyBuilderProps) {
   const [creator, setCreator] = useState<SurveyCreator | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSelfEvaluation, setIsSelfEvaluation] = useState(false);
+
+  // Optional: Export current theme configuration
+  const exportTheme = () => {
+    if (!creator) return;
+
+    const currentTheme = creator.survey.getTheme();
+    console.log('Current Survey Theme:', JSON.stringify(currentTheme, null, 2));
+
+    // Optional: Save to localStorage for persistence
+    localStorage.setItem('surveyjs-custom-theme', JSON.stringify(currentTheme));
+
+    toast.success('Theme exported to console and localStorage');
+  };
 
   useEffect(() => {
     const options = {
@@ -36,9 +141,15 @@ export default function SurveyBuilder({
 
     const surveyCreator = new SurveyCreator(options);
 
+    // Apply Sky-Blue Custom Theme to the survey
+    surveyCreator.survey.applyTheme(SKY_BLUE_THEME);
+
     // Set initial survey if provided
     if (initialSurvey) {
       surveyCreator.JSON = initialSurvey.Schema || {};
+      setIsSelfEvaluation(initialSurvey.IsSelfEvaluation || false);
+      // Reapply theme after loading JSON
+      surveyCreator.survey.applyTheme(SKY_BLUE_THEME);
     } else {
       // Default empty survey
       surveyCreator.JSON = {
@@ -78,6 +189,7 @@ export default function SurveyBuilder({
         title: surveyTitle,
         description: surveyDescription,
         schema: surveyJSON,
+        isSelfEvaluation: isSelfEvaluation,
       };
 
       let response;
@@ -161,18 +273,70 @@ export default function SurveyBuilder({
   }
 
   return (
-    <div className="survey-builder-container">
-      {/* Action Buttons */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-        <div>
+    <div className="w-full h-full bg-gray-50 font-['Inter',_'Poppins',_system-ui,_-apple-system,_sans-serif]">
+      <div className="survey-builder-container">
+        {/* Action Buttons */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+        <div className="flex-1">
           <h2 className="text-xl font-semibold text-gray-900">
             {surveyId ? 'Edit Survey' : 'Create New Survey'}
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
+
+          {/* Survey Type Toggle */}
+          <div className="flex items-center gap-6 mt-3 mb-3" style={{ zIndex: 1000, position: 'relative' }}>
+            <span className="text-sm font-medium text-gray-700">Survey Type:</span>
+            <div className="flex items-center gap-4">
+              <div
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => setIsSelfEvaluation(false)}
+              >
+                <input
+                  type="radio"
+                  id="radio-360"
+                  name="surveyType"
+                  value="360"
+                  checked={!isSelfEvaluation}
+                  onChange={() => setIsSelfEvaluation(false)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                  style={{ pointerEvents: 'auto' }}
+                />
+                <label htmlFor="radio-360" className="text-sm text-gray-700 select-none cursor-pointer">
+                  360-Degree Evaluation
+                </label>
+              </div>
+              <div
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => setIsSelfEvaluation(true)}
+              >
+                <input
+                  type="radio"
+                  id="radio-self"
+                  name="surveyType"
+                  value="self"
+                  checked={isSelfEvaluation}
+                  onChange={() => setIsSelfEvaluation(true)}
+                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                  style={{ pointerEvents: 'auto' }}
+                />
+                <label htmlFor="radio-self" className="text-sm text-gray-700 select-none cursor-pointer">
+                  Self-Evaluation
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Conditional Placeholder Instructions */}
+          <p className="text-sm text-gray-600">
             Use drag & drop to build your survey. You can include placeholders like{' '}
-            <code className="bg-gray-100 px-1 rounded">{'{subjectName}'}</code> or{' '}
-            <code className="bg-gray-100 px-1 rounded">{'{evaluatorName}'}</code> in
-            question text.
+            {isSelfEvaluation ? (
+              <code className="bg-gray-100 px-1 rounded">{'{employeeName}'}</code>
+            ) : (
+              <>
+                <code className="bg-gray-100 px-1 rounded">{'{subjectName}'}</code> or{' '}
+                <code className="bg-gray-100 px-1 rounded">{'{evaluatorName}'}</code>
+              </>
+            )}{' '}
+            in question text.
           </p>
         </div>
         <div className="flex space-x-3">
@@ -236,7 +400,611 @@ export default function SurveyBuilder({
           font-family: 'Courier New', monospace;
           font-size: 0.875rem;
         }
+
+        /* ===== SurveyJS Creator Theme Overrides - Gray Backgrounds with Black Text ===== */
+
+        /* CRITICAL: Override all black backgrounds globally */
+        .svc-creator,
+        .svc-creator *,
+        .svc-tab-designer,
+        .svc-tab-designer *,
+         
+        .sd-root-modern,
+        .sd-root-modern * {
+          background-color: transparent !important;
+        }
+
+        /* Top Menu Tabs - Gray background with black text */
+        .svc-tabbed-menu-item,
+        .svc-tab-designer,
+        .svc-tab-logic,
+        .svc-tab-preview,
+        .svc-tab-translation {
+          background-color: #f3f4f6 !important; /* Gray-100 */
+          color: #000000 !important; /* Black text */
+        }
+
+        .svc-tabbed-menu-item:hover {
+          background-color: #e5e7eb !important; /* Gray-200 */
+        }
+
+        .svc-tabbed-menu-item--selected,
+        .svc-tabbed-menu-item.svc-tabbed-menu-item--selected {
+          background-color: #0284c7 !important; /* Sky-600 - Active tab */
+          color: #ffffff !important; /* White text for active */
+        }
+
+        /* Add Question Button - Gray background with black text */
+        .svc-question__content-actions,
+        .svc-page__add-new-question,
+        .svc-page__question-add-new-question,
+        .svc-question__add-new-question,
+        .svc-add-new-question-btn,
+        .svc-add-new-item-button,
+        .svc-item-value-controls__add,
+        .svc-page__add-new-question-container,
+        .svc-page__footer,
+        .svc-question__drag-area,
+        .svc-question__drag-element {
+          background-color: #f3f4f6 !important; /* Gray-100 */
+          color: #000000 !important; /* Black text */
+          border: 1px solid #d1d5db !important; /* Gray-300 border */
+        }
+
+        .svc-question__content-actions:hover,
+        .svc-page__add-new-question:hover,
+        .svc-add-new-question-btn:hover,
+        .svc-add-new-item-button:hover {
+          background-color: #e5e7eb !important; /* Gray-200 on hover */
+          color: #000000 !important;
+        }
+
+        /* Page header and title areas - White background */
+        .svc-page__header,
+        .svc-page__title,
+        .sd-page__title,
+        .sd-page__description,
+        .svc-page__content-actions {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+        }
+
+        /* Black bar at top of pages - make it white */
+        .svc-page__content::before,
+        .svc-page__content::after,
+        .svc-question__content::before,
+        .svc-question__content::after {
+          background-color: #ffffff !important;
+        }
+
+        /* Property Grid (Right Panel) - Gray background with black text */
+        .svc-property-panel,
+        .svc-property-panel__header,
+        .spg-panel,
+        .spg-panel__content,
+        .spg-question,
+        .spg-row {
+          background-color: #f9fafb !important; /* Light gray */
+          color: #000000 !important; /* Black text */
+        }
+
+        .spg-panel__title,
+        .spg-question__title,
+        .spg-question__content {
+          color: #000000 !important; /* Black text */
+        }
+
+        /* Toolbox (Left Panel) - Gray background */
+        .svc-toolbox,
+        .svc-toolbox__container,
+        .svc-toolbox__category {
+          background-color: #f9fafb !important; /* Light gray */
+        }
+
+        .svc-toolbox__category-header,
+        .svc-toolbox__category-title {
+          background-color: #e5e7eb !important; /* Gray-200 */
+          color: #000000 !important; /* Black text */
+        }
+
+        /* Designer Surface - White/Light Gray */
+        .svc-tab-designer__content,
+        .svc-creator__content-wrapper,
+        .svc-creator-tab__content,
+        .svc-tab-designer__content-wrapper,
+        .sd-body,
+        .sd-container-modern,
+        .sd-page,
+        .sd-page__content {
+          background-color: #ffffff !important; /* White */
+        }
+
+        /* Page elements - White background */
+        .svc-page,
+        .svc-page__content,
+        .svc-page__content-wrapper,
+        .sd-page__row,
+        .sd-row {
+          background-color: #ffffff !important;
+        }
+
+        /* Question containers - White background */
+        .svc-question,
+        .svc-question__content,
+        .sd-question,
+        .sd-element,
+        .sd-element__content {
+          background-color: #ffffff !important;
+        }
+
+        /* Remove all black backgrounds from survey elements */
+        .sd-body,
+        .sd-body__page,
+        .sd-page,
+        .sd-row,
+        .sd-question,
+        .sd-element,
+        .sd-panel,
+        .sd-panel__content,
+        .svc-page__content,
+        .svc-question__content,
+        div[class*="svc-"],
+        div[class*="sd-"] {
+          background-color: transparent !important;
+        }
+
+        /* Ensure white background for main containers */
+        .svc-tab-designer__content,
+        .svc-creator__content-wrapper,
+        .sd-root-modern__container,
+        .sd-container-modern__content {
+          background-color: #ffffff !important;
+        }
+
+        /* Page Navigator - Gray background */
+        .svc-page-navigator,
+        .svc-page-navigator__selector {
+          background-color: #f3f4f6 !important; /* Gray-100 */
+          color: #000000 !important;
+        }
+
+        .svc-page-navigator-item {
+          background-color: #f9fafb !important;
+          color: #000000 !important;
+        }
+
+        .svc-page-navigator-item--selected {
+          background-color: #0284c7 !important; /* Sky-600 */
+          color: #ffffff !important;
+        }
+
+        /* Question Adorners - White background */
+        .svc-question__adorner,
+        .svc-question__content,
+        .svc-question__content-wrapper {
+          background-color: #ffffff !important; /* White */
+          border: 1px solid #e5e7eb !important; /* Light gray border */
+        }
+
+        /* Nuclear option: Override ANY element with black background */
+        .svc-creator [style*="background-color: rgb(0, 0, 0)"],
+        .svc-creator [style*="background-color: black"],
+        .svc-creator [style*="background: rgb(0, 0, 0)"],
+        .svc-creator [style*="background: black"],
+        .sd-root-modern [style*="background-color: rgb(0, 0, 0)"],
+        .sd-root-modern [style*="background-color: black"],
+        .sd-root-modern [style*="background: rgb(0, 0, 0)"],
+        .sd-root-modern [style*="background: black"] {
+          background-color: #ffffff !important;
+          background: #ffffff !important;
+        }
+
+        /* Specific fix for page description areas */
+        .svc-page__description-container,
+        .sd-page__description-container {
+          background-color: #ffffff !important;
+        }
+
+        /* Fix for the black bars in the screenshot */
+        .svc-page__content-actions-container,
+        .svc-question__drag-area-indicator,
+        .svc-question__drag-area-placeholder {
+          background-color: #f3f4f6 !important; /* Light gray */
+        }
+
+        /* Action Buttons - Gray with black text */
+        .svc-action-button,
+        .sv-action-bar-item,
+        .sv-action__content {
+          background-color: #f3f4f6 !important; /* Gray-100 */
+          color: #000000 !important;
+        }
+
+        .svc-action-button:hover,
+        .sv-action-bar-item:hover {
+          background-color: #e5e7eb !important; /* Gray-200 */
+        }
+
+        /* Dropdown menus - White background with black text */
+        .sv-popup,
+        .sv-popup__container,
+        .sv-list,
+        .sv-list__item {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+        }
+
+        .sv-list__item:hover {
+          background-color: #f3f4f6 !important; /* Gray-100 */
+        }
+
+        /* ===== FORCE ALL TEXT TO BLACK ===== */
+
+        /* General text color override - BLACK everywhere */
+        .svc-creator,
+        .svc-creator *,
+        .svc-tab-designer,
+        .svc-tab-designer *,
+        .svc-property-panel,
+        .svc-property-panel *,
+        .sd-root-modern,
+        .sd-root-modern *,
+        .svc-page,
+        .svc-page *,
+        .svc-question,
+        .svc-question * {
+          color: #000000 !important;
+        }
+
+        /* Ensure all text inputs in property grid are black */
+        .spg-input,
+        .spg-checkbox__caption,
+        .spg-dropdown,
+        .spg-text-editor {
+          color: #000000 !important;
+        }
+
+        /* All labels and text elements - BLACK */
+        label,
+        span,
+        p,
+        div,
+        h1, h2, h3, h4, h5, h6,
+        .svc-text,
+        .sd-text,
+        .svc-string-viewer,
+        .sd-string-viewer {
+          color: #000000 !important;
+        }
+
+        /* Page and question titles - BLACK */
+        .svc-page__title,
+        .sd-page__title,
+        .svc-question__title,
+        .sd-question__title,
+        .sd-element__title {
+          color: #000000 !important;
+          font-weight: 600 !important;
+        }
+
+        /* Descriptions - BLACK (not gray) */
+        .svc-page__description,
+        .sd-page__description,
+        .svc-question__description,
+        .sd-question__description,
+        .sd-element__description {
+          color: #000000 !important;
+        }
+
+        /* Empty state text - BLACK */
+        .svc-page__placeholder,
+        .svc-question__placeholder,
+        .svc-empty-message,
+        .sd-empty-message {
+          color: #000000 !important;
+        }
+
+        /* Property grid labels - BLACK */
+        .spg-label,
+        .spg-title,
+        .spg-question__title,
+        .spg-panel__title {
+          color: #000000 !important;
+        }
+
+        /* Toolbox item text - BLACK */
+        .svc-toolbox__item-title,
+        .svc-toolbox__item-text,
+        .svc-toolbox__category-title {
+          color: #000000 !important;
+        }
+
+        /* SurveyJS Form Theme - Blue and White with Black Text */
+
+        /* Question text - Black */
+        .sd-question__title,
+        .sd-question__header,
+        .sd-element__title,
+        .sd-title,
+        .sd-page__title,
+        .sd-survey__title,
+        .svc-page__title,
+        .svc-question__title {
+          color: #000000 !important;
+          font-weight: 600 !important;
+        }
+
+        /* Question description - BLACK (not gray) */
+        .sd-question__description,
+        .sd-element__description,
+        .svc-page__description,
+        .svc-question__description {
+          color: #000000 !important;
+        }
+
+        /* "Description" label text - BLACK */
+        .svc-page__description-label,
+        .svc-question__description-label,
+        .sd-description,
+        .svc-string-viewer__text {
+          color: #000000 !important;
+        }
+
+        /* Empty state message - BLACK */
+        .svc-page__placeholder-text,
+        .svc-question__placeholder-text,
+        .svc-empty-state,
+        .svc-empty-state__text {
+          color: #000000 !important;
+        }
+
+        /* Input fields - White background with black text */
+        .sd-input,
+        .sd-text,
+        .sd-comment,
+        .sd-dropdown,
+        .sd-selectbase,
+        input[type="text"],
+        input[type="number"],
+        input[type="email"],
+        textarea,
+        select {
+          background-color: #ffffff !important;
+          color: #000000 !important;
+          border: 1px solid #d1d5db !important;
+        }
+
+        /* Input focus - Blue border */
+        .sd-input:focus,
+        .sd-text:focus,
+        .sd-comment:focus,
+        .sd-dropdown:focus,
+        input:focus,
+        textarea:focus,
+        select:focus {
+          border-color: #3b82f6 !important;
+          outline: none !important;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+        }
+
+        /* Radio buttons and checkboxes - Blue when selected */
+        .sd-radio__control,
+        .sd-checkbox__control {
+          border-color: #d1d5db !important;
+        }
+
+        .sd-radio__control:checked,
+        .sd-checkbox__control:checked {
+          background-color: #3b82f6 !important;
+          border-color: #3b82f6 !important;
+        }
+
+        /* Radio and checkbox labels - Black text */
+        .sd-radio__label,
+        .sd-checkbox__label,
+        .sd-item__control-label {
+          color: #000000 !important;
+        }
+
+        /* Buttons - Blue theme */
+        .sd-btn,
+        .sd-navigation__complete-btn,
+        .sd-navigation__next-btn,
+        .sd-navigation__prev-btn {
+          background-color: #3b82f6 !important;
+          color: #ffffff !important;
+          border: none !important;
+        }
+
+        .sd-btn:hover,
+        .sd-navigation__complete-btn:hover,
+        .sd-navigation__next-btn:hover {
+          background-color: #2563eb !important;
+        }
+
+        .sd-navigation__prev-btn {
+          background-color: #ffffff !important;
+          color: #3b82f6 !important;
+          border: 1px solid #3b82f6 !important;
+        }
+
+        .sd-navigation__prev-btn:hover {
+          background-color: #eff6ff !important;
+        }
+
+        /* Page background - White */
+        .sd-page,
+        .sd-body,
+        .sd-container-modern {
+          background-color: #ffffff !important;
+        }
+
+        /* Panel background - Light gray */
+        .sd-panel,
+        .sd-question {
+          background-color: #f9fafb !important;
+          border: 1px solid #e5e7eb !important;
+        }
+
+        /* Progress bar - Blue */
+        .sd-progress__bar {
+          background-color: #3b82f6 !important;
+        }
+
+        /* Rating stars - Blue */
+        .sd-rating__item--selected {
+          color: #3b82f6 !important;
+        }
+
+        /* Matrix cells - White background, black text */
+        .sd-matrix__cell,
+        .sd-table__cell {
+          background-color: #ffffff !important;
+          color: #b83535ff !important;
+          border-color: #e5e7eb !important;
+        }
+
+        /* Dropdown options - Black text */
+        .sd-dropdown__item,
+        option {
+          color: #000000 !important;
+          background-color: #ffffff !important;
+        }
+
+        .sd-dropdown__item:hover {
+          background-color: #eff6ff !important;
+        }
+
+        /* Error messages - Red */
+        .sd-question__erbox,
+        .sd-question--error {
+          color: #dc2626 !important;
+        }
+
+        /* Placeholder text - Gray */
+        .sd-input::placeholder,
+        .sd-text::placeholder,
+        .sd-comment::placeholder,
+        input::placeholder,
+        textarea::placeholder {
+          color: #9ca3af !important;
+        }
+
+        /* ===== FINAL NUCLEAR OVERRIDES - Remove ALL black backgrounds ===== */
+
+        /* Override any remaining black backgrounds in SurveyJS */
+        .svc-creator div,
+        .svc-creator section,
+        .svc-creator article,
+        .sd-root-modern div,
+        .sd-root-modern section {
+          background-color: inherit !important;
+        }
+
+        /* Force white background on main content areas */
+        .svc-tab-designer__content,
+        .svc-creator__content-holder,
+        .svc-creator__area,
+        .sd-root-modern {
+          background-color: #ffffff !important;
+        }
+
+        /* Force white/gray on all survey elements */
+        .svc-page,
+        .svc-page > *,
+        .svc-question,
+        .svc-question > * {
+          background-color: #ffffff !important;
+        }
+
+        /* Remove black from any pseudo-elements */
+        .svc-creator *::before,
+        .svc-creator *::after,
+        .sd-root-modern *::before,
+        .sd-root-modern *::after {
+          background-color: transparent !important;
+        }
+
+        /* Specific override for the black bars visible in screenshot */
+        .svc-page__content > div,
+        .svc-question__content > div {
+          background-color: #ffffff !important;
+        }
+
+        /* Override SurveyJS default dark theme if applied */
+        .sv-root-modern--dark,
+        .svc-creator--dark {
+          background-color: #ffffff !important;
+        }
+
+        .sv-root-modern--dark *,
+        .svc-creator--dark * {
+          background-color: inherit !important;
+          color: #000000 !important;
+        }
+
+        /* ===== FINAL TEXT COLOR OVERRIDES - ALL TEXT BLACK ===== */
+
+        /* Override any gray/light text colors */
+        .svc-creator [class*="text"],
+        .svc-creator [class*="title"],
+        .svc-creator [class*="label"],
+        .svc-creator [class*="description"],
+        .svc-creator [class*="placeholder"],
+        .sd-root-modern [class*="text"],
+        .sd-root-modern [class*="title"],
+        .sd-root-modern [class*="label"],
+        .sd-root-modern [class*="description"] {
+          color: #000000 !important;
+        }
+
+        /* Specific override for "Description" text */
+        .svc-page__description-container *,
+        .svc-question__description-container *,
+        .sd-page__description *,
+        .sd-question__description * {
+          color: #000000 !important;
+        }
+
+        /* Override for empty state text like "The page is empty..." */
+        .svc-page__content-actions-text,
+        .svc-question__content-actions-text,
+        .svc-panel__placeholder,
+        .svc-panel__add-new-question-text {
+          color: #000000 !important;
+        }
+
+        /* All text nodes in SurveyJS - NUCLEAR OPTION */
+        .svc-creator,
+        .svc-creator > *,
+        .svc-creator > * > *,
+        .svc-creator > * > * > *,
+        .sd-root-modern,
+        .sd-root-modern > *,
+        .sd-root-modern > * > *,
+        .sd-root-modern > * > * > * {
+          color: #000000 !important;
+        }
+
+        /* Override inline text color styles */
+        .svc-creator [style*="color"],
+        .sd-root-modern [style*="color"] {
+          color: #000000 !important;
+        }
+
+        /* Ensure white text only on blue/active elements */
+        .svc-tabbed-menu-item--selected,
+        .svc-tabbed-menu-item--selected *,
+        .svc-page-navigator-item--selected,
+        .svc-page-navigator-item--selected *,
+        .sd-btn,
+        .sd-btn *,
+        button.sd-navigation__complete-btn,
+        button.sd-navigation__next-btn {
+          color: #ffffff !important;
+        }
       `}</style>
+      </div>
     </div>
   );
 }

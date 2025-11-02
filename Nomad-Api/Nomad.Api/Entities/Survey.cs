@@ -23,9 +23,15 @@ public class Survey
     /// </summary>
     [Required]
     public JsonDocument Schema { get; set; } = JsonDocument.Parse("{}");
-    
+
+    /// <summary>
+    /// Indicates if this survey is designed for self-evaluation (Subject = Evaluator)
+    /// When true, placeholders like {employeeName} should be used instead of {subjectName}/{evaluatorName}
+    /// </summary>
+    public bool IsSelfEvaluation { get; set; } = false;
+
     public bool IsActive { get; set; } = true;
-    
+
     // Audit fields
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }

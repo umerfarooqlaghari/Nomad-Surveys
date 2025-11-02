@@ -104,13 +104,17 @@ public class AuthenticationService : IAuthenticationService
             userResponse.Roles = userRoles;
             userResponse.Permissions = await GetUserPermissionsAsync(user.Id, tenant?.Id);
 
+            // Include tenant in user response for easier access on frontend
+            var tenantResponse = _mapper.Map<TenantResponse>(tenant);
+            userResponse.Tenant = tenantResponse;
+
             return new LoginResponse
             {
                 AccessToken = token,
                 RefreshToken = Guid.NewGuid().ToString(), // TODO: Implement proper refresh token
                 ExpiresAt = DateTime.UtcNow.AddHours(24),
                 User = userResponse,
-                Tenant = _mapper.Map<TenantResponse>(tenant)
+                Tenant = tenantResponse
             };
         }
         catch (Exception ex)
