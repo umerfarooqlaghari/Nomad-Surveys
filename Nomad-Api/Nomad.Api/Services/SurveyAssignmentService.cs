@@ -230,7 +230,7 @@ public class SurveyAssignmentService : ISurveyAssignmentService
     {
         try
         {
-            // Get the survey to check IsSelfEvaluation
+            // Get the survey to verify it exists
             var survey = await _context.Surveys
                 .FirstOrDefaultAsync(s => s.Id == surveyId && s.IsActive);
 
@@ -246,18 +246,6 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                 .Include(se => se.Evaluator)
                     .ThenInclude(e => e.Employee)
                 .Where(se => se.IsActive);
-
-            // Filter based on survey type
-            if (survey.IsSelfEvaluation)
-            {
-                // Only show "Self" relationships for self-evaluation surveys
-                query = query.Where(se => se.Relationship == "Self");
-            }
-            else
-            {
-                // Only show non-"Self" relationships for 360-degree surveys
-                query = query.Where(se => se.Relationship != "Self");
-            }
 
             // Apply relationship type filter
             if (!string.IsNullOrWhiteSpace(relationshipType))
@@ -333,18 +321,8 @@ public class SurveyAssignmentService : ISurveyAssignmentService
 
     private string? ValidateAssignment(Survey survey, SubjectEvaluator relationship)
     {
-        // Validate self-evaluation survey can only be assigned to "Self" relationships
-        if (survey.IsSelfEvaluation && !string.Equals(relationship.Relationship, "Self", StringComparison.OrdinalIgnoreCase))
-        {
-            return $"Cannot assign self-evaluation survey to non-self relationship ({relationship.Subject.Employee.FullName} - {relationship.Evaluator.Employee.FullName}, Relationship: {relationship.Relationship})";
-        }
-
-        // Validate 360-degree survey cannot be assigned to "Self" relationships
-        if (!survey.IsSelfEvaluation && string.Equals(relationship.Relationship, "Self", StringComparison.OrdinalIgnoreCase))
-        {
-            return $"Cannot assign 360-degree survey to self-evaluation relationship ({relationship.Subject.Employee.FullName})";
-        }
-
+        // No validation needed - surveys now support all relationship types
+        // Questions will be conditionally displayed based on relationship type at runtime
         return null;
     }
 }

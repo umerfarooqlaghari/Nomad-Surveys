@@ -17,14 +17,10 @@ public class CreateSurveyRequest
     /// <summary>
     /// SurveyJS JSON schema object
     /// Can include dynamic placeholders like {subjectName}, {evaluatorName}
+    /// Questions can have conditional visibility based on relationship type
     /// </summary>
     [Required]
     public object Schema { get; set; } = new { };
-
-    /// <summary>
-    /// Indicates if this survey is for self-evaluation (Subject = Evaluator)
-    /// </summary>
-    public bool IsSelfEvaluation { get; set; } = false;
 }
 
 /// <summary>
@@ -42,14 +38,10 @@ public class UpdateSurveyRequest
     /// <summary>
     /// SurveyJS JSON schema object
     /// Can include dynamic placeholders like {subjectName}, {evaluatorName}
+    /// Questions can have conditional visibility based on relationship type
     /// </summary>
     [Required]
     public object Schema { get; set; } = new { };
-
-    /// <summary>
-    /// Indicates if this survey is for self-evaluation (Subject = Evaluator)
-    /// </summary>
-    public bool? IsSelfEvaluation { get; set; }
 
     public bool? IsActive { get; set; }
 }

@@ -27,6 +27,11 @@ builder.Services.AddControllers()
 // Add HttpContextAccessor for tenant resolution
 builder.Services.AddHttpContextAccessor();
 
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+builder.Logging.SetMinimumLevel(LogLevel.Debug);
+
 // Configure Npgsql Data Source with dynamic JSON support (required for EF Core 8 + Npgsql 8.x)
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -106,6 +111,11 @@ builder.Services.AddScoped<IRelationshipService, RelationshipService>();
 // Add survey services
 builder.Services.AddScoped<ISurveyService, SurveyService>();
 builder.Services.AddScoped<ISurveyAssignmentService, SurveyAssignmentService>();
+
+// Add cluster, competency, question services
+builder.Services.AddScoped<IClusterService, ClusterService>();
+builder.Services.AddScoped<ICompetencyService, CompetencyService>();
+builder.Services.AddScoped<IQuestionService, QuestionService>();
 
 // Add employee service
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();

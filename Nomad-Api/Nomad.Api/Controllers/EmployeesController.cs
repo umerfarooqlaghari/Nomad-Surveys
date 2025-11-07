@@ -132,7 +132,12 @@ public class EmployeesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating employee");
-            return StatusCode(500, new { message = "An error occurred while creating the employee" });
+            return StatusCode(500, new
+            {
+                message = ex.Message,
+                stackTrace = ex.StackTrace,
+                inner = ex.InnerException?.Message
+            });
         }
     }
 

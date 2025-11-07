@@ -16,6 +16,8 @@ interface Submission {
   SubjectName: string;
   SurveyTitle: string;
   CompletedDate: string;
+  CompletedAt: string;
+  SubmittedAt: string;
 }
 
 interface MySubmissionsProps {
@@ -184,13 +186,13 @@ export default function MySubmissions({ params }: MySubmissionsProps) {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center text-sm text-black">
                             <CalendarIcon className="h-4 w-4 mr-2 text-gray-400" />
-                            {submission.CompletedDate
-                              ? new Date(submission.CompletedDate).toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric'
-                                })
-                              : 'N/A'}
+                            {submission.CompletedAt || submission.SubmittedAt
+                            ? new Date(submission.CompletedAt || submission.SubmittedAt).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })
+                            : 'N/A'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

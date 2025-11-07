@@ -42,6 +42,11 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
     // Survey submission entity
     public DbSet<SurveySubmission> SurveySubmissions { get; set; }
 
+    // Cluster, Competency, Question entities
+    public DbSet<Cluster> Clusters { get; set; }
+    public DbSet<Competency> Competencies { get; set; }
+    public DbSet<Question> Questions { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -50,6 +55,7 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         ConfigureEntityRelationships(modelBuilder);
         ConfigureParticipantRelationships(modelBuilder);
         ConfigureSurveyRelationships(modelBuilder);
+        ConfigureClusterCompetencyQuestionRelationships(modelBuilder);
         ConfigureGlobalQueryFilters(modelBuilder);
     }
 
@@ -411,6 +417,80 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         });
     }
 
+    private void ConfigureClusterCompetencyQuestionRelationships(ModelBuilder modelBuilder)
+    {
+        // Cluster configurations
+        modelBuilder.Entity<Cluster>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ClusterName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Index for better query performance
+            entity.HasIndex(e => new { e.TenantId, e.IsActive });
+            entity.HasIndex(e => e.CreatedAt);
+        });
+
+        // Competency configurations
+        modelBuilder.Entity<Competency>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Foreign key to Cluster
+            entity.HasOne(e => e.Cluster)
+                .WithMany(c => c.Competencies)
+                .HasForeignKey(e => e.ClusterId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Index for better query performance
+            entity.HasIndex(e => new { e.TenantId, e.IsActive });
+            entity.HasIndex(e => e.ClusterId);
+            entity.HasIndex(e => e.CreatedAt);
+        });
+
+        // Question configurations
+        modelBuilder.Entity<Question>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SelfQuestion).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.OthersQuestion).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Foreign key to Competency
+            entity.HasOne(e => e.Competency)
+                .WithMany(c => c.Questions)
+                .HasForeignKey(e => e.CompetencyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Index for better query performance
+            entity.HasIndex(e => new { e.TenantId, e.IsActive });
+            entity.HasIndex(e => e.CompetencyId);
+            entity.HasIndex(e => e.CreatedAt);
+        });
+    }
+
     private void ConfigureGlobalQueryFilters(ModelBuilder modelBuilder)
     {
         // Apply global query filters for tenant isolation
@@ -439,8 +519,10 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         // Survey submission query filter for tenant isolation
         modelBuilder.Entity<SurveySubmission>().HasQueryFilter(ss => CurrentTenantId == null || ss.TenantId == CurrentTenantId);
 
-        // Survey assignment query filter for tenant isolation
-        modelBuilder.Entity<SubjectEvaluatorSurvey>().HasQueryFilter(ses => CurrentTenantId == null || ses.TenantId == CurrentTenantId);
+        // Cluster, Competency, Question query filters for tenant isolation
+        modelBuilder.Entity<Cluster>().HasQueryFilter(c => CurrentTenantId == null || c.TenantId == CurrentTenantId);
+        modelBuilder.Entity<Competency>().HasQueryFilter(c => CurrentTenantId == null || c.TenantId == CurrentTenantId);
+        modelBuilder.Entity<Question>().HasQueryFilter(q => CurrentTenantId == null || q.TenantId == CurrentTenantId);
     }
 
     public override int SaveChanges()

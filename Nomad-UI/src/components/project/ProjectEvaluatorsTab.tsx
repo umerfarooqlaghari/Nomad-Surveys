@@ -320,12 +320,12 @@ EMP004,"[{""SubjectEmployeeId"":""EMP003"",""Relationship"":""Peer""}]"`;
                     <div
                       key={employee.Id}
                       className="flex items-center p-3 hover:bg-gray-50 border-b border-gray-200 cursor-pointer"
-                      onClick={() => handleEmployeeSelect(employee.EmployeeId)}
+                      // onClick={() => handleEmployeeSelect(employee.EmployeeId)}
                     >
                       <input
                         type="checkbox"
                         checked={selectedEmployeeIds.includes(employee.EmployeeId)}
-                        onChange={() => {}}
+                        onChange={() => handleEmployeeSelect(employee.EmployeeId)}
                         className="mr-3 cursor-pointer"
                         onClick={(e) => e.stopPropagation()}
                       />
