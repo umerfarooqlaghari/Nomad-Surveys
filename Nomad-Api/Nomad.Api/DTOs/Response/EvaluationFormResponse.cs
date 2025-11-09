@@ -16,7 +16,6 @@ public class EvaluationFormResponse
     public JsonDocument SurveySchema { get; set; } = null!;
     public string SubjectName { get; set; } = string.Empty;
     public string EvaluatorName { get; set; } = string.Empty;
-    public bool IsSelfEvaluation { get; set; }
     public string RelationshipType { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public JsonDocument? SavedResponseData { get; set; }

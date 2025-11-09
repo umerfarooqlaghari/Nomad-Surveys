@@ -14,7 +14,6 @@ public class SubmissionHistoryResponse
     public string SubjectEmail { get; set; } = string.Empty;
     public string SubjectDepartment { get; set; } = string.Empty;
     public string SurveyTitle { get; set; } = string.Empty;
-    public bool IsSelfEvaluation { get; set; }
     public string RelationshipType { get; set; } = string.Empty;
     public DateTime CompletedAt { get; set; }
     public DateTime SubmittedAt { get; set; }
@@ -34,7 +33,6 @@ public class SubmissionDetailResponse
     public JsonDocument ResponseData { get; set; } = null!;
     public string SubjectName { get; set; } = string.Empty;
     public string EvaluatorName { get; set; } = string.Empty;
-    public bool IsSelfEvaluation { get; set; }
     public string RelationshipType { get; set; } = string.Empty;
     public DateTime CompletedAt { get; set; }
     public DateTime SubmittedAt { get; set; }

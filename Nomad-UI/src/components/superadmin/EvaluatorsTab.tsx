@@ -77,10 +77,10 @@ export default function EvaluatorsTab() {
             onClick={downloadTemplate}
             className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
           >
-            📥 Download Template
+             Download Template
           </button>
           <label className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors cursor-pointer">
-            📤 Import Excel/CSV
+             Import Excel/CSV
             <input
               type="file"
               accept=".xlsx,.xls,.csv"

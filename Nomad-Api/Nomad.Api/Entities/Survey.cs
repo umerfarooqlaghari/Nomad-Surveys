@@ -20,15 +20,10 @@ public class Survey
     /// <summary>
     /// SurveyJS JSON schema stored as JSONB in PostgreSQL
     /// Supports dynamic placeholders like {subjectName}, {evaluatorName}
+    /// Questions can have conditional visibility based on relationship type
     /// </summary>
     [Required]
     public JsonDocument Schema { get; set; } = JsonDocument.Parse("{}");
-
-    /// <summary>
-    /// Indicates if this survey is designed for self-evaluation (Subject = Evaluator)
-    /// When true, placeholders like {employeeName} should be used instead of {subjectName}/{evaluatorName}
-    /// </summary>
-    public bool IsSelfEvaluation { get; set; } = false;
 
     public bool IsActive { get; set; } = true;
 

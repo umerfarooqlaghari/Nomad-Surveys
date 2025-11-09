@@ -370,7 +370,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* First Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-black mb-1">
                   First Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -379,7 +379,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   value={formData.FirstName}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="John"
                 />
               </div>
@@ -395,7 +395,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   value={formData.LastName}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2  text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Doe"
                 />
               </div>
@@ -411,7 +411,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   value={formData.Email}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="john.doe@example.com"
                 />
               </div>
@@ -427,7 +427,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   value={formData.EmployeeId}
                   onChange={handleInputChange}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="EMP001"
                 />
               </div>
@@ -442,7 +442,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   name="Number"
                   value={formData.Number}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="+1234567890"
                 />
               </div>
@@ -457,7 +457,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   name="CompanyName"
                   value={formData.CompanyName}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Acme Corp"
                 />
               </div>
@@ -472,7 +472,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   name="Designation"
                   value={formData.Designation}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Software Engineer"
                 />
               </div>
@@ -487,7 +487,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   name="Department"
                   value={formData.Department}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Engineering"
                 />
               </div>
@@ -504,7 +504,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   onChange={handleInputChange}
                   min="0"
                   max="100"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="5"
                 />
               </div>
@@ -519,7 +519,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   name="Grade"
                   value={formData.Grade}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Senior"
                 />
               </div>
@@ -533,7 +533,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   name="Gender"
                   value={formData.Gender}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   <option value="">Select Gender</option>
                   <option value="Male">Male</option>
@@ -553,7 +553,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                   name="ManagerId"
                   value={formData.ManagerId}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="MGR001"
                 />
               </div>
@@ -589,7 +589,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                           setAdditionalAttributes(newAttrs);
                         }}
                         placeholder="Key (e.g., skills)"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="flex-1 px-3 py-2 text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                       <input
                         type="text"
@@ -600,7 +600,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                           setAdditionalAttributes(newAttrs);
                         }}
                         placeholder="Value (e.g., JavaScript, React)"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="flex-1 px-3 py-2  text-black border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                       <button
                         type="button"

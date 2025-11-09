@@ -258,6 +258,44 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
+            modelBuilder.Entity("Nomad.Api.Entities.Cluster", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ClusterName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("TenantId", "IsActive");
+
+                    b.ToTable("Clusters");
+                });
+
             modelBuilder.Entity("Nomad.Api.Entities.Company", b =>
                 {
                     b.Property<Guid>("Id")
@@ -327,6 +365,49 @@ namespace Nomad.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Companies");
+                });
+
+            modelBuilder.Entity("Nomad.Api.Entities.Competency", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClusterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClusterId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("TenantId", "IsActive");
+
+                    b.ToTable("Competencies");
                 });
 
             modelBuilder.Entity("Nomad.Api.Entities.Employee", b =>
@@ -504,6 +585,50 @@ namespace Nomad.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("Permissions");
+                });
+
+            modelBuilder.Entity("Nomad.Api.Entities.Question", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompetencyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("OthersQuestion")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("SelfQuestion")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompetencyId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("TenantId", "IsActive");
+
+                    b.ToTable("Questions");
                 });
 
             modelBuilder.Entity("Nomad.Api.Entities.RolePermission", b =>
@@ -961,6 +1086,17 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("Nomad.Api.Entities.Cluster", b =>
+                {
+                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("Nomad.Api.Entities.Company", b =>
                 {
                     b.HasOne("Nomad.Api.Entities.ApplicationUser", "ContactPerson")
@@ -975,6 +1111,25 @@ namespace Nomad.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("ContactPerson");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("Nomad.Api.Entities.Competency", b =>
+                {
+                    b.HasOne("Nomad.Api.Entities.Cluster", "Cluster")
+                        .WithMany("Competencies")
+                        .HasForeignKey("ClusterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Cluster");
 
                     b.Navigation("Tenant");
                 });
@@ -1014,6 +1169,25 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Tenant");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Nomad.Api.Entities.Question", b =>
+                {
+                    b.HasOne("Nomad.Api.Entities.Competency", "Competency")
+                        .WithMany("Questions")
+                        .HasForeignKey("CompetencyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Competency");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("Nomad.Api.Entities.RolePermission", b =>
@@ -1208,6 +1382,16 @@ namespace Nomad.Api.Migrations
             modelBuilder.Entity("Nomad.Api.Entities.ApplicationUser", b =>
                 {
                     b.Navigation("UserTenantRoles");
+                });
+
+            modelBuilder.Entity("Nomad.Api.Entities.Cluster", b =>
+                {
+                    b.Navigation("Competencies");
+                });
+
+            modelBuilder.Entity("Nomad.Api.Entities.Competency", b =>
+                {
+                    b.Navigation("Questions");
                 });
 
             modelBuilder.Entity("Nomad.Api.Entities.Employee", b =>

@@ -15,7 +15,6 @@ public class AssignedEvaluationResponse
     public string SubjectDesignation { get; set; } = string.Empty;
     public string SurveyTitle { get; set; } = string.Empty;
     public string SurveyDescription { get; set; } = string.Empty;
-    public bool IsSelfEvaluation { get; set; }
     public string RelationshipType { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty; // Pending, InProgress, Completed
     public DateTime? StartedAt { get; set; }

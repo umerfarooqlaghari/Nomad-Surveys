@@ -147,13 +147,36 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
   };
 
   const handleBulkImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('🔵 [EVALUATORS] handleBulkImport TRIGGERED');
+
     const file = e.target.files?.[0];
-    if (!file || !token) return;
+    console.log('📁 [EVALUATORS] File object:', file);
+    console.log('🔑 [EVALUATORS] Token exists:', !!token);
+    console.log('📍 [EVALUATORS] Project slug:', projectSlug);
+
+    if (!file) {
+      console.log('❌ [EVALUATORS] No file selected');
+      return;
+    }
+
+    if (!token) {
+      console.log('❌ [EVALUATORS] No token available');
+      toast.error('Authentication token not found. Please log in again.');
+      return;
+    }
 
     setIsImporting(true);
     try {
+      console.log('📖 [EVALUATORS] Reading file content...');
       const text = await file.text();
+      console.log('📄 [EVALUATORS] File content length:', text.length);
+
+      console.log('🔍 [EVALUATORS] Parsing CSV...');
       const parseResult = evaluatorService.parseCSV(text);
+      console.log('✅ [EVALUATORS] Parse result:', {
+        evaluatorsCount: parseResult.evaluators.length,
+        errorsCount: parseResult.errors.length
+      });
 
       if (parseResult.errors.length > 0) {
         parseResult.errors.forEach(err => toast.error(err));
@@ -163,11 +186,14 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
         }
       }
 
+      console.log('🚀 [EVALUATORS] Calling bulkCreateEvaluators API...');
       const response = await evaluatorService.bulkCreateEvaluators(
         projectSlug,
         { Evaluators: parseResult.evaluators },
         token
       );
+
+      console.log('📥 [EVALUATORS] API response:', response);
 
       if (response.error) {
         toast.error(response.error);
@@ -179,7 +205,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
         loadEvaluators();
       }
     } catch (error) {
-      console.error('Error importing evaluators:', error);
+      console.error('❌ [EVALUATORS] Error importing evaluators:', error);
       toast.error('Failed to import evaluators');
     } finally {
       setIsImporting(false);
@@ -253,14 +279,20 @@ EMP004,"[{""SubjectEmployeeId"":""EMP003"",""Relationship"":""Peer""}]"`;
             >
               Download CSV Template
             </button>
-            <label className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
-              Bulk Import CSV
+            <label
+              htmlFor="evaluator-csv-upload"
+              className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer inline-block"
+              style={{ pointerEvents: 'auto' }}
+            >
+              {isImporting ? 'Importing...' : 'Bulk Import CSV'}
               <input
+                id="evaluator-csv-upload"
                 type="file"
                 accept=".csv"
                 onChange={handleBulkImport}
                 className="hidden"
                 disabled={isImporting}
+                style={{ display: 'none' }}
               />
             </label>
             <button
@@ -269,12 +301,12 @@ EMP004,"[{""SubjectEmployeeId"":""EMP003"",""Relationship"":""Peer""}]"`;
             >
               {showAddForm ? 'Cancel' : 'Add Evaluators'}
             </button>
-            <button
+            {/* <button
               onClick={() => window.open(`/projects/${projectSlug}/subject-evaluator-connections`, '_blank')}
               className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
             >
               Manage Connections
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -295,7 +327,7 @@ EMP004,"[{""SubjectEmployeeId"":""EMP003"",""Relationship"":""Peer""}]"`;
                 />
               </div>
               
-              <div className="mb-4 flex items-center gap-4">
+              {/* <div className="mb-4 flex items-center gap-4">
                 <label className="flex items-center">
                   <input
                     type="checkbox"
@@ -308,7 +340,7 @@ EMP004,"[{""SubjectEmployeeId"":""EMP003"",""Relationship"":""Peer""}]"`;
                 <span className="text-sm text-gray-600">
                   {selectedEmployeeIds.length} selected
                 </span>
-              </div>
+              </div> */}
 
               <div className="max-h-96 overflow-y-auto border border-gray-300 rounded-md bg-white">
                 {filteredAvailableEmployees.length === 0 ? (
@@ -320,14 +352,19 @@ EMP004,"[{""SubjectEmployeeId"":""EMP003"",""Relationship"":""Peer""}]"`;
                     <div
                       key={employee.Id}
                       className="flex items-center p-3 hover:bg-gray-50 border-b border-gray-200 cursor-pointer"
-                      onClick={() => handleEmployeeSelect(employee.EmployeeId)}
+                                            onClick={() => handleEmployeeSelect(employee.EmployeeId)}
+
                     >
                       <input
                         type="checkbox"
                         checked={selectedEmployeeIds.includes(employee.EmployeeId)}
-                        onChange={() => {}}
-                        className="mr-3 cursor-pointer"
-                        onClick={(e) => e.stopPropagation()}
+                        onChange={() => handleEmployeeSelect(employee.EmployeeId)}
+                        className="mr-3 relative z-10 cursor-pointer"
+                        // onClick={(e) => e.stopPropagation()}
+                                                onClick={(e) => e.stopPropagation()}
+
+                        // onClick={() => handleEmployeeSelect(employee.EmployeeId)}
+
                       />
                       <div className="flex-1">
                         <div className="font-medium text-gray-900">

@@ -71,6 +71,7 @@ public class RelationshipService : IRelationshipService
 {
     private readonly NomadSurveysDbContext _context;
     private readonly ILogger<RelationshipService> _logger;
+    private const string DefaultPassword = "Password@123";
 
     public RelationshipService(NomadSurveysDbContext context, ILogger<RelationshipService> logger)
     {
@@ -210,35 +211,110 @@ public class RelationshipService : IRelationshipService
         var allTenantEvaluators = await _context.Evaluators
             .Include(e => e.Employee)
             .Where(e => e.TenantId == tenantId)
-            .Select(e => new { e.Id, EmployeeIdString = e.Employee.EmployeeId })
+            .Select(e => new { e.Id, EmployeeIdString = e.Employee.EmployeeId, e.IsActive })
             .ToListAsync();
 
         _logger.LogInformation("📊 Total evaluators in tenant {TenantId}: {Count}. EmployeeIds: {AllIds}",
             tenantId, allTenantEvaluators.Count, string.Join(", ", allTenantEvaluators.Select(e => e.EmployeeIdString)));
 
-        // Get existing evaluators by EmployeeId within the tenant (case-insensitive)
+        // Get existing ACTIVE evaluators by EmployeeId within the tenant (case-insensitive)
+        // Inactive evaluators will be treated as "missing" and go through reactivation logic
         var existingEvaluators = allTenantEvaluators
-            .Where(e => employeeIds.Any(id => string.Equals(id, e.EmployeeIdString, StringComparison.OrdinalIgnoreCase)))
+            .Where(e => e.IsActive && employeeIds.Any(id => string.Equals(id, e.EmployeeIdString, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
         _logger.LogInformation("✅ Found {Count} existing evaluators for tenant {TenantId}: {EvaluatorIds}",
             existingEvaluators.Count, tenantId, string.Join(", ", existingEvaluators.Select(e => e.EmployeeIdString)));
 
-        // Check for non-existent EmployeeIds
+        // Check for non-existent EmployeeIds and auto-create evaluators if employees exist
         var foundEmployeeIds = existingEvaluators.Select(e => e.EmployeeIdString).ToList();
-        result.FailedEmployeeIds = employeeIds.Except(foundEmployeeIds).ToList();
+        var missingEmployeeIds = employeeIds.Except(foundEmployeeIds, StringComparer.OrdinalIgnoreCase).ToList();
+
+        if (missingEmployeeIds.Any())
+        {
+            _logger.LogInformation("🔍 Attempting to auto-create evaluators for missing EmployeeIds: {MissingIds}",
+                string.Join(", ", missingEmployeeIds));
+
+            // Load all employees for missing IDs to avoid LINQ translation issues
+            var employeesForMissing = await _context.Employees
+                .Where(e => e.TenantId == tenantId && e.IsActive)
+                .ToListAsync();
+
+            foreach (var missingEmployeeId in missingEmployeeIds)
+            {
+                // Find the employee in memory (case-insensitive)
+                var employee = employeesForMissing
+                    .FirstOrDefault(e => string.Equals(e.EmployeeId, missingEmployeeId, StringComparison.OrdinalIgnoreCase));
+
+                if (employee != null)
+                {
+                    // Check if evaluator exists but is inactive (soft-deleted)
+                    var existingEvaluator = await _context.Evaluators
+                        .FirstOrDefaultAsync(ev => ev.EmployeeId == employee.Id && ev.TenantId == tenantId);
+
+                    if (existingEvaluator != null && !existingEvaluator.IsActive)
+                    {
+                        // Reactivate existing evaluator
+                        existingEvaluator.IsActive = true;
+                        existingEvaluator.UpdatedAt = DateTime.UtcNow;
+                        _context.Evaluators.Update(existingEvaluator);
+                        await _context.SaveChangesAsync();
+
+                        // Add to existing evaluators list
+                        existingEvaluators.Add(new { existingEvaluator.Id, EmployeeIdString = employee.EmployeeId, IsActive = true });
+
+                        _logger.LogInformation("✅ Reactivated evaluator for employee {EmployeeId} ({EmployeeName})",
+                            employee.EmployeeId, $"{employee.FirstName} {employee.LastName}");
+                    }
+                    else if (existingEvaluator == null)
+                    {
+                        // Auto-create new evaluator record
+                        var newEvaluator = new Evaluator
+                        {
+                            Id = Guid.NewGuid(),
+                            EmployeeId = employee.Id,
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow,
+                            TenantId = tenantId
+                        };
+
+                        _context.Evaluators.Add(newEvaluator);
+                        await _context.SaveChangesAsync();
+
+                        // Add to existing evaluators list
+                        existingEvaluators.Add(new { newEvaluator.Id, EmployeeIdString = employee.EmployeeId, IsActive = true });
+
+                        _logger.LogInformation("✅ Auto-created evaluator for employee {EmployeeId} ({EmployeeName})",
+                            employee.EmployeeId, $"{employee.FirstName} {employee.LastName}");
+                    }
+                    else
+                    {
+                        // Evaluator already exists and is active
+                        existingEvaluators.Add(new { existingEvaluator.Id, EmployeeIdString = employee.EmployeeId, IsActive = true });
+                        _logger.LogInformation("ℹ️ Evaluator already exists for employee {EmployeeId}", employee.EmployeeId);
+                    }
+                }
+                else
+                {
+                    result.FailedEmployeeIds.Add(missingEmployeeId);
+                    _logger.LogWarning("❌ Employee not found for EmployeeId: {EmployeeId}", missingEmployeeId);
+                }
+            }
+        }
 
         if (result.FailedEmployeeIds.Any())
         {
             _logger.LogWarning("Evaluator EmployeeIds not found: {FailedIds}", string.Join(", ", result.FailedEmployeeIds));
         }
 
-        // Get existing relationships to avoid duplicates
+        // Get ALL existing relationships (both active and inactive) to avoid duplicates and reactivate if needed
         var existingRelationships = await _context.SubjectEvaluators
             .Where(se => se.SubjectId == subjectId &&
                         existingEvaluators.Select(e => e.Id).Contains(se.EvaluatorId))
-            .Select(se => se.EvaluatorId)
             .ToListAsync();
+
+        var existingRelationshipsByEvaluatorId = existingRelationships.ToDictionary(se => se.EvaluatorId);
 
         // Create new relationships with types
         _logger.LogInformation("🔄 Processing {Count} evaluator relationships", evaluatorRelationships.Count);
@@ -268,13 +344,29 @@ public class RelationshipService : IRelationshipService
                 }
             }
 
-            if (existingRelationships.Contains(evaluator.Id))
+            // Check if relationship already exists (active or inactive)
+            if (existingRelationshipsByEvaluatorId.TryGetValue(evaluator.Id, out var existingRel))
             {
-                _logger.LogInformation("⚠️ Duplicate relationship detected for evaluator {EmployeeId}", evaluator.EmployeeIdString);
-                result.DuplicateConnections.Add(evaluator.EmployeeIdString);
+                if (existingRel.IsActive)
+                {
+                    _logger.LogInformation("⚠️ Active relationship already exists for evaluator {EmployeeId}", evaluator.EmployeeIdString);
+                    result.DuplicateConnections.Add(evaluator.EmployeeIdString);
+                }
+                else
+                {
+                    // Reactivate inactive relationship
+                    existingRel.IsActive = true;
+                    existingRel.Relationship = evaluatorRelationship.RelationshipType;
+                    existingRel.UpdatedAt = DateTime.UtcNow;
+                    _context.SubjectEvaluators.Update(existingRel);
+                    result.SuccessfulConnections++;
+                    _logger.LogInformation("✅ Reactivated relationship: Subject {SubjectId} -> Evaluator {EvaluatorId} ({EmployeeId}) as {RelationshipType}",
+                        subjectId, evaluator.Id, evaluator.EmployeeIdString, evaluatorRelationship.RelationshipType);
+                }
                 continue;
             }
 
+            // Create new relationship
             var relationship = new SubjectEvaluator
             {
                 Id = Guid.NewGuid(),
@@ -414,35 +506,110 @@ public class RelationshipService : IRelationshipService
         var allTenantSubjects = await _context.Subjects
             .Include(s => s.Employee)
             .Where(s => s.TenantId == tenantId)
-            .Select(s => new { s.Id, EmployeeIdString = s.Employee.EmployeeId })
+            .Select(s => new { s.Id, EmployeeIdString = s.Employee.EmployeeId, s.IsActive })
             .ToListAsync();
 
         _logger.LogInformation("📊 Total subjects in tenant {TenantId}: {Count}. EmployeeIds: {AllIds}",
             tenantId, allTenantSubjects.Count, string.Join(", ", allTenantSubjects.Select(s => s.EmployeeIdString)));
 
-        // Get existing subjects by EmployeeId within the tenant (case-insensitive)
+        // Get existing ACTIVE subjects by EmployeeId within the tenant (case-insensitive)
+        // Inactive subjects will be treated as "missing" and go through reactivation logic
         var existingSubjects = allTenantSubjects
-            .Where(s => employeeIds.Any(id => string.Equals(id, s.EmployeeIdString, StringComparison.OrdinalIgnoreCase)))
+            .Where(s => s.IsActive && employeeIds.Any(id => string.Equals(id, s.EmployeeIdString, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
         _logger.LogInformation("✅ Found {Count} existing subjects for tenant {TenantId}: {SubjectIds}",
             existingSubjects.Count, tenantId, string.Join(", ", existingSubjects.Select(s => s.EmployeeIdString)));
 
-        // Check for non-existent EmployeeIds
+        // Check for non-existent EmployeeIds and auto-create subjects if employees exist
         var foundEmployeeIds = existingSubjects.Select(s => s.EmployeeIdString).ToList();
-        result.FailedEmployeeIds = employeeIds.Except(foundEmployeeIds).ToList();
+        var missingEmployeeIds = employeeIds.Except(foundEmployeeIds, StringComparer.OrdinalIgnoreCase).ToList();
+
+        if (missingEmployeeIds.Any())
+        {
+            _logger.LogInformation("🔍 Attempting to auto-create subjects for missing EmployeeIds: {MissingIds}",
+                string.Join(", ", missingEmployeeIds));
+
+            // Load all employees for missing IDs to avoid LINQ translation issues
+            var employeesForMissing = await _context.Employees
+                .Where(e => e.TenantId == tenantId && e.IsActive)
+                .ToListAsync();
+
+            foreach (var missingEmployeeId in missingEmployeeIds)
+            {
+                // Find the employee in memory (case-insensitive)
+                var employee = employeesForMissing
+                    .FirstOrDefault(e => string.Equals(e.EmployeeId, missingEmployeeId, StringComparison.OrdinalIgnoreCase));
+
+                if (employee != null)
+                {
+                    // Check if subject exists but is inactive (soft-deleted)
+                    var existingSubject = await _context.Subjects
+                        .FirstOrDefaultAsync(s => s.EmployeeId == employee.Id && s.TenantId == tenantId);
+
+                    if (existingSubject != null && !existingSubject.IsActive)
+                    {
+                        // Reactivate existing subject
+                        existingSubject.IsActive = true;
+                        existingSubject.UpdatedAt = DateTime.UtcNow;
+                        _context.Subjects.Update(existingSubject);
+                        await _context.SaveChangesAsync();
+
+                        // Add to existing subjects list
+                        existingSubjects.Add(new { existingSubject.Id, EmployeeIdString = employee.EmployeeId, IsActive = true });
+
+                        _logger.LogInformation("✅ Reactivated subject for employee {EmployeeId} ({EmployeeName})",
+                            employee.EmployeeId, $"{employee.FirstName} {employee.LastName}");
+                    }
+                    else if (existingSubject == null)
+                    {
+                        // Auto-create new subject record
+                        var newSubject = new Subject
+                        {
+                            Id = Guid.NewGuid(),
+                            EmployeeId = employee.Id,
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow,
+                            TenantId = tenantId
+                        };
+
+                        _context.Subjects.Add(newSubject);
+                        await _context.SaveChangesAsync();
+
+                        // Add to existing subjects list
+                        existingSubjects.Add(new { newSubject.Id, EmployeeIdString = employee.EmployeeId, IsActive = true });
+
+                        _logger.LogInformation("✅ Auto-created subject for employee {EmployeeId} ({EmployeeName})",
+                            employee.EmployeeId, $"{employee.FirstName} {employee.LastName}");
+                    }
+                    else
+                    {
+                        // Subject already exists and is active
+                        existingSubjects.Add(new { existingSubject.Id, EmployeeIdString = employee.EmployeeId, IsActive = true });
+                        _logger.LogInformation("ℹ️ Subject already exists for employee {EmployeeId}", employee.EmployeeId);
+                    }
+                }
+                else
+                {
+                    result.FailedEmployeeIds.Add(missingEmployeeId);
+                    _logger.LogWarning("❌ Employee not found for EmployeeId: {EmployeeId}", missingEmployeeId);
+                }
+            }
+        }
 
         if (result.FailedEmployeeIds.Any())
         {
             _logger.LogWarning("Subject EmployeeIds not found: {FailedIds}", string.Join(", ", result.FailedEmployeeIds));
         }
 
-        // Get existing relationships to avoid duplicates
+        // Get ALL existing relationships (both active and inactive) to avoid duplicates and reactivate if needed
         var existingRelationships = await _context.SubjectEvaluators
             .Where(se => se.EvaluatorId == evaluatorId &&
                         existingSubjects.Select(s => s.Id).Contains(se.SubjectId))
-            .Select(se => se.SubjectId)
             .ToListAsync();
+
+        var existingRelationshipsBySubjectId = existingRelationships.ToDictionary(se => se.SubjectId);
 
         // Create new relationships with types
         _logger.LogInformation("🔄 Processing {Count} subject relationships", subjectRelationships.Count);
@@ -472,13 +639,29 @@ public class RelationshipService : IRelationshipService
                 }
             }
 
-            if (existingRelationships.Contains(subject.Id))
+            // Check if relationship already exists (active or inactive)
+            if (existingRelationshipsBySubjectId.TryGetValue(subject.Id, out var existingRel))
             {
-                _logger.LogInformation("⚠️ Duplicate relationship detected for subject {EmployeeId}", subject.EmployeeIdString);
-                result.DuplicateConnections.Add(subject.EmployeeIdString);
+                if (existingRel.IsActive)
+                {
+                    _logger.LogInformation("⚠️ Active relationship already exists for subject {EmployeeId}", subject.EmployeeIdString);
+                    result.DuplicateConnections.Add(subject.EmployeeIdString);
+                }
+                else
+                {
+                    // Reactivate inactive relationship
+                    existingRel.IsActive = true;
+                    existingRel.Relationship = subjectRelationship.RelationshipType;
+                    existingRel.UpdatedAt = DateTime.UtcNow;
+                    _context.SubjectEvaluators.Update(existingRel);
+                    result.SuccessfulConnections++;
+                    _logger.LogInformation("✅ Reactivated relationship: Evaluator {EvaluatorId} -> Subject {SubjectId} ({EmployeeId}) as {RelationshipType}",
+                        evaluatorId, subject.Id, subject.EmployeeIdString, subjectRelationship.RelationshipType);
+                }
                 continue;
             }
 
+            // Create new relationship
             var relationship = new SubjectEvaluator
             {
                 Id = Guid.NewGuid(),
@@ -590,20 +773,104 @@ public class RelationshipService : IRelationshipService
 
         // Resolve incoming evaluator employee IDs in this tenant (case-insensitive)
         var incomingEmployeeIds = newEvaluatorRelationships.Select(er => er.EmployeeId).ToList();
-        var evaluators = await _context.Evaluators
+
+        // Get ALL evaluators for this tenant first (for debugging)
+        var allTenantEvaluators = await _context.Evaluators
             .Include(e => e.Employee)
-            .Where(e => e.TenantId == tenantId && incomingEmployeeIds.Contains(e.Employee.EmployeeId))
+            .Where(e => e.TenantId == tenantId)
             .Select(e => new { e.Id, EmployeeIdString = e.Employee.EmployeeId })
             .ToListAsync();
 
-        var foundEmployeeIds = evaluators.Select(e => e.EmployeeIdString).ToList();
-        result.FailedEmployeeIds = incomingEmployeeIds
-            .Except(foundEmployeeIds, StringComparer.OrdinalIgnoreCase)
+        // Get existing evaluators by EmployeeId within the tenant (case-insensitive)
+        var evaluators = allTenantEvaluators
+            .Where(e => incomingEmployeeIds.Any(id => string.Equals(id, e.EmployeeIdString, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-        // Load existing relationships for this subject to these evaluators
+        // Check for non-existent EmployeeIds and auto-create evaluators if employees exist
+        var foundEmployeeIds = evaluators.Select(e => e.EmployeeIdString).ToList();
+        var missingEmployeeIds = incomingEmployeeIds.Except(foundEmployeeIds, StringComparer.OrdinalIgnoreCase).ToList();
+
+        if (missingEmployeeIds.Any())
+        {
+            _logger.LogInformation("🔍 Attempting to auto-create evaluators for missing EmployeeIds: {MissingIds}",
+                string.Join(", ", missingEmployeeIds));
+
+            // Load all employees for missing IDs to avoid LINQ translation issues
+            var employeesForMissing = await _context.Employees
+                .Where(e => e.TenantId == tenantId && e.IsActive)
+                .ToListAsync();
+
+            foreach (var missingEmployeeId in missingEmployeeIds)
+            {
+                // Find the employee in memory (case-insensitive)
+                var employee = employeesForMissing
+                    .FirstOrDefault(e => string.Equals(e.EmployeeId, missingEmployeeId, StringComparison.OrdinalIgnoreCase));
+
+                if (employee != null)
+                {
+                    // Check if evaluator exists but is inactive (soft-deleted)
+                    var existingEvaluator = await _context.Evaluators
+                        .FirstOrDefaultAsync(ev => ev.EmployeeId == employee.Id && ev.TenantId == tenantId);
+
+                    if (existingEvaluator != null && !existingEvaluator.IsActive)
+                    {
+                        // Reactivate existing evaluator
+                        existingEvaluator.IsActive = true;
+                        existingEvaluator.UpdatedAt = DateTime.UtcNow;
+                        _context.Evaluators.Update(existingEvaluator);
+                        await _context.SaveChangesAsync();
+
+                        // Add to evaluators list
+                        evaluators.Add(new { existingEvaluator.Id, EmployeeIdString = employee.EmployeeId });
+
+                        _logger.LogInformation("✅ Reactivated evaluator for employee {EmployeeId} ({EmployeeName})",
+                            employee.EmployeeId, $"{employee.FirstName} {employee.LastName}");
+                    }
+                    else if (existingEvaluator == null)
+                    {
+                        // Auto-create new evaluator record
+                        var newEvaluator = new Evaluator
+                        {
+                            Id = Guid.NewGuid(),
+                            EmployeeId = employee.Id,
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow,
+                            TenantId = tenantId
+                        };
+
+                        _context.Evaluators.Add(newEvaluator);
+                        await _context.SaveChangesAsync();
+
+                        // Add to evaluators list
+                        evaluators.Add(new { newEvaluator.Id, EmployeeIdString = employee.EmployeeId });
+
+                        _logger.LogInformation("✅ Auto-created evaluator for employee {EmployeeId} ({EmployeeName})",
+                            employee.EmployeeId, $"{employee.FirstName} {employee.LastName}");
+                    }
+                    else
+                    {
+                        // Evaluator already exists and is active
+                        evaluators.Add(new { existingEvaluator.Id, EmployeeIdString = employee.EmployeeId });
+                        _logger.LogInformation("ℹ️ Evaluator already exists for employee {EmployeeId}", employee.EmployeeId);
+                    }
+                }
+                else
+                {
+                    result.FailedEmployeeIds.Add(missingEmployeeId);
+                    _logger.LogWarning("❌ Employee not found for EmployeeId: {EmployeeId}", missingEmployeeId);
+                }
+            }
+        }
+
+        if (result.FailedEmployeeIds.Any())
+        {
+            _logger.LogWarning("Evaluator EmployeeIds not found: {FailedIds}", string.Join(", ", result.FailedEmployeeIds));
+        }
+
+        // Load ALL existing relationships for this subject to these evaluators (both active and inactive)
         var existingRels = await _context.SubjectEvaluators
-            .Where(se => se.SubjectId == subjectId && se.IsActive && evaluators.Select(e => e.Id).Contains(se.EvaluatorId))
+            .Where(se => se.SubjectId == subjectId && evaluators.Select(e => e.Id).Contains(se.EvaluatorId))
             .Include(se => se.Evaluator)
                 .ThenInclude(e => e.Employee)
             .ToListAsync();
@@ -615,6 +882,7 @@ public class RelationshipService : IRelationshipService
 
         int updates = 0;
         int creates = 0;
+        int reactivations = 0;
 
         foreach (var er in newEvaluatorRelationships)
         {
@@ -627,18 +895,33 @@ public class RelationshipService : IRelationshipService
 
             if (existingByEmpId.TryGetValue(evaluator.EmployeeIdString, out var existing))
             {
-                // Relationship exists; update type if changed
-                if (!string.Equals(existing.Relationship, er.RelationshipType, StringComparison.OrdinalIgnoreCase))
+                if (existing.IsActive)
                 {
-                    existing.Relationship = er.RelationshipType;
-                    existing.UpdatedAt = DateTime.UtcNow;
-                    _context.SubjectEvaluators.Update(existing);
-                    updates++;
-                    result.SuccessfulConnections++;
+                    // Relationship exists and is active; update type if changed
+                    if (!string.Equals(existing.Relationship, er.RelationshipType, StringComparison.OrdinalIgnoreCase))
+                    {
+                        existing.Relationship = er.RelationshipType;
+                        existing.UpdatedAt = DateTime.UtcNow;
+                        _context.SubjectEvaluators.Update(existing);
+                        updates++;
+                        result.SuccessfulConnections++;
+                    }
+                    else
+                    {
+                        result.DuplicateConnections.Add(evaluator.EmployeeIdString);
+                    }
                 }
                 else
                 {
-                    result.DuplicateConnections.Add(evaluator.EmployeeIdString);
+                    // Reactivate inactive relationship
+                    existing.IsActive = true;
+                    existing.Relationship = er.RelationshipType;
+                    existing.UpdatedAt = DateTime.UtcNow;
+                    _context.SubjectEvaluators.Update(existing);
+                    reactivations++;
+                    result.SuccessfulConnections++;
+                    _logger.LogInformation("✅ Reactivated relationship: Subject {SubjectId} -> Evaluator {EvaluatorEmployeeId} as {RelationshipType}",
+                        subjectId, evaluator.EmployeeIdString, er.RelationshipType);
                 }
             }
             else
@@ -675,8 +958,8 @@ public class RelationshipService : IRelationshipService
             result.Warnings.Add($"Evaluator EmployeeIds not found: {string.Join(", ", result.FailedEmployeeIds)}");
         }
 
-        _logger.LogInformation("Merge completed for subject {SubjectId}: {Creates} created, {Updates} updated, {Duplicates} unchanged, {Failed} failed",
-            subjectId, creates, updates, result.DuplicateConnections.Count, result.FailedEmployeeIds.Count);
+        _logger.LogInformation("Merge completed for subject {SubjectId}: {Creates} created, {Updates} updated, {Reactivations} reactivated, {Duplicates} unchanged, {Failed} failed",
+            subjectId, creates, updates, reactivations, result.DuplicateConnections.Count, result.FailedEmployeeIds.Count);
 
         return result;
     }
@@ -756,20 +1039,102 @@ public class RelationshipService : IRelationshipService
 
         // Resolve incoming subject employee IDs in this tenant (case-insensitive)
         var incomingEmployeeIds = newSubjectRelationships.Select(sr => sr.EmployeeId).ToList();
-        var subjects = await _context.Subjects
+
+        // Load ALL subjects for this tenant (both active and inactive) to enable reactivation
+        var allTenantSubjects = await _context.Subjects
             .Include(s => s.Employee)
-            .Where(s => s.TenantId == tenantId && incomingEmployeeIds.Contains(s.Employee.EmployeeId))
-            .Select(s => new { s.Id, EmployeeIdString = s.Employee.EmployeeId })
+            .Where(s => s.TenantId == tenantId)
+            .Select(s => new { s.Id, EmployeeIdString = s.Employee.EmployeeId, s.IsActive })
             .ToListAsync();
 
+        // Filter ACTIVE subjects by incoming employee IDs (case-insensitive)
+        // Inactive subjects will be treated as "missing" and go through reactivation logic
+        var subjects = allTenantSubjects
+            .Where(s => s.IsActive && incomingEmployeeIds.Any(id => string.Equals(id, s.EmployeeIdString, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
         var foundEmployeeIds = subjects.Select(s => s.EmployeeIdString).ToList();
-        result.FailedEmployeeIds = incomingEmployeeIds
+        var missingEmployeeIds = incomingEmployeeIds
             .Except(foundEmployeeIds, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        // Load existing relationships for this evaluator to these subjects
+        // Auto-create subjects for missing EmployeeIds if employees exist
+        if (missingEmployeeIds.Any())
+        {
+            _logger.LogInformation("🔍 Attempting to auto-create subjects for missing EmployeeIds: {MissingIds}",
+                string.Join(", ", missingEmployeeIds));
+
+            // Load all employees for missing IDs to avoid LINQ translation issues
+            var employeesForMissing = await _context.Employees
+                .Where(e => e.TenantId == tenantId && e.IsActive)
+                .ToListAsync();
+
+            foreach (var missingEmployeeId in missingEmployeeIds)
+            {
+                // Find the employee in memory (case-insensitive)
+                var employee = employeesForMissing
+                    .FirstOrDefault(e => string.Equals(e.EmployeeId, missingEmployeeId, StringComparison.OrdinalIgnoreCase));
+
+                if (employee != null)
+                {
+                    // Check if subject exists but is inactive (soft-deleted)
+                    var existingSubject = await _context.Subjects
+                        .FirstOrDefaultAsync(s => s.EmployeeId == employee.Id && s.TenantId == tenantId);
+
+                    if (existingSubject != null && !existingSubject.IsActive)
+                    {
+                        // Reactivate existing subject
+                        existingSubject.IsActive = true;
+                        existingSubject.UpdatedAt = DateTime.UtcNow;
+                        _context.Subjects.Update(existingSubject);
+                        await _context.SaveChangesAsync();
+
+                        // Add to subjects list
+                        subjects.Add(new { existingSubject.Id, EmployeeIdString = employee.EmployeeId, IsActive = true });
+
+                        _logger.LogInformation("✅ Reactivated subject for employee {EmployeeId} ({EmployeeName})",
+                            employee.EmployeeId, $"{employee.FirstName} {employee.LastName}");
+                    }
+                    else if (existingSubject == null)
+                    {
+                        // Auto-create new subject record
+                        var newSubject = new Subject
+                        {
+                            Id = Guid.NewGuid(),
+                            EmployeeId = employee.Id,
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow,
+                            TenantId = tenantId
+                        };
+
+                        _context.Subjects.Add(newSubject);
+                        await _context.SaveChangesAsync();
+
+                        // Add to subjects list
+                        subjects.Add(new { newSubject.Id, EmployeeIdString = employee.EmployeeId, IsActive = true });
+
+                        _logger.LogInformation("✅ Auto-created subject for employee {EmployeeId} ({EmployeeName})",
+                            employee.EmployeeId, $"{employee.FirstName} {employee.LastName}");
+                    }
+                    else
+                    {
+                        // Subject already exists and is active
+                        subjects.Add(new { existingSubject.Id, EmployeeIdString = employee.EmployeeId, IsActive = true });
+                        _logger.LogInformation("ℹ️ Subject already exists for employee {EmployeeId}", employee.EmployeeId);
+                    }
+                }
+                else
+                {
+                    result.FailedEmployeeIds.Add(missingEmployeeId);
+                    _logger.LogWarning("❌ Employee not found for EmployeeId: {EmployeeId}", missingEmployeeId);
+                }
+            }
+        }
+
+        // Load ALL existing relationships for this evaluator to these subjects (both active and inactive)
         var existingRels = await _context.SubjectEvaluators
-            .Where(se => se.EvaluatorId == evaluatorId && se.IsActive && subjects.Select(s => s.Id).Contains(se.SubjectId))
+            .Where(se => se.EvaluatorId == evaluatorId && subjects.Select(s => s.Id).Contains(se.SubjectId))
             .Include(se => se.Subject)
                 .ThenInclude(s => s.Employee)
             .ToListAsync();
@@ -781,6 +1146,7 @@ public class RelationshipService : IRelationshipService
 
         int updates = 0;
         int creates = 0;
+        int reactivations = 0;
 
         foreach (var sr in newSubjectRelationships)
         {
@@ -793,18 +1159,33 @@ public class RelationshipService : IRelationshipService
 
             if (existingByEmpId.TryGetValue(subject.EmployeeIdString, out var existing))
             {
-                // Relationship exists; update type if changed
-                if (!string.Equals(existing.Relationship, sr.RelationshipType, StringComparison.OrdinalIgnoreCase))
+                if (existing.IsActive)
                 {
-                    existing.Relationship = sr.RelationshipType;
-                    existing.UpdatedAt = DateTime.UtcNow;
-                    _context.SubjectEvaluators.Update(existing);
-                    updates++;
-                    result.SuccessfulConnections++;
+                    // Relationship exists and is active; update type if changed
+                    if (!string.Equals(existing.Relationship, sr.RelationshipType, StringComparison.OrdinalIgnoreCase))
+                    {
+                        existing.Relationship = sr.RelationshipType;
+                        existing.UpdatedAt = DateTime.UtcNow;
+                        _context.SubjectEvaluators.Update(existing);
+                        updates++;
+                        result.SuccessfulConnections++;
+                    }
+                    else
+                    {
+                        result.DuplicateConnections.Add(subject.EmployeeIdString);
+                    }
                 }
                 else
                 {
-                    result.DuplicateConnections.Add(subject.EmployeeIdString);
+                    // Reactivate inactive relationship
+                    existing.IsActive = true;
+                    existing.Relationship = sr.RelationshipType;
+                    existing.UpdatedAt = DateTime.UtcNow;
+                    _context.SubjectEvaluators.Update(existing);
+                    reactivations++;
+                    result.SuccessfulConnections++;
+                    _logger.LogInformation("✅ Reactivated relationship: Evaluator {EvaluatorId} -> Subject {SubjectEmployeeId} as {RelationshipType}",
+                        evaluatorId, subject.EmployeeIdString, sr.RelationshipType);
                 }
             }
             else
@@ -841,8 +1222,8 @@ public class RelationshipService : IRelationshipService
             result.Warnings.Add($"Subject EmployeeIds not found: {string.Join(", ", result.FailedEmployeeIds)}");
         }
 
-        _logger.LogInformation("Merge completed for evaluator {EvaluatorId}: {Creates} created, {Updates} updated, {Duplicates} unchanged, {Failed} failed",
-            evaluatorId, creates, updates, result.DuplicateConnections.Count, result.FailedEmployeeIds.Count);
+        _logger.LogInformation("Merge completed for evaluator {EvaluatorId}: {Creates} created, {Updates} updated, {Reactivations} reactivated, {Duplicates} unchanged, {Failed} failed",
+            evaluatorId, creates, updates, reactivations, result.DuplicateConnections.Count, result.FailedEmployeeIds.Count);
 
         return result;
     }

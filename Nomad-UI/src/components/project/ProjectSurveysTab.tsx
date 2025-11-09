@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import SurveyBuilder from '@/components/survey/SurveyBuilder';
+import CustomSurveyBuilder from '@/components/survey/CustomSurveyBuilder';
 import AssignSurveyModal from '@/components/modals/AssignSurveyModal';
 import toast from 'react-hot-toast';
 
@@ -168,7 +168,7 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
 
   if (showBuilder) {
     return (
-      <SurveyBuilder
+      <CustomSurveyBuilder
         tenantSlug={projectSlug}
         token={token || ''}
         initialSurvey={editingSurvey}

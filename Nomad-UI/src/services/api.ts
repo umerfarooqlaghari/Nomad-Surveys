@@ -182,9 +182,10 @@ export function handleApiResponse<T>(
   if (response.error) {
     return { data: null, error: response.error };
   }
-  
-  if (response.data === undefined) {
-    return { data: null, error: 'No data received from server' };
+
+  // For 204 No Content responses, return success with empty object
+  if (response.status === 204 || response.data === undefined) {
+    return { data: {} as T, error: null };
   }
 
   return { data: response.data, error: null };

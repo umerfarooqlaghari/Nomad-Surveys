@@ -136,7 +136,7 @@ public class SubjectsController : ControllerBase
                 return StatusCode(207, result); // Multi-Status for partial success
             }
 
-            return CreatedAtAction(nameof(GetSubjects), new { tenantId = currentTenantId }, result);
+            return StatusCode(StatusCodes.Status201Created, result);
         }
         catch (ArgumentException ex)
         {

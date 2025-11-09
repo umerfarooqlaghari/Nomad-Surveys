@@ -13,6 +13,7 @@ import ProjectSubjectsTab from '@/components/project/ProjectSubjectsTab';
 import ProjectEvaluatorsTab from '@/components/project/ProjectEvaluatorsTab';
 import ProjectEmployeesTab from '@/components/project/ProjectEmployeesTab';
 import ProjectSurveysTab from '@/components/project/ProjectSurveysTab';
+import ProjectQuestionsTab from '@/components/project/ProjectQuestionsTab';
 
 const tabs = [
   { id: 'profile', name: 'Profile', icon: "/Icons/people.svg" },
@@ -22,6 +23,7 @@ const tabs = [
   { id: 'evaluators', name: 'Evaluators', icon: "/Icons/person-gear.svg" },
   { id: 'employees', name: 'Employees', icon: "/Icons/person-add.svg" },
   { id: 'surveys', name: 'Surveys', icon: "/Icons/wrench-adjustable-circle.svg" },
+  { id: 'questions', name: 'Questions', icon: "/Icons/ui-checks.svg" },
 ];
 
 export default function ProjectDashboard() {
@@ -57,6 +59,8 @@ export default function ProjectDashboard() {
         return <ProjectEmployeesTab projectSlug={projectSlug} />;
       case 'surveys':
         return <ProjectSurveysTab projectSlug={projectSlug} />;
+      case 'questions':
+        return <ProjectQuestionsTab projectSlug={projectSlug} />;
       default:
         return <ProjectProfileTab projectSlug={projectSlug} />;
     }

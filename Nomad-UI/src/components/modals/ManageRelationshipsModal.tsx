@@ -98,6 +98,27 @@ export default function ManageRelationshipsModal({
     }
   }, [isOpen, entityId]);
 
+  // Auto-select self-evaluation relationships with "Self" type when tab changes
+  useEffect(() => {
+    if (currentEntity && availableOptions.length > 0 && activeTab === 'add') {
+      const selfOption = availableOptions.find(opt => opt.EmployeeId === currentEntity.EmployeeId);
+      if (selfOption) {
+        // Always set "Self" for self-evaluation, but don't force it to be selected
+        // The user can toggle it on/off using the relationship selection
+        setSelectedRelationships(prev => {
+          // Only auto-set if not already set
+          if (!prev[selfOption.Id]) {
+            return {
+              ...prev,
+              [selfOption.Id]: 'Self'
+            };
+          }
+          return prev;
+        });
+      }
+    }
+  }, [currentEntity, availableOptions, activeTab, selectedRelationships]);
+
   const loadExistingRelationships = async () => {
     if (!token || !entityId) return;
 
@@ -180,6 +201,7 @@ export default function ManageRelationshipsModal({
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const relationshipsToAdd = Object.entries(selectedRelationships).filter(([_, rel]) => rel !== '');
 
     if (relationshipsToAdd.length === 0) {
@@ -325,18 +347,12 @@ export default function ManageRelationshipsModal({
       option.EmployeeIdString.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-  // Auto-select "Self" relationship for current entity
+  // Auto-suggest "Self" relationship for current entity (but don't force it)
   // Find the option that matches the current entity's EmployeeId (could be different Id if same person is both subject and evaluator)
+  // Note: We no longer auto-select this - admins can choose to add or remove self-evaluation relationships
   useEffect(() => {
-    if (currentEntity && availableOptions.length > 0) {
-      const matchingOption = allAvailableOptions.find(opt => opt.EmployeeId === currentEntity.EmployeeId);
-      if (matchingOption && !selectedRelationships[matchingOption.Id] && !existingIds.includes(matchingOption.Id)) {
-        setSelectedRelationships(prev => ({
-          ...prev,
-          [matchingOption.Id]: 'Self'
-        }));
-      }
-    }
+    // This effect is kept for potential future use but doesn't auto-select anymore
+    // Admins have full control over all relationships including self-evaluation
   }, [currentEntity, availableOptions, existingRelationships]);
 
   if (!isOpen) return null;
@@ -558,18 +574,55 @@ export default function ManageRelationshipsModal({
                         </div>
 
                         {/* Relationship Dropdown Column */}
-                        <div className="px-4 py-3 flex items-center">
-                          <select
-                            value={selectedRelationships[option.Id] || (currentEntity && option.EmployeeId === currentEntity.EmployeeId ? 'Self' : '')}
-                            onChange={(e) => handleRelationshipChange(option.Id, e.target.value)}
-                            disabled={!!(currentEntity && option.EmployeeId === currentEntity.EmployeeId)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:text-gray-900 disabled:cursor-not-allowed"
-                          >
-                            <option value="">Select Relationship</option>
-                            {relationshipTypes.map(type => (
-                              <option key={type} value={type}>{type}</option>
-                            ))}
-                          </select>
+                        <div className="px-4 py-3 flex items-center gap-3">
+                          {currentEntity && option.EmployeeId === currentEntity.EmployeeId ? (
+                            <>
+                              {/* Checkbox to enable/disable self-evaluation */}
+                              <div
+                                className="flex items-center cursor-pointer"
+                                onClick={() => {
+                                  if (selectedRelationships[option.Id]) {
+                                    handleRelationshipChange(option.Id, '');
+                                  } else {
+                                    handleRelationshipChange(option.Id, 'Self');
+                                  }
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={!!selectedRelationships[option.Id]}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      handleRelationshipChange(option.Id, 'Self');
+                                    } else {
+                                      handleRelationshipChange(option.Id, '');
+                                    }
+                                  }}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="w-4 h-4 relative z-10 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                                  style={{ pointerEvents: 'auto' }}
+                                />
+                              </div>
+                              <select
+                                value="Self"
+                                disabled
+                                className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-gray-100 cursor-not-allowed"
+                              >
+                                <option value="Self">Self</option>
+                              </select>
+                            </>
+                          ) : (
+                            <select
+                              value={selectedRelationships[option.Id] || ''}
+                              onChange={(e) => handleRelationshipChange(option.Id, e.target.value)}
+                              className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                              <option value="">Select Relationship</option>
+                              {relationshipTypes.map(type => (
+                                <option key={type} value={type}>{type}</option>
+                              ))}
+                            </select>
+                          )}
                         </div>
                       </div>
                     ))

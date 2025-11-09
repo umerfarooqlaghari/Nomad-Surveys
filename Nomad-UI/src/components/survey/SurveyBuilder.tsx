@@ -2,11 +2,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { SurveyCreatorComponent, SurveyCreator } from 'survey-creator-react';
+import { ICreatorPlugin } from 'survey-creator-core';
 import 'survey-core/survey-core.min.css';
 import 'survey-creator-core/survey-creator-core.min.css';
 import toast from 'react-hot-toast';
+import ImportQuestionModal from './ImportQuestionModal';
 
 // Sky-Blue Custom Theme Configuration
 const SKY_BLUE_THEME = {
@@ -117,7 +119,7 @@ export default function SurveyBuilder({
 }: SurveyBuilderProps) {
   const [creator, setCreator] = useState<SurveyCreator | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [isSelfEvaluation, setIsSelfEvaluation] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // Optional: Export current theme configuration
   const exportTheme = () => {
@@ -147,7 +149,6 @@ export default function SurveyBuilder({
     // Set initial survey if provided
     if (initialSurvey) {
       surveyCreator.JSON = initialSurvey.Schema || {};
-      setIsSelfEvaluation(initialSurvey.IsSelfEvaluation || false);
       // Reapply theme after loading JSON
       surveyCreator.survey.applyTheme(SKY_BLUE_THEME);
     } else {
@@ -166,6 +167,27 @@ export default function SurveyBuilder({
     // Configure creator settings
     surveyCreator.showToolbox = true;
     surveyCreator.showPropertyGrid = true;
+
+    // Add custom "Import Question" action to question toolbar
+    surveyCreator.onDefineElementMenuItems.add((_sender: any, options: any) => {
+      // Only add to questions, not pages or panels
+      const objType = options.obj.getType();
+      if (objType !== 'page' && objType !== 'panel' && options.obj.name) {
+        // Find the index of "Delete" action to insert before it
+        const deleteIndex = options.items.findIndex((item: any) => item.id === 'delete');
+        const insertIndex = deleteIndex !== -1 ? deleteIndex : options.items.length;
+
+        // Add Import Question action
+        options.items.splice(insertIndex, 0, {
+          id: 'import-question',
+          title: 'Import Question',
+          iconName: 'icon-import',
+          action: () => {
+            setShowImportModal(true);
+          },
+        });
+      }
+    });
 
     setCreator(surveyCreator);
 
@@ -189,7 +211,6 @@ export default function SurveyBuilder({
         title: surveyTitle,
         description: surveyDescription,
         schema: surveyJSON,
-        isSelfEvaluation: isSelfEvaluation,
       };
 
       let response;
@@ -264,6 +285,74 @@ export default function SurveyBuilder({
     }
   };
 
+  const handleImportQuestion = (question: any) => {
+    if (!creator) return;
+
+    try {
+      const surveyJSON = creator.JSON;
+
+      // Get the current page or create one if it doesn't exist
+      if (!surveyJSON.pages || surveyJSON.pages.length === 0) {
+        surveyJSON.pages = [{ name: 'page1', elements: [] }];
+      }
+
+      const currentPage = surveyJSON.pages[0];
+      if (!currentPage.elements) {
+        currentPage.elements = [];
+      }
+
+      // Generate unique question names
+      const questionBaseName = `q_${question.Id.substring(0, 8)}`;
+      const selfQuestionName = `${questionBaseName}_self`;
+      const othersQuestionName = `${questionBaseName}_others`;
+
+      // Map question types to SurveyJS types
+      const questionTypeMap: Record<string, string> = {
+        'Text': 'text',
+        'Rating': 'rating',
+        'MultipleChoice': 'radiogroup',
+        'Checkbox': 'checkbox',
+        'Dropdown': 'dropdown',
+      };
+
+      const surveyJSType = questionTypeMap[question.QuestionType] || 'text';
+
+      // Add Self question with visibility condition
+      const selfQuestion = {
+        type: surveyJSType,
+        name: selfQuestionName,
+        title: question.SelfQuestion,
+        visibleIf: "{relationship} = 'Self'",
+        isRequired: false,
+        questionId: question.Id, // Store reference to original question
+        questionSource: 'imported',
+      };
+
+      // Add Others question with visibility condition
+      const othersQuestion = {
+        type: surveyJSType,
+        name: othersQuestionName,
+        title: question.OthersQuestion,
+        visibleIf: "{relationship} <> 'Self'",
+        isRequired: false,
+        questionId: question.Id, // Store reference to original question
+        questionSource: 'imported',
+      };
+
+      // Add both questions to the survey
+      currentPage.elements.push(selfQuestion);
+      currentPage.elements.push(othersQuestion);
+
+      // Update the creator
+      creator.JSON = surveyJSON;
+
+      toast.success('Question imported successfully!');
+    } catch (error: any) {
+      console.error('Error importing question:', error);
+      toast.error('Failed to import question');
+    }
+  };
+
   if (!creator) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -282,61 +371,12 @@ export default function SurveyBuilder({
             {surveyId ? 'Edit Survey' : 'Create New Survey'}
           </h2>
 
-          {/* Survey Type Toggle */}
-          <div className="flex items-center gap-6 mt-3 mb-3" style={{ zIndex: 1000, position: 'relative' }}>
-            <span className="text-sm font-medium text-gray-700">Survey Type:</span>
-            <div className="flex items-center gap-4">
-              <div
-                className="flex items-center gap-2 cursor-pointer"
-                onClick={() => setIsSelfEvaluation(false)}
-              >
-                <input
-                  type="radio"
-                  id="radio-360"
-                  name="surveyType"
-                  value="360"
-                  checked={!isSelfEvaluation}
-                  onChange={() => setIsSelfEvaluation(false)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
-                  style={{ pointerEvents: 'auto' }}
-                />
-                <label htmlFor="radio-360" className="text-sm text-gray-700 select-none cursor-pointer">
-                  360-Degree Evaluation
-                </label>
-              </div>
-              <div
-                className="flex items-center gap-2 cursor-pointer"
-                onClick={() => setIsSelfEvaluation(true)}
-              >
-                <input
-                  type="radio"
-                  id="radio-self"
-                  name="surveyType"
-                  value="self"
-                  checked={isSelfEvaluation}
-                  onChange={() => setIsSelfEvaluation(true)}
-                  className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
-                  style={{ pointerEvents: 'auto' }}
-                />
-                <label htmlFor="radio-self" className="text-sm text-gray-700 select-none cursor-pointer">
-                  Self-Evaluation
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Conditional Placeholder Instructions */}
-          <p className="text-sm text-gray-600">
+          {/* Instructions */}
+          <p className="text-sm text-gray-600 mt-2">
             Use drag & drop to build your survey. You can include placeholders like{' '}
-            {isSelfEvaluation ? (
-              <code className="bg-gray-100 px-1 rounded">{'{employeeName}'}</code>
-            ) : (
-              <>
-                <code className="bg-gray-100 px-1 rounded">{'{subjectName}'}</code> or{' '}
-                <code className="bg-gray-100 px-1 rounded">{'{evaluatorName}'}</code>
-              </>
-            )}{' '}
-            in question text.
+            <code className="bg-gray-100 px-1 rounded">{'{subjectName}'}</code> or{' '}
+            <code className="bg-gray-100 px-1 rounded">{'{evaluatorName}'}</code>{' '}
+            in question text. Questions will be shown based on the evaluator&apos;s relationship to the subject.
           </p>
         </div>
         <div className="flex space-x-3">
@@ -1004,6 +1044,15 @@ export default function SurveyBuilder({
           color: #ffffff !important;
         }
       `}</style>
+
+      {/* Import Question Modal */}
+      <ImportQuestionModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImportQuestion}
+        tenantSlug={tenantSlug}
+        token={token}
+      />
       </div>
     </div>
   );
