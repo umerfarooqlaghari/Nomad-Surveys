@@ -366,24 +366,32 @@ export default function AssignSurveyModal({
                 <p className="text-center text-gray-500 py-8">No available relationships found</p>
               ) : (
                 <div className="space-y-2">
-                  {filteredAvailable.map(relationship => (
-                    <label
+                  {filteredAvailable.map(relationship => {
+                    const isSelected = selectedAvailable.has(relationship.SubjectEvaluatorId);
+
+                    const toggleSelection = () => {
+                      const newSelected = new Set(selectedAvailable);
+                      if (isSelected) {
+                        newSelected.delete(relationship.SubjectEvaluatorId);
+                      } else {
+                        newSelected.add(relationship.SubjectEvaluatorId);
+                      }
+                      setSelectedAvailable(newSelected);
+                    };
+
+                    return (
+                    <div
                       key={relationship.SubjectEvaluatorId}
                       className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                      onClick={toggleSelection}
                     >
                       <input
                         type="checkbox"
-                        checked={selectedAvailable.has(relationship.SubjectEvaluatorId)}
-                        onChange={(e) => {
-                          const newSelected = new Set(selectedAvailable);
-                          if (e.target.checked) {
-                            newSelected.add(relationship.SubjectEvaluatorId);
-                          } else {
-                            newSelected.delete(relationship.SubjectEvaluatorId);
-                          }
-                          setSelectedAvailable(newSelected);
-                        }}
-                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        checked={isSelected}
+                        onChange={() => {}} // Handled by parent div onClick
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-1 w-4 h-4 relative z-10 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                        style={{ pointerEvents: 'auto' }}
                       />
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
@@ -399,8 +407,9 @@ export default function AssignSurveyModal({
                           {relationship.SubjectDesignation && ` • ${relationship.SubjectDesignation}`}
                         </div>
                       </div>
-                      </label>
-                  ))}
+                    </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -426,24 +435,32 @@ export default function AssignSurveyModal({
                 <p className="text-center text-gray-500 py-8">No assigned relationships found</p>
               ) : (
                 <div className="space-y-2">
-                  {filteredAssigned.map(relationship => (
-                    <label
+                  {filteredAssigned.map(relationship => {
+                    const isSelected = selectedAssigned.has(relationship.SubjectEvaluatorId);
+
+                    const toggleSelection = () => {
+                      const newSelected = new Set(selectedAssigned);
+                      if (isSelected) {
+                        newSelected.delete(relationship.SubjectEvaluatorId);
+                      } else {
+                        newSelected.add(relationship.SubjectEvaluatorId);
+                      }
+                      setSelectedAssigned(newSelected);
+                    };
+
+                    return (
+                    <div
                       key={relationship.SubjectEvaluatorId}
                       className="flex items-start gap-3 p-4 border border-green-200 bg-green-50 rounded-lg hover:bg-green-100 cursor-pointer"
+                      onClick={toggleSelection}
                     >
                       <input
                         type="checkbox"
-                        checked={selectedAssigned.has(relationship.SubjectEvaluatorId)}
-                        onChange={(e) => {
-                          const newSelected = new Set(selectedAssigned);
-                          if (e.target.checked) {
-                            newSelected.add(relationship.SubjectEvaluatorId);
-                          } else {
-                            newSelected.delete(relationship.SubjectEvaluatorId);
-                          }
-                          setSelectedAssigned(newSelected);
-                        }}
-                        className="mt-1 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        checked={isSelected}
+                        onChange={() => {}} // Handled by parent div onClick
+                        onClick={(e) => e.stopPropagation()}
+                        className="mt-1 w-4 h-4 relative z-10 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                        style={{ pointerEvents: 'auto' }}
                       />
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
@@ -459,7 +476,9 @@ export default function AssignSurveyModal({
                           {relationship.SubjectDesignation && ` • ${relationship.SubjectDesignation}`}
                         </div>
                       </div>
-</label>                  ))}
+                    </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

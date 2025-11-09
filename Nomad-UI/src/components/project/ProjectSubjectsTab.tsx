@@ -147,13 +147,36 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
   };
 
   const handleBulkImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('🔵 [SUBJECTS] handleBulkImport TRIGGERED');
+
     const file = e.target.files?.[0];
-    if (!file || !token) return;
+    console.log('📁 [SUBJECTS] File object:', file);
+    console.log('🔑 [SUBJECTS] Token exists:', !!token);
+    console.log('📍 [SUBJECTS] Project slug:', projectSlug);
+
+    if (!file) {
+      console.log('❌ [SUBJECTS] No file selected');
+      return;
+    }
+
+    if (!token) {
+      console.log('❌ [SUBJECTS] No token available');
+      toast.error('Authentication token not found. Please log in again.');
+      return;
+    }
 
     setIsImporting(true);
     try {
+      console.log('📖 [SUBJECTS] Reading file content...');
       const text = await file.text();
+      console.log('📄 [SUBJECTS] File content length:', text.length);
+
+      console.log('🔍 [SUBJECTS] Parsing CSV...');
       const parseResult = subjectService.parseCSV(text);
+      console.log('✅ [SUBJECTS] Parse result:', {
+        subjectsCount: parseResult.subjects.length,
+        errorsCount: parseResult.errors.length
+      });
 
       if (parseResult.errors.length > 0) {
         parseResult.errors.forEach(err => toast.error(err));
@@ -163,11 +186,14 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
         }
       }
 
+      console.log('🚀 [SUBJECTS] Calling bulkCreateSubjects API...');
       const response = await subjectService.bulkCreateSubjects(
         projectSlug,
         { Subjects: parseResult.subjects },
         token
       );
+
+      console.log('📥 [SUBJECTS] API response:', response);
 
       if (response.error) {
         toast.error(response.error);
@@ -179,7 +205,7 @@ export default function ProjectSubjectsTab({ projectSlug }: ProjectSubjectsTabPr
         loadSubjects();
       }
     } catch (error) {
-      console.error('Error importing subjects:', error);
+      console.error('❌ [SUBJECTS] Error importing subjects:', error);
       toast.error('Failed to import subjects');
     } finally {
       setIsImporting(false);
@@ -253,14 +279,20 @@ EMP003,"[{""EvaluatorEmployeeId"":""EMP004"",""Relationship"":""Peer""}]"`;
             >
               Download CSV Template
             </button>
-            <label className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer">
-              Bulk Import CSV
+            <label
+              htmlFor="subject-csv-upload"
+              className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium cursor-pointer inline-block"
+              style={{ pointerEvents: 'auto' }}
+            >
+              {isImporting ? 'Importing...' : 'Bulk Import CSV'}
               <input
+                id="subject-csv-upload"
                 type="file"
                 accept=".csv"
                 onChange={handleBulkImport}
                 className="hidden"
                 disabled={isImporting}
+                style={{ display: 'none' }}
               />
             </label>
             <button
@@ -269,16 +301,15 @@ EMP003,"[{""EvaluatorEmployeeId"":""EMP004"",""Relationship"":""Peer""}]"`;
             >
               {showAddForm ? 'Cancel' : 'Add Subjects'}
             </button>
-            <button
+            {/* <button
               onClick={() => window.open(`/projects/${projectSlug}/subject-evaluator-connections`, '_blank')}
               className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
             >
               Manage Connections
-            </button>
+            </button> */}
           </div>
         </div>
 
-        {/* Add Form - Employee Multi-Select */}
         {showAddForm && (
           <div className="border-t pt-6 mt-6">
             <h3 className="text-lg font-medium text-gray-900 mb-4">

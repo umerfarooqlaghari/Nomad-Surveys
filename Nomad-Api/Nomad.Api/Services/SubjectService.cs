@@ -318,14 +318,35 @@ public class SubjectService : ISubjectService
                             // Reactivate
                             existingSubject.IsActive = true;
                             existingSubject.UpdatedAt = DateTime.UtcNow;
+                            _context.Subjects.Update(existingSubject);
+                            await _context.SaveChangesAsync();
+
                             response.UpdatedCount++;
                             response.CreatedIds.Add(existingSubject.Id);
+
+                            _logger.LogInformation("✅ Reactivated subject for employee {EmployeeId}", subjectRequest.EmployeeId);
+
+                            // Handle relationships when reactivating
+                            if (subjectRequest.EvaluatorRelationships != null && subjectRequest.EvaluatorRelationships.Any())
+                            {
+                                var evaluatorRelationships = subjectRequest.EvaluatorRelationships
+                                    .Select(er => (er.EvaluatorEmployeeId, er.Relationship))
+                                    .ToList();
+
+                                await _relationshipService.MergeSubjectEvaluatorRelationshipsWithTypesAsync(
+                                    existingSubject.Id,
+                                    evaluatorRelationships,
+                                    tenantId
+                                );
+                            }
                         }
                         else
                         {
                             // Already active - skip or update relationships
                             response.UpdatedCount++;
                             response.CreatedIds.Add(existingSubject.Id);
+
+                            _logger.LogInformation("ℹ️ Subject already active for employee {EmployeeId}", subjectRequest.EmployeeId);
 
                             // Update relationships if provided
                             if (subjectRequest.EvaluatorRelationships != null && subjectRequest.EvaluatorRelationships.Any())

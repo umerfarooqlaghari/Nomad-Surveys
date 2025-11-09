@@ -197,12 +197,9 @@ class SubjectService {
       // Parse headers (case-insensitive)
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
 
-      // Validate required headers
-      const requiredHeaders = ['firstname', 'lastname', 'email', 'employeeid'];
-      const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
-
-      if (missingHeaders.length > 0) {
-        errors.push(`Missing required columns: ${missingHeaders.join(', ')}`);
+      // Validate required headers - only EmployeeId is required for bulk import
+      if (!headers.includes('employeeid')) {
+        errors.push('Missing required column: EmployeeId');
         return { subjects, errors };
       }
 
@@ -252,14 +249,23 @@ class SubjectService {
           let evaluatorRelationships: EvaluatorRelationship[] | undefined;
           const relationshipsStr = getField('evaluatorrelationships');
 
+          console.log(`🔍 [PARSE] Row ${lineNumber}: relationshipsStr =`, relationshipsStr);
+
           if (relationshipsStr) {
             try {
               // Remove outer quotes if present and unescape doubled quotes
-              const jsonStr = relationshipsStr
+              let jsonStr = relationshipsStr
                 .replace(/^"|"$/g, '')
                 .replace(/""/g, '"');
 
+              // Fix common mistake: replace periods between objects with commas
+              // Pattern: }. { should become }, {
+              jsonStr = jsonStr.replace(/\}\s*\.\s*\{/g, '},{');
+
+              console.log(`🔍 [PARSE] Row ${lineNumber}: jsonStr after cleanup =`, jsonStr);
+
               const parsedData = JSON.parse(jsonStr);
+              console.log(`✅ [PARSE] Row ${lineNumber}: parsedData =`, parsedData);
 
               if (!Array.isArray(parsedData)) {
                 errors.push(`Row ${lineNumber}: EvaluatorRelationships must be a JSON array`);
@@ -289,9 +295,11 @@ class SubjectService {
                     Relationship: String(relationship)
                   };
                 });
+                console.log(`✅ [PARSE] Row ${lineNumber}: evaluatorRelationships =`, evaluatorRelationships);
               }
             } catch (parseError: any) {
-              errors.push(`Row ${lineNumber}: Failed to parse EvaluatorRelationships JSON - ${parseError.message}`);
+              console.error(`❌ [PARSE] Row ${lineNumber}: JSON parse error:`, parseError);
+              errors.push(`Row ${lineNumber}: Failed to parse EvaluatorRelationships JSON - ${parseError.message}. Raw value: "${relationshipsStr}"`);
               evaluatorRelationships = undefined;
             }
           }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useEffect, useState, use, useCallback } from 'react';
@@ -5,10 +6,9 @@ import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import ParticipantLayout from '@/components/participant/ParticipantLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { Model } from 'survey-core';
-import { Survey } from 'survey-react-ui';
-import 'survey-core/defaultV2.min.css';
 import { ArrowLeftIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { SurveySchema } from '@/types/survey';
+import QuestionRenderer from '@/components/survey/QuestionRenderer';
 
 interface SubmissionDetailProps {
   params: Promise<{ tenantSlug: string; id: string }>;
@@ -20,7 +20,9 @@ export default function SubmissionDetail({ params }: SubmissionDetailProps) {
   const submissionId = resolvedParams.id;
   const router = useRouter();
   const { token } = useAuth();
-  const [surveyModel, setSurveyModel] = useState<Model | null>(null);
+  const [surveySchema, setSurveySchema] = useState<SurveySchema | null>(null);
+  const [responseData, setResponseData] = useState<Record<string, any>>({});
+  const [relationshipType, setRelationshipType] = useState<string>('Self');
   const [isLoading, setIsLoading] = useState(true);
   const [submissionData, setSubmissionData] = useState<{
     SubjectName: string;
@@ -52,36 +54,23 @@ export default function SubmissionDetail({ params }: SubmissionDetailProps) {
       setSubmissionData({
         SubjectName: data.SubjectName,
         SurveyTitle: data.SurveyTitle,
-        CompletedDate: data.CompletedDate,
+        CompletedDate: data.CompletedAt || data.SubmittedAt,
       });
 
-      // Create survey model with the schema
-      const survey = new Model(data.SurveySchema);
+      // Parse the custom survey schema
+      const schema: SurveySchema = typeof data.SurveySchema === 'string'
+        ? JSON.parse(data.SurveySchema)
+        : data.SurveySchema;
 
-      // Load the submitted response data
-      if (data.ResponseData) {
-        survey.data = data.ResponseData;
-      }
+      setSurveySchema(schema);
+      setRelationshipType(data.RelationshipType || 'Self');
 
-      // Set to read-only mode
-      survey.mode = 'display';
+      // Parse response data
+      const responses = typeof data.ResponseData === 'string'
+        ? JSON.parse(data.ResponseData)
+        : data.ResponseData || {};
 
-      // Apply custom theme
-      survey.applyTheme({
-        isPanelless: true,
-        cssVariables: {
-          '--sjs-primary-backcolor': 'rgba(2, 132, 199, 1)',
-          '--sjs-secondary-backcolor': 'rgba(224, 242, 254, 1)',
-          '--sjs-general-backcolor': 'rgba(255, 255, 255, 1)',
-          '--sjs-general-forecolor': 'rgba(0, 0, 0, 1)',
-          '--sjs-font-editorfont-color': 'rgba(0, 0, 0, 1)',
-          '--sjs-corner-radius': '0.5rem',
-        },
-        themeName: 'participant-survey-readonly',
-        colorPalette: 'light',
-      });
-
-      setSurveyModel(survey);
+      setResponseData(responses);
     } catch (error) {
       console.error('Error loading submission:', error);
     } finally {
@@ -137,9 +126,55 @@ export default function SubmissionDetail({ params }: SubmissionDetailProps) {
                 <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
                 <p className="text-sm text-black mt-4">Loading submission...</p>
               </div>
-            ) : surveyModel ? (
-              <div className="survey-container">
-                <Survey model={surveyModel} />
+            ) : surveySchema ? (
+              <div className="space-y-8">
+                {surveySchema.pages.map((page, pageIndex) => {
+                  const isSelf = relationshipType === 'Self';
+
+                  // Filter questions based on visibility
+                  const visibleQuestions = page.questions.filter((q) => {
+                    if (!q.showTo || q.showTo === 'everyone') return true;
+                    if (q.showTo === 'self' && isSelf) return true;
+                    if (q.showTo === 'others' && !isSelf) return true;
+                    return false;
+                  });
+
+                  if (visibleQuestions.length === 0) return null;
+
+                  return (
+                    <div key={page.id} className="space-y-6">
+                      {/* Page Header */}
+                      {surveySchema.pages.length > 1 && (
+                        <div className="border-b border-gray-200 pb-4">
+                          <h2 className="text-xl font-semibold text-gray-900">
+                            Page {pageIndex + 1}
+                            {page.title && `: ${page.title}`}
+                          </h2>
+                          {page.description && (
+                            <p className="text-sm text-gray-600 mt-1">{page.description}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Questions */}
+                      <div className="space-y-6">
+                        <div className="text-black">
+                        {visibleQuestions.map((question, index) => (
+                          <QuestionRenderer
+                            key={question.id}
+                            question={question}
+                            questionNumber={index + 1}
+                            isSelf={isSelf}
+                            value={responseData[question.id]}
+                            onChange={() => {}} // Read-only, no changes allowed
+                            isPreview={true} // Set to preview mode (read-only)
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="py-12 text-center">
@@ -154,27 +189,6 @@ export default function SubmissionDetail({ params }: SubmissionDetailProps) {
             )}
           </div>
         </div>
-
-        <style jsx global>{`
-          .survey-container .sd-root-modern {
-            background-color: transparent !important;
-          }
-          .survey-container .sd-root-modern *,
-          .survey-container .sd-question,
-          .survey-container .sd-question *,
-          .survey-container .sd-title,
-          .survey-container .sd-description,
-          .survey-container label,
-          .survey-container span,
-          .survey-container p,
-          .survey-container div {
-            color: #000000 !important;
-          }
-          .survey-container .sd-input {
-            background-color: #f9fafb !important;
-            border-color: #e5e7eb !important;
-          }
-        `}</style>
       </ParticipantLayout>
     </ProtectedRoute>
   );

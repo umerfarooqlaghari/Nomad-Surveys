@@ -15,10 +15,11 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
     private readonly ILogger<SubjectEvaluatorService> _logger;
     private readonly ISubjectService _subjectService;
     private readonly IEvaluatorService _evaluatorService;
+    private const string DefaultPassword = "Password@123";
 
     public SubjectEvaluatorService(
-        NomadSurveysDbContext context, 
-        IMapper mapper, 
+        NomadSurveysDbContext context,
+        IMapper mapper,
         ILogger<SubjectEvaluatorService> logger,
         ISubjectService subjectService,
         IEvaluatorService evaluatorService)
@@ -62,8 +63,41 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
 
                 if (evaluator == null)
                 {
-                    errors.Add($"Evaluator {evaluatorRequest.EvaluatorId} not found or not in same tenant");
-                    continue;
+                    // Try to find the employee by ID to auto-create evaluator
+                    var employee = await _context.Employees
+                        .FirstOrDefaultAsync(e => e.Id == evaluatorRequest.EvaluatorId &&
+                                                e.TenantId == subject.TenantId &&
+                                                e.IsActive);
+
+                    if (employee != null)
+                    {
+                        // Auto-create evaluator record
+                        evaluator = new Evaluator
+                        {
+                            Id = Guid.NewGuid(),
+                            EmployeeId = employee.Id,
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow,
+                            TenantId = subject.TenantId
+                        };
+
+                        _context.Evaluators.Add(evaluator);
+                        await _context.SaveChangesAsync();
+
+                        // Reload with Employee navigation property
+                        evaluator = await _context.Evaluators
+                            .Include(e => e.Employee)
+                            .FirstOrDefaultAsync(e => e.Id == evaluator.Id);
+
+                        _logger.LogInformation("Auto-created evaluator for employee {EmployeeId} ({EmployeeName})",
+                            employee.EmployeeId, employee.FullName);
+                    }
+                    else
+                    {
+                        errors.Add($"Employee {evaluatorRequest.EvaluatorId} not found or not in same tenant");
+                        continue;
+                    }
                 }
 
                 // Validate self-evaluation: if relationship is "Self", subject and evaluator must reference the same employee
@@ -183,8 +217,41 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
 
                 if (subject == null)
                 {
-                    errors.Add($"Subject {subjectRequest.SubjectId} not found or not in same tenant");
-                    continue;
+                    // Try to find the employee by ID to auto-create subject
+                    var employee = await _context.Employees
+                        .FirstOrDefaultAsync(e => e.Id == subjectRequest.SubjectId &&
+                                                e.TenantId == evaluator.TenantId &&
+                                                e.IsActive);
+
+                    if (employee != null)
+                    {
+                        // Auto-create subject record
+                        subject = new Subject
+                        {
+                            Id = Guid.NewGuid(),
+                            EmployeeId = employee.Id,
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow,
+                            TenantId = evaluator.TenantId
+                        };
+
+                        _context.Subjects.Add(subject);
+                        await _context.SaveChangesAsync();
+
+                        // Reload with Employee navigation property
+                        subject = await _context.Subjects
+                            .Include(s => s.Employee)
+                            .FirstOrDefaultAsync(s => s.Id == subject.Id);
+
+                        _logger.LogInformation("Auto-created subject for employee {EmployeeId} ({EmployeeName})",
+                            employee.EmployeeId, employee.FullName);
+                    }
+                    else
+                    {
+                        errors.Add($"Employee {subjectRequest.SubjectId} not found or not in same tenant");
+                        continue;
+                    }
                 }
 
                 // Validate self-evaluation: if relationship is "Self", subject and evaluator must reference the same employee

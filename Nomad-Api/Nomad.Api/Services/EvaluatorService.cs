@@ -267,20 +267,41 @@ public class EvaluatorService : IEvaluatorService
                         {
                             existingEvaluator.IsActive = true;
                             existingEvaluator.UpdatedAt = DateTime.UtcNow;
+                            _context.Evaluators.Update(existingEvaluator);
+                            await _context.SaveChangesAsync();
+
                             response.UpdatedCount++;
                             response.CreatedIds.Add(existingEvaluator.Id);
+
+                            _logger.LogInformation("✅ Reactivated evaluator for employee {EmployeeId}", evaluatorRequest.EmployeeId);
+
+                            // Handle relationships when reactivating
+                            if (evaluatorRequest.SubjectRelationships != null && evaluatorRequest.SubjectRelationships.Any())
+                            {
+                                var subjectRelationships = evaluatorRequest.SubjectRelationships
+                                    .Select(sr => (sr.SubjectEmployeeId, sr.Relationship))
+                                    .ToList();
+
+                                await _relationshipService.MergeEvaluatorSubjectRelationshipsWithTypesAsync(
+                                    existingEvaluator.Id,
+                                    subjectRelationships,
+                                    tenantId
+                                );
+                            }
                         }
                         else
                         {
                             response.UpdatedCount++;
                             response.CreatedIds.Add(existingEvaluator.Id);
 
+                            _logger.LogInformation("ℹ️ Evaluator already active for employee {EmployeeId}", evaluatorRequest.EmployeeId);
+
                             if (evaluatorRequest.SubjectRelationships != null && evaluatorRequest.SubjectRelationships.Any())
                             {
                                 var subjectRelationships = evaluatorRequest.SubjectRelationships
                                     .Select(sr => (sr.SubjectEmployeeId, sr.Relationship))
                                     .ToList();
-                                
+
                                 await _relationshipService.MergeEvaluatorSubjectRelationshipsWithTypesAsync(
                                     existingEvaluator.Id,
                                     subjectRelationships,

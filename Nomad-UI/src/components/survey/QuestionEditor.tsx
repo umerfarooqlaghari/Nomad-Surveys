@@ -177,16 +177,37 @@ export default function QuestionEditor({
 
           {/* Required Toggle */}
           <div className="mb-4">
-            <label className="flex items-center gap-3 cursor-pointer select-none">
+            <div
+              className="flex items-center gap-3 cursor-pointer select-none"
+              onClick={() => handleFieldChange('required', !question.required)}
+            >
               <input
                 type="checkbox"
                 checked={question.required}
-                onChange={(e) => handleFieldChange('required', e.target.checked)}
-                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                // onChange={() => {}}
+                      onChange={() => handleFieldChange('required', !question.required)}
+                onClick={(e) => e.stopPropagation()}
+                className="w-5 h-5 relative z-10 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                style={{ pointerEvents: 'auto' }}
               />
               <span className="text-sm font-medium text-black">Required Question</span>
-            </label>
+            </div>
           </div>
+      {/* <div className="mb-4">
+  <label className="flex items-center gap-3 cursor-pointer select-none">
+      onClick={(e) => handleFieldChange('false', e.target.checked)}
+    <input
+      type="checkbox"
+      checked={question.required}
+      onChange={(e) => handleFieldChange('required', e.target.checked)}
+      className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+      onClick={(e) => e.stopPropagation()}
+    />
+    <span className="text-sm font-medium text-black">Required Question</span>
+  </label>
+</div> */}
+
+
 
           {/* Question Type Configuration */}
           <QuestionTypeConfigurator
