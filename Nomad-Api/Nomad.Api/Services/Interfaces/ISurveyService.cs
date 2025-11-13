@@ -11,5 +11,6 @@ public interface ISurveyService
     Task<SurveyResponse?> UpdateSurveyAsync(Guid surveyId, UpdateSurveyRequest request);
     Task<bool> DeleteSurveyAsync(Guid surveyId);
     Task<bool> SurveyExistsAsync(Guid surveyId, Guid? tenantId = null);
+    Task<SurveyAssignmentResponse> AutoAssignSurveyToAllRelationshipsAsync(Guid surveyId, Guid tenantId);
 }
 

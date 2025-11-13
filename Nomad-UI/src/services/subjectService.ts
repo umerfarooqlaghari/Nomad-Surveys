@@ -181,6 +181,9 @@ class SubjectService {
 
   /**
    * Parse CSV data into subjects array with comprehensive validation
+   * Supports two formats:
+   * 1. Flattened format: EmployeeId, EvaluatorEmployeeId, Relationship (one row per relationship)
+   * 2. Legacy format: EmployeeId, EvaluatorRelationships (JSON array)
    */
   parseCSV(csvData: string): { subjects: CreateSubjectRequest[]; errors: string[] } {
     const errors: string[] = [];
@@ -203,125 +206,255 @@ class SubjectService {
         return { subjects, errors };
       }
 
-      // Track duplicate EmployeeIds within the CSV
-      const seenEmployeeIds = new Set<string>();
+      // Detect CSV format based on headers
+      const hasEvaluatorEmployeeId = headers.includes('evaluatoremployeeid');
+      const hasRelationship = headers.includes('relationship');
+      const hasEvaluatorRelationships = headers.includes('evaluatorrelationships');
 
-      // Parse data rows
-      for (let i = 1; i < lines.length; i++) {
-        const lineNumber = i + 1;
+      const isFlattenedFormat = hasEvaluatorEmployeeId && hasRelationship;
+      const isLegacyFormat = hasEvaluatorRelationships;
 
-        // Skip empty lines
-        if (!lines[i].trim()) {
-          continue;
-        }
+      console.log(`📋 [CSV FORMAT] Detected format: ${isFlattenedFormat ? 'Flattened' : isLegacyFormat ? 'Legacy JSON' : 'Simple (EmployeeId only)'}`);
 
-        try {
-          // Parse CSV line handling quoted fields with commas and JSON
-          const values = this.parseCSVLine(lines[i]);
-
-          if (values.length < headers.length) {
-            errors.push(`Row ${lineNumber}: Insufficient columns (expected ${headers.length}, got ${values.length})`);
-            continue;
-          }
-
-          // Extract field values
-          const getField = (fieldName: string): string => {
-            const index = headers.indexOf(fieldName.toLowerCase());
-            return index !== -1 ? values[index].trim() : '';
-          };
-
-          const employeeId = getField('employeeid');
-
-          // Validate required fields
-          if (!employeeId) {
-            errors.push(`Row ${lineNumber}: EmployeeId is required`);
-            continue;
-          }
-
-          // Check for duplicate EmployeeId within CSV
-          if (seenEmployeeIds.has(employeeId.toLowerCase())) {
-            errors.push(`Row ${lineNumber}: Duplicate EmployeeId "${employeeId}" found in CSV (only first occurrence will be processed)`);
-            continue;
-          }
-          seenEmployeeIds.add(employeeId.toLowerCase());
-
-          // Parse EvaluatorRelationships JSON array
-          let evaluatorRelationships: EvaluatorRelationship[] | undefined;
-          const relationshipsStr = getField('evaluatorrelationships');
-
-          console.log(`🔍 [PARSE] Row ${lineNumber}: relationshipsStr =`, relationshipsStr);
-
-          if (relationshipsStr) {
-            try {
-              // Remove outer quotes if present and unescape doubled quotes
-              let jsonStr = relationshipsStr
-                .replace(/^"|"$/g, '')
-                .replace(/""/g, '"');
-
-              // Fix common mistake: replace periods between objects with commas
-              // Pattern: }. { should become }, {
-              jsonStr = jsonStr.replace(/\}\s*\.\s*\{/g, '},{');
-
-              console.log(`🔍 [PARSE] Row ${lineNumber}: jsonStr after cleanup =`, jsonStr);
-
-              const parsedData = JSON.parse(jsonStr);
-              console.log(`✅ [PARSE] Row ${lineNumber}: parsedData =`, parsedData);
-
-              if (!Array.isArray(parsedData)) {
-                errors.push(`Row ${lineNumber}: EvaluatorRelationships must be a JSON array`);
-              } else {
-                // Normalize property names (case-insensitive)
-                evaluatorRelationships = parsedData.map((item: any, idx: number) => {
-                  const lowerMap: Record<string, any> = {};
-                  Object.keys(item).forEach(k => { lowerMap[k.toLowerCase()] = item[k]; });
-
-                  const evaluatorEmployeeId = lowerMap['evaluatoremployeeid'] ?? lowerMap['evaluatorid'] ?? '';
-                  const relationship = lowerMap['relationship'] ?? '';
-
-                  if (!evaluatorEmployeeId) {
-                    errors.push(`Row ${lineNumber}: EvaluatorRelationships[${idx}] missing EvaluatorEmployeeId`);
-                  }
-                  if (!relationship) {
-                    errors.push(`Row ${lineNumber}: EvaluatorRelationships[${idx}] missing Relationship`);
-                  }
-
-                  // Validate self-evaluation: if relationship is "Self", SubjectEmployeeId must equal EvaluatorEmployeeId
-                  if (relationship.toLowerCase() === 'self' && evaluatorEmployeeId.toLowerCase() !== employeeId.toLowerCase()) {
-                    errors.push(`Row ${lineNumber}: EvaluatorRelationships[${idx}] - Relationship "Self" requires SubjectEmployeeId and EvaluatorEmployeeId to match (SubjectEmployeeId: ${employeeId}, EvaluatorEmployeeId: ${evaluatorEmployeeId})`);
-                  }
-
-                  return {
-                    EvaluatorEmployeeId: String(evaluatorEmployeeId),
-                    Relationship: String(relationship)
-                  };
-                });
-                console.log(`✅ [PARSE] Row ${lineNumber}: evaluatorRelationships =`, evaluatorRelationships);
-              }
-            } catch (parseError: any) {
-              console.error(`❌ [PARSE] Row ${lineNumber}: JSON parse error:`, parseError);
-              errors.push(`Row ${lineNumber}: Failed to parse EvaluatorRelationships JSON - ${parseError.message}. Raw value: "${relationshipsStr}"`);
-              evaluatorRelationships = undefined;
-            }
-          }
-
-          // Create subject request object
-          const subject: CreateSubjectRequest = {
-            EmployeeId: employeeId,
-            EvaluatorRelationships: evaluatorRelationships
-          };
-
-          subjects.push(subject);
-        } catch (rowError: any) {
-          errors.push(`Row ${lineNumber}: ${rowError.message}`);
-        }
-      }
-
-      if (subjects.length === 0 && errors.length === 0) {
-        errors.push('No valid data rows found in CSV');
+      if (isFlattenedFormat) {
+        // New flattened format: EmployeeId, EvaluatorEmployeeId, Relationship
+        return this.parseFlattenedCSV(lines, headers, errors);
+      } else {
+        // Legacy format or simple format (EmployeeId only)
+        return this.parseLegacyCSV(lines, headers, errors);
       }
 
     } catch (error: any) {
       errors.push(`CSV parsing error: ${error.message}`);
+    }
+
+    return { subjects, errors };
+  }
+
+  /**
+   * Parse flattened CSV format where each row represents one subject-evaluator relationship
+   * Format: EmployeeId, EvaluatorEmployeeId, Relationship
+   */
+  private parseFlattenedCSV(lines: string[], headers: string[], errors: string[]): { subjects: CreateSubjectRequest[]; errors: string[] } {
+    const subjects: CreateSubjectRequest[] = [];
+    const subjectMap = new Map<string, EvaluatorRelationship[]>();
+
+    // Parse data rows and group by EmployeeId
+    for (let i = 1; i < lines.length; i++) {
+      const lineNumber = i + 1;
+
+      // Skip empty lines
+      if (!lines[i].trim()) {
+        continue;
+      }
+
+      try {
+        // Parse CSV line handling quoted fields
+        const values = this.parseCSVLine(lines[i]);
+
+        if (values.length < headers.length) {
+          errors.push(`Row ${lineNumber}: Insufficient columns (expected ${headers.length}, got ${values.length})`);
+          continue;
+        }
+
+        // Extract field values
+        const getField = (fieldName: string): string => {
+          const index = headers.indexOf(fieldName.toLowerCase());
+          return index !== -1 ? values[index].trim() : '';
+        };
+
+        const employeeId = getField('employeeid');
+        const evaluatorEmployeeId = getField('evaluatoremployeeid');
+        const relationship = getField('relationship');
+
+        // Validate required fields
+        if (!employeeId) {
+          errors.push(`Row ${lineNumber}: EmployeeId is required`);
+          continue;
+        }
+
+        if (!evaluatorEmployeeId) {
+          errors.push(`Row ${lineNumber}: EvaluatorEmployeeId is required`);
+          continue;
+        }
+
+        if (!relationship) {
+          errors.push(`Row ${lineNumber}: Relationship is required`);
+          continue;
+        }
+
+        // Validate self-evaluation: if relationship is "Self", EvaluatorEmployeeId must equal EmployeeId
+        if (relationship.toLowerCase() === 'self' && evaluatorEmployeeId.toLowerCase() !== employeeId.toLowerCase()) {
+          errors.push(`Row ${lineNumber}: Relationship "Self" requires EvaluatorEmployeeId and EmployeeId to match (EmployeeId: ${employeeId}, EvaluatorEmployeeId: ${evaluatorEmployeeId})`);
+          continue;
+        }
+
+        // Group relationships by EmployeeId
+        const key = employeeId.toLowerCase();
+        if (!subjectMap.has(key)) {
+          subjectMap.set(key, []);
+        }
+
+        subjectMap.get(key)!.push({
+          EvaluatorEmployeeId: evaluatorEmployeeId,
+          Relationship: relationship
+        });
+
+        console.log(`✅ [FLATTENED] Row ${lineNumber}: Added relationship for ${employeeId} -> ${evaluatorEmployeeId} (${relationship})`);
+
+      } catch (rowError: any) {
+        errors.push(`Row ${lineNumber}: ${rowError.message}`);
+      }
+    }
+
+    // Convert map to subjects array
+    subjectMap.forEach((relationships, employeeIdKey) => {
+      // Get the original casing from the first relationship
+      const employeeId = relationships.length > 0 ?
+        lines.slice(1).find(line => {
+          const values = this.parseCSVLine(line);
+          const getField = (fieldName: string): string => {
+            const index = headers.indexOf(fieldName.toLowerCase());
+            return index !== -1 ? values[index].trim() : '';
+          };
+          return getField('employeeid').toLowerCase() === employeeIdKey;
+        })?.split(',')[0].trim() || employeeIdKey : employeeIdKey;
+
+      subjects.push({
+        EmployeeId: employeeId,
+        EvaluatorRelationships: relationships
+      });
+    });
+
+    if (subjects.length === 0 && errors.length === 0) {
+      errors.push('No valid data rows found in CSV');
+    }
+
+    console.log(`📊 [FLATTENED] Parsed ${subjects.length} subjects with relationships`);
+
+    return { subjects, errors };
+  }
+
+  /**
+   * Parse legacy CSV format with JSON EvaluatorRelationships column
+   * Format: EmployeeId, EvaluatorRelationships (JSON array)
+   */
+  private parseLegacyCSV(lines: string[], headers: string[], errors: string[]): { subjects: CreateSubjectRequest[]; errors: string[] } {
+    const subjects: CreateSubjectRequest[] = [];
+    const seenEmployeeIds = new Set<string>();
+
+    // Parse data rows
+    for (let i = 1; i < lines.length; i++) {
+      const lineNumber = i + 1;
+
+      // Skip empty lines
+      if (!lines[i].trim()) {
+        continue;
+      }
+
+      try {
+        // Parse CSV line handling quoted fields with commas and JSON
+        const values = this.parseCSVLine(lines[i]);
+
+        if (values.length < headers.length) {
+          errors.push(`Row ${lineNumber}: Insufficient columns (expected ${headers.length}, got ${values.length})`);
+          continue;
+        }
+
+        // Extract field values
+        const getField = (fieldName: string): string => {
+          const index = headers.indexOf(fieldName.toLowerCase());
+          return index !== -1 ? values[index].trim() : '';
+        };
+
+        const employeeId = getField('employeeid');
+
+        // Validate required fields
+        if (!employeeId) {
+          errors.push(`Row ${lineNumber}: EmployeeId is required`);
+          continue;
+        }
+
+        // Check for duplicate EmployeeId within CSV
+        if (seenEmployeeIds.has(employeeId.toLowerCase())) {
+          errors.push(`Row ${lineNumber}: Duplicate EmployeeId "${employeeId}" found in CSV (only first occurrence will be processed)`);
+          continue;
+        }
+        seenEmployeeIds.add(employeeId.toLowerCase());
+
+        // Parse EvaluatorRelationships JSON array
+        let evaluatorRelationships: EvaluatorRelationship[] | undefined;
+        const relationshipsStr = getField('evaluatorrelationships');
+
+        console.log(`🔍 [PARSE] Row ${lineNumber}: relationshipsStr =`, relationshipsStr);
+
+        if (relationshipsStr) {
+          try {
+            // Remove outer quotes if present and unescape doubled quotes
+            let jsonStr = relationshipsStr
+              .replace(/^"|"$/g, '')
+              .replace(/""/g, '"');
+
+            // Fix common mistake: replace periods between objects with commas
+            // Pattern: }. { should become }, {
+            jsonStr = jsonStr.replace(/\}\s*\.\s*\{/g, '},{');
+
+            console.log(`🔍 [PARSE] Row ${lineNumber}: jsonStr after cleanup =`, jsonStr);
+
+            const parsedData = JSON.parse(jsonStr);
+            console.log(`✅ [PARSE] Row ${lineNumber}: parsedData =`, parsedData);
+
+            if (!Array.isArray(parsedData)) {
+              errors.push(`Row ${lineNumber}: EvaluatorRelationships must be a JSON array`);
+            } else {
+              // Normalize property names (case-insensitive)
+              evaluatorRelationships = parsedData.map((item: any, idx: number) => {
+                const lowerMap: Record<string, any> = {};
+                Object.keys(item).forEach(k => { lowerMap[k.toLowerCase()] = item[k]; });
+
+                const evaluatorEmployeeId = lowerMap['evaluatoremployeeid'] ?? lowerMap['evaluatorid'] ?? '';
+                const relationship = lowerMap['relationship'] ?? '';
+
+                if (!evaluatorEmployeeId) {
+                  errors.push(`Row ${lineNumber}: EvaluatorRelationships[${idx}] missing EvaluatorEmployeeId`);
+                }
+                if (!relationship) {
+                  errors.push(`Row ${lineNumber}: EvaluatorRelationships[${idx}] missing Relationship`);
+                }
+
+                // Validate self-evaluation: if relationship is "Self", SubjectEmployeeId must equal EvaluatorEmployeeId
+                if (relationship.toLowerCase() === 'self' && evaluatorEmployeeId.toLowerCase() !== employeeId.toLowerCase()) {
+                  errors.push(`Row ${lineNumber}: EvaluatorRelationships[${idx}] - Relationship "Self" requires SubjectEmployeeId and EvaluatorEmployeeId to match (SubjectEmployeeId: ${employeeId}, EvaluatorEmployeeId: ${evaluatorEmployeeId})`);
+                }
+
+                return {
+                  EvaluatorEmployeeId: String(evaluatorEmployeeId),
+                  Relationship: String(relationship)
+                };
+              });
+              console.log(`✅ [PARSE] Row ${lineNumber}: evaluatorRelationships =`, evaluatorRelationships);
+            }
+          } catch (parseError: any) {
+            console.error(`❌ [PARSE] Row ${lineNumber}: JSON parse error:`, parseError);
+            errors.push(`Row ${lineNumber}: Failed to parse EvaluatorRelationships JSON - ${parseError.message}. Raw value: "${relationshipsStr}"`);
+            evaluatorRelationships = undefined;
+          }
+        }
+
+        // Create subject request object
+        const subject: CreateSubjectRequest = {
+          EmployeeId: employeeId,
+          EvaluatorRelationships: evaluatorRelationships
+        };
+
+        subjects.push(subject);
+      } catch (rowError: any) {
+        errors.push(`Row ${lineNumber}: ${rowError.message}`);
+      }
+    }
+
+    if (subjects.length === 0 && errors.length === 0) {
+      errors.push('No valid data rows found in CSV');
     }
 
     return { subjects, errors };

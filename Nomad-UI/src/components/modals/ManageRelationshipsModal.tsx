@@ -89,35 +89,43 @@ export default function ManageRelationshipsModal({
   const [selectedRelationships, setSelectedRelationships] = useState<{ [key: string]: string }>({});
   const [editingRelationship, setEditingRelationship] = useState<{ id: string; relationship: string } | null>(null);
   const [currentEntity, setCurrentEntity] = useState<AvailableOption | null>(null);
+  
 
   useEffect(() => {
     if (isOpen && entityId) {
       loadExistingRelationships();
       loadAvailableOptions();
       loadCurrentEntity();
+      // Clear selected relationships when modal opens
+      setSelectedRelationships({});
     }
   }, [isOpen, entityId]);
 
-  // Auto-select self-evaluation relationships with "Self" type when tab changes
+  // Clear selected relationships when switching tabs
   useEffect(() => {
-    if (currentEntity && availableOptions.length > 0 && activeTab === 'add') {
-      const selfOption = availableOptions.find(opt => opt.EmployeeId === currentEntity.EmployeeId);
-      if (selfOption) {
-        // Always set "Self" for self-evaluation, but don't force it to be selected
-        // The user can toggle it on/off using the relationship selection
-        setSelectedRelationships(prev => {
-          // Only auto-set if not already set
-          if (!prev[selfOption.Id]) {
-            return {
-              ...prev,
-              [selfOption.Id]: 'Self'
-            };
-          }
-          return prev;
-        });
-      }
-    }
-  }, [currentEntity, availableOptions, activeTab, selectedRelationships]);
+    setSelectedRelationships({});
+  }, [activeTab]);
+
+  // Auto-select self-evaluation relationships with "Self" type when tab changes
+  // DISABLED: This was causing issues where self-relationships were auto-selected even when already existing
+  // useEffect(() => {
+  //   if (currentEntity && availableOptions.length > 0 && activeTab === 'add') {
+  //     const selfOption = availableOptions.find(opt => opt.EmployeeId === currentEntity.EmployeeId);
+  //     if (selfOption) {
+  //       setSelectedRelationships(prev => {
+  //         if (!prev[selfOption.Id]) {
+  //           return {
+  //             ...prev,
+  //             [selfOption.Id]: 'Self'
+  //           };
+  //         }
+  //         return prev;
+  //       });
+  //     }
+  //   }
+  // }, [currentEntity, availableOptions, activeTab]);
+
+
 
   const loadExistingRelationships = async () => {
     if (!token || !entityId) return;
@@ -321,7 +329,7 @@ export default function ManageRelationshipsModal({
       if (relationship === '') {
         const newState = { ...prev };
         delete newState[id];
-        return newState;
+        return newState;  
       }
       return { ...prev, [id]: relationship };
     });
@@ -332,6 +340,11 @@ export default function ManageRelationshipsModal({
     entityType === 'subject' ? r.EvaluatorId : r.SubjectId
   );
 
+  // Get existing EmployeeIds to check for self-relationships
+  const existingEmployeeIds = existingRelationships.map(r =>
+    entityType === 'subject' ? r.Evaluator?.EmployeeId : r.Subject?.EmployeeId
+  ).filter(Boolean) as string[];
+
   // Include current entity in available options for self-evaluation
   // Check by EmployeeId to avoid duplicates (same employee can be both subject and evaluator with different IDs)
   const allAvailableOptions = currentEntity && !availableOptions.some(opt => opt.EmployeeId === currentEntity.EmployeeId)
@@ -339,7 +352,14 @@ export default function ManageRelationshipsModal({
     : availableOptions;
 
   const filteredAvailableOptions = allAvailableOptions
-    .filter(option => !existingIds.includes(option.Id))
+    .filter(option => {
+      // For self-relationships, check by EmployeeId instead of Id
+      if (currentEntity && option.EmployeeId === currentEntity.EmployeeId) {
+        return !existingEmployeeIds.includes(option.EmployeeId);
+      }
+      // For other relationships, check by Id as usual
+      return !existingIds.includes(option.Id);
+    })
     .filter(option =>
       searchTerm === '' ||
       option.FullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -591,16 +611,9 @@ export default function ManageRelationshipsModal({
                                 <input
                                   type="checkbox"
                                   checked={!!selectedRelationships[option.Id]}
-                                  onChange={(e) => {
-                                    if (e.target.checked) {
-                                      handleRelationshipChange(option.Id, 'Self');
-                                    } else {
-                                      handleRelationshipChange(option.Id, '');
-                                    }
-                                  }}
-                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={() => {}}
+                                  // onClick={(e) => e.stopPropagation()}
                                   className="w-4 h-4 relative z-10 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                                  style={{ pointerEvents: 'auto' }}
                                 />
                               </div>
                               <select

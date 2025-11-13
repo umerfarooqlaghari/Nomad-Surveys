@@ -120,6 +120,7 @@ export default function SurveyBuilder({
   const [creator, setCreator] = useState<SurveyCreator | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [autoAssign, setAutoAssign] = useState<boolean>(false);
 
   // Optional: Export current theme configuration
   const exportTheme = () => {
@@ -211,6 +212,7 @@ export default function SurveyBuilder({
         title: surveyTitle,
         description: surveyDescription,
         schema: surveyJSON,
+        ...(surveyId ? {} : { autoAssign }), // Only include autoAssign for new surveys
       };
 
       let response;
@@ -365,50 +367,94 @@ export default function SurveyBuilder({
     <div className="w-full h-full bg-gray-50 font-['Inter',_'Poppins',_system-ui,_-apple-system,_sans-serif]">
       <div className="survey-builder-container">
         {/* Action Buttons */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-        <div className="flex-1">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {surveyId ? 'Edit Survey' : 'Create New Survey'}
-          </h2>
+        <div className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold text-gray-900">
+                {surveyId ? 'Edit Survey' : 'Create New Survey'}
+              </h2>
 
-          {/* Instructions */}
-          <p className="text-sm text-gray-600 mt-2">
-            Use drag & drop to build your survey. You can include placeholders like{' '}
-            <code className="bg-gray-100 px-1 rounded">{'{subjectName}'}</code> or{' '}
-            <code className="bg-gray-100 px-1 rounded">{'{evaluatorName}'}</code>{' '}
-            in question text. Questions will be shown based on the evaluator&apos;s relationship to the subject.
-          </p>
-        </div>
-        <div className="flex space-x-3">
-          {onCancel && (
-            <button
-              onClick={onCancel}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Cancel
-            </button>
+              {/* Instructions */}
+              <p className="text-sm text-gray-600 mt-2">
+                Use drag & drop to build your survey. You can include placeholders like{' '}
+                <code className="bg-gray-100 px-1 rounded">{'{subjectName}'}</code> or{' '}
+                <code className="bg-gray-100 px-1 rounded">{'{evaluatorName}'}</code>{' '}
+                in question text. Questions will be shown based on the evaluator&apos;s relationship to the subject.
+              </p>
+            </div>
+            <div className="flex space-x-3">
+              {onCancel && (
+                <button
+                  onClick={onCancel}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                onClick={handleReset}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Reset
+              </button>
+              <button
+                onClick={handlePreview}
+                className="px-4 py-2 border border-blue-500 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Preview
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? 'Saving...' : surveyId ? 'Update Survey' : 'Save Survey'}
+              </button>
+            </div>
+          </div>
+
+          {/* Auto-Assign Option - Only show when creating new survey */}
+          {!surveyId && (
+            <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <label className="block text-sm font-medium text-gray-900 mb-3">
+                Evaluator Assignment <span className="text-red-500">*</span>
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="assignmentType"
+                    value="manual"
+                    checked={!autoAssign}
+                    onChange={() => setAutoAssign(false)}
+                    className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="ml-3 text-sm text-gray-700">
+                    Assign Evaluators Manually
+                  </span>
+                </label>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="radio"
+                    name="assignmentType"
+                    value="auto"
+                    checked={autoAssign}
+                    onChange={() => setAutoAssign(true)}
+                    className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="ml-3 text-sm text-gray-700">
+                    Auto-Assign to All Evaluators
+                  </span>
+                </label>
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                {autoAssign
+                  ? 'The survey will be automatically assigned to all existing subject-evaluator relationships.'
+                  : 'You can manually assign the survey to specific evaluators after creation.'}
+              </p>
+            </div>
           )}
-          <button
-            onClick={handleReset}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Reset
-          </button>
-          <button
-            onClick={handlePreview}
-            className="px-4 py-2 border border-blue-500 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Preview
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSaving ? 'Saving...' : surveyId ? 'Update Survey' : 'Save Survey'}
-          </button>
         </div>
-      </div>
 
       {/* SurveyJS Creator */}
       <div className="survey-creator-wrapper" style={{ height: 'calc(100vh - 250px)' }}>
