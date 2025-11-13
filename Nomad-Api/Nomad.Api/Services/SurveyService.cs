@@ -107,6 +107,15 @@ public class SurveyService : ISurveyService
 
             _logger.LogInformation("Survey created successfully: {SurveyId} for tenant {TenantId}", survey.Id, tenantId);
 
+            // Auto-assign to all relationships if requested
+            if (request.AutoAssign)
+            {
+                _logger.LogInformation("Auto-assigning survey {SurveyId} to all active relationships", survey.Id);
+                var assignmentResult = await AutoAssignSurveyToAllRelationshipsAsync(survey.Id, tenantId);
+                _logger.LogInformation("Auto-assignment completed: {AssignedCount} relationships assigned, {ErrorCount} errors",
+                    assignmentResult.AssignedCount, assignmentResult.ErrorCount);
+            }
+
             return new SurveyResponse
             {
                 Id = survey.Id,
@@ -216,6 +225,121 @@ public class SurveyService : ISurveyService
         {
             _logger.LogError(ex, "Error checking if survey exists {SurveyId}", surveyId);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Auto-assign survey to all active subject-evaluator relationships in the tenant
+    /// Performs bulk insert with single SaveChanges call for efficiency
+    /// </summary>
+    public async Task<SurveyAssignmentResponse> AutoAssignSurveyToAllRelationshipsAsync(Guid surveyId, Guid tenantId)
+    {
+        var response = new SurveyAssignmentResponse();
+
+        try
+        {
+            // Verify survey exists and belongs to tenant
+            var survey = await _context.Surveys
+                .FirstOrDefaultAsync(s => s.Id == surveyId && s.TenantId == tenantId && s.IsActive);
+
+            if (survey == null)
+            {
+                response.Success = false;
+                response.Message = "Survey not found or inactive";
+                return response;
+            }
+
+            // Fetch all active subject-evaluator relationships for this tenant in a single query
+            var activeRelationships = await _context.SubjectEvaluators
+                .Where(se => se.TenantId == tenantId && se.IsActive)
+                .Select(se => new { se.Id, se.TenantId })
+                .ToListAsync();
+
+            // Edge case: No relationships exist
+            if (!activeRelationships.Any())
+            {
+                response.Success = true;
+                response.Message = "No active subject-evaluator relationships found for this tenant";
+                response.AssignedCount = 0;
+                _logger.LogWarning("Auto-assign: No active relationships found for tenant {TenantId}", tenantId);
+                return response;
+            }
+
+            // Fetch existing assignments for this survey in a single query to avoid duplicates
+            var existingAssignmentIds = await _context.SubjectEvaluatorSurveys
+                .Where(ses => ses.SurveyId == surveyId && ses.TenantId == tenantId)
+                .Select(ses => ses.SubjectEvaluatorId)
+                .ToHashSetAsync();
+
+            // Prepare new assignments (excluding duplicates)
+            var newAssignments = new List<SubjectEvaluatorSurvey>();
+            var skippedDuplicates = 0;
+            var now = DateTime.UtcNow;
+
+            foreach (var relationship in activeRelationships)
+            {
+                // Edge case: Skip if already assigned (duplicate prevention)
+                if (existingAssignmentIds.Contains(relationship.Id))
+                {
+                    skippedDuplicates++;
+                    continue;
+                }
+
+                newAssignments.Add(new SubjectEvaluatorSurvey
+                {
+                    Id = Guid.NewGuid(),
+                    SubjectEvaluatorId = relationship.Id,
+                    SurveyId = surveyId,
+                    TenantId = tenantId,
+                    IsActive = true,
+                    CreatedAt = now
+                });
+            }
+
+            // Edge case: All relationships already assigned
+            if (!newAssignments.Any())
+            {
+                response.Success = true;
+                response.Message = $"All {activeRelationships.Count} relationships are already assigned to this survey";
+                response.AssignedCount = 0;
+                _logger.LogInformation("Auto-assign: All relationships already assigned for survey {SurveyId}", surveyId);
+                return response;
+            }
+
+            // Bulk insert with single SaveChanges call
+            _context.SubjectEvaluatorSurveys.AddRange(newAssignments);
+            await _context.SaveChangesAsync();
+
+            response.Success = true;
+            response.AssignedCount = newAssignments.Count;
+            response.Message = $"Successfully auto-assigned survey to {newAssignments.Count} relationship(s)";
+
+            if (skippedDuplicates > 0)
+            {
+                response.Message += $" ({skippedDuplicates} already assigned)";
+            }
+
+            _logger.LogInformation("Auto-assign completed: {AssignedCount} new assignments created for survey {SurveyId}, {SkippedCount} duplicates skipped",
+                newAssignments.Count, surveyId, skippedDuplicates);
+
+            return response;
+        }
+        catch (DbUpdateException dbEx)
+        {
+            // Edge case: Partial assignment failure (e.g., constraint violation)
+            _logger.LogError(dbEx, "Database error during auto-assign for survey {SurveyId}", surveyId);
+            response.Success = false;
+            response.Message = "Database error occurred during auto-assignment. Some assignments may have failed.";
+            response.Errors.Add("Database constraint violation - possible duplicate or invalid relationship");
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during auto-assign for survey {SurveyId}", surveyId);
+            response.Success = false;
+            response.Message = "An error occurred during auto-assignment";
+            response.Errors.Add(ex.Message);
+            return response;
         }
     }
 

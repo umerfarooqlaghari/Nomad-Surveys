@@ -43,6 +43,7 @@ export default function CustomSurveyBuilder({
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [autoAssign, setAutoAssign] = useState<boolean>(true);
   const [activeTab, setActiveTab] = useState<'form' | 'json'>('form');
   const [jsonInput, setJsonInput] = useState('');
 
@@ -128,6 +129,7 @@ export default function CustomSurveyBuilder({
         title: survey.title,
         description: survey.description || '',
         schema: survey,
+        ...(surveyId ? {} : { autoAssign }), // Only include autoAssign for new surveys
       };
 
       let response;
@@ -356,7 +358,7 @@ export default function CustomSurveyBuilder({
                 />
               </div>
 
-              <div>
+              <div className="mb-4">
                 <label className="block text-sm font-medium text-black mb-2">
                   Description (Optional)
                 </label>
@@ -368,6 +370,58 @@ export default function CustomSurveyBuilder({
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400"
                 />
               </div>
+
+              {/* Auto-Assign Option - Only show when creating new survey */}
+              {!surveyId && (
+                <div className="pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-medium text-black mb-3">
+                    Evaluator Assignment <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-2">
+                    <label
+                      className="flex items-center cursor-pointer"
+                      onClick={() => setAutoAssign(false)}
+                    >
+                      <input
+                        type="radio"
+                        name="assignmentType"
+                        value="manual"
+                        checked={!autoAssign}
+                        // onChange={() => {}}
+                        // onClick={(e) => e.stopPropagation()}
+                        onChange={() => setAutoAssign(false)} // ✅ handle inside onChange
+                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span className="ml-3 text-sm text-gray-700">
+                        Assign Evaluators Manually
+                      </span>
+                    </label>
+                    <label
+                      className="flex items-center cursor-pointer"
+                      onClick={() => setAutoAssign(true)}
+                    >
+                      <input
+                        type="radio"
+                        name="assignmentType"
+                        value="auto"
+                        checked={autoAssign}
+                        // onChange={() => {}}
+                        // onClick={(e) => e.stopPropagation()}
+                        onChange={() => setAutoAssign(true)} // ✅ handle inside onChange
+                        className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span className="ml-3 text-sm text-gray-700">
+                        Auto-Assign to All Evaluators
+                      </span>
+                    </label>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    {autoAssign
+                      ? 'The survey will be automatically assigned to all existing subject-evaluator relationships.'
+                      : 'You can manually assign the survey to specific evaluators after creation.'}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Pages */}

@@ -214,10 +214,13 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
   };
 
   const downloadTemplate = () => {
-    const csvContent = `EmployeeId,SubjectRelationships
-EMP002,"[{""SubjectEmployeeId"":""EMP001"",""Relationship"":""Direct Report""}]"
-EMP004,"[{""SubjectEmployeeId"":""EMP003"",""Relationship"":""Peer""}]"`;
-    
+    // New flattened CSV format - simpler and more user-friendly
+    const csvContent = `EmployeeId,SubjectEmployeeId,Relationship
+EMP001,EMP002,Manager
+EMP001,EMP003,Peer
+EMP002,EMP001,Direct Report
+EMP002,EMP004,Peer`;
+
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');

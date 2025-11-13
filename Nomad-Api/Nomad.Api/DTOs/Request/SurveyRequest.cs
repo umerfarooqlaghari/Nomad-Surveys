@@ -10,10 +10,10 @@ public class CreateSurveyRequest
     [Required]
     [StringLength(200, MinimumLength = 1)]
     public string Title { get; set; } = string.Empty;
-    
+
     [StringLength(1000)]
     public string? Description { get; set; }
-    
+
     /// <summary>
     /// SurveyJS JSON schema object
     /// Can include dynamic placeholders like {subjectName}, {evaluatorName}
@@ -21,6 +21,11 @@ public class CreateSurveyRequest
     /// </summary>
     [Required]
     public object Schema { get; set; } = new { };
+
+    /// <summary>
+    /// If true, automatically assigns the survey to all active subject-evaluator relationships
+    /// </summary>
+    public bool AutoAssign { get; set; } = false;
 }
 
 /// <summary>
