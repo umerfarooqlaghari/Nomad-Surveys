@@ -100,6 +100,7 @@ export default function QuestionRenderer({
         {options.map((option) => (
           <label
             key={option.id}
+            htmlFor={`q-${question.id}-opt-${option.id}`}
             className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
               value === option.id
                 ? 'border-blue-600 bg-blue-50'
@@ -107,6 +108,7 @@ export default function QuestionRenderer({
             } ${isPreview ? 'cursor-default' : ''}`}
           >
             <input
+                id={`q-${question.id}-opt-${option.id}`}
               type="radio"
               name={question.id}
               value={option.id}
@@ -140,7 +142,8 @@ export default function QuestionRenderer({
         {options.map((option) => (
           <label
             key={option.id}
-            className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+            onClick={() => handleToggle(option.id)}
+            className={`flex items-center gap-3 p-3 border-2 rounded-lg transition-colors ${
               selectedValues.includes(option.id)
                 ? 'border-blue-600 bg-blue-50'
                 : 'border-gray-300 bg-white hover:border-blue-400'
@@ -151,7 +154,7 @@ export default function QuestionRenderer({
               checked={selectedValues.includes(option.id)}
               onChange={() => handleToggle(option.id)}
               disabled={isPreview}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
             />
             <span className="text-gray-900">{option.text}</span>
           </label>
@@ -180,7 +183,7 @@ export default function QuestionRenderer({
         placeholder={question.config.placeholder || 'Enter your answer...'}
         maxLength={question.config.maxLength}
         disabled={isPreview}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
       />
     );
   };
@@ -196,7 +199,7 @@ export default function QuestionRenderer({
           maxLength={question.config.maxLength}
           disabled={isPreview}
           rows={4}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
         />
         {question.config.maxLength && (
           <p className="text-sm text-gray-500 mt-1 text-right">

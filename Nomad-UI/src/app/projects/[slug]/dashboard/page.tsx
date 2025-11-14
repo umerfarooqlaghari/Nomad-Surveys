@@ -17,11 +17,11 @@ import ProjectQuestionsTab from '@/components/project/ProjectQuestionsTab';
 
 const tabs = [
   { id: 'profile', name: 'Profile', icon: "/Icons/people.svg" },
-  { id: 'employees', name: 'Employees', icon: "/Icons/person-add.svg" },
-  { id: 'evaluators', name: 'Evaluators', icon: "/Icons/person-gear.svg" },
-  { id: 'subjects', name: 'Subjects', icon: "/Icons/person-add.svg" },
   { id: 'questions', name: 'Questions', icon: "/Icons/ui-checks.svg" },
   { id: 'surveys', name: 'Surveys', icon: "/Icons/wrench-adjustable-circle.svg" },
+  { id: 'subjects', name: 'Subjects', icon: "/Icons/person-add.svg" },
+  { id: 'evaluators', name: 'Evaluators', icon: "/Icons/person-gear.svg" },
+  { id: 'employees', name: 'Employees', icon: "/Icons/person-add.svg" },
   { id: 'reports', name: 'Reports', icon: "/Icons/archive.svg" },
   { id: 'analytics', name: 'Analytics', icon: "/Icons/clipboard-data.svg" },
 ];
