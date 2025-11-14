@@ -73,7 +73,7 @@ export default function QuestionTypeConfigurator({
             <button
               type="button"
               onClick={addRatingOption}
-              className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="px-3 py-1 text-sm bg-blue-600 text-black rounded hover:bg-blue-700"
             >
               + Add Option
             </button>
@@ -83,7 +83,7 @@ export default function QuestionTypeConfigurator({
           </p>
 
           {ratingOptions.length === 0 ? (
-            <div className="text-sm text-gray-500 italic p-4 border border-dashed border-gray-300 rounded-lg text-center">
+            <div className="text-sm text-black italic p-4 border border-dashed border-gray-300 rounded-lg text-center">
               No rating options defined. Click &quot;Add Option&quot; to create custom rating scale.
             </div>
           ) : (
@@ -193,11 +193,11 @@ export default function QuestionTypeConfigurator({
                 value={question.config.minSelections || 0}
                 onChange={(e) => updateConfig({ minSelections: parseInt(e.target.value) })}
                 min={0}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-500 mb-1">
                 Max Selections (0 = unlimited)
               </label>
               <input
@@ -205,7 +205,7 @@ export default function QuestionTypeConfigurator({
                 value={question.config.maxSelections || 0}
                 onChange={(e) => updateConfig({ maxSelections: parseInt(e.target.value) || undefined })}
                 min={0}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500"
               />
             </div>
           </div>
@@ -220,7 +220,7 @@ export default function QuestionTypeConfigurator({
                 type="text"
                 value={option.text}
                 onChange={(e) => updateOption(option.id, e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500"
               />
               <button
                 onClick={() => moveOption(index, 'up')}
@@ -264,7 +264,7 @@ export default function QuestionTypeConfigurator({
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-500 mb-1">
               Min Length
             </label>
             <input
@@ -272,7 +272,7 @@ export default function QuestionTypeConfigurator({
               value={question.config.minLength || 0}
               onChange={(e) => updateConfig({ minLength: parseInt(e.target.value) })}
               min={0}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500"
             />
           </div>
           <div>
@@ -284,7 +284,7 @@ export default function QuestionTypeConfigurator({
               value={question.config.maxLength || 500}
               onChange={(e) => updateConfig({ maxLength: parseInt(e.target.value) })}
               min={1}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500"
             />
           </div>
         </div>
@@ -298,7 +298,7 @@ export default function QuestionTypeConfigurator({
             value={question.config.placeholder || ''}
             onChange={(e) => updateConfig({ placeholder: e.target.value })}
             placeholder="Enter placeholder text..."
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500"
           />
         </div>
       </div>
@@ -320,7 +320,7 @@ export default function QuestionTypeConfigurator({
               type="number"
               value={question.config.numberMin ?? 0}
               onChange={(e) => updateConfig({ numberMin: parseInt(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500"
             />
           </div>
           <div>
@@ -331,7 +331,7 @@ export default function QuestionTypeConfigurator({
               type="number"
               value={question.config.numberMax ?? 100}
               onChange={(e) => updateConfig({ numberMax: parseInt(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500"
             />
           </div>
         </div>

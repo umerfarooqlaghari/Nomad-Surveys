@@ -186,7 +186,7 @@ export default function QuestionEditor({
                 checked={question.required}
                 // onChange={() => {}}
                       onChange={() => handleFieldChange('required', !question.required)}
-                onClick={(e) => e.stopPropagation()}
+                // onClick={(e) => e.stopPropagation()}
                 className="w-5 h-5 relative z-10 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                 style={{ pointerEvents: 'auto' }}
               />

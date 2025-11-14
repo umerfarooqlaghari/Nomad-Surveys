@@ -112,7 +112,7 @@ export default function SurveyRenderer({
 
         {/* Questions */}
         {visibleQuestions.length === 0 ? (
-          <div className="py-8 text-center text-gray-500">
+          <div className="py-8 text-center text-black">
             <p>No questions to display on this page.</p>
           </div>
         ) : (

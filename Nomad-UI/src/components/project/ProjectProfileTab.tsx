@@ -52,11 +52,11 @@ export default function ProjectProfileTab({ projectSlug }: ProjectProfileTabProp
 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
   <h2 className="text-2xl font-semibold text-gray-900 mb-6">Project Profile</h2>
 
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+  <div className="grid grid-cols-1 gap-2">
     {/* Basic Information */}
     <div className="space-y-5">
       <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Basic Information</h3>
-      <div className="grid grid-cols-2 gap-y-4 text-sm">
+      <div className="grid grid-cols-2 gap-y-6 text-sm">
         <div className="text-gray-500 font-medium">Project Name</div>
         <div className="text-gray-900 font-semibold">{projectData.name}</div>
 
@@ -82,25 +82,6 @@ export default function ProjectProfileTab({ projectSlug }: ProjectProfileTabProp
         <div className="text-gray-500 font-medium">Created</div>
         <div className="text-gray-900 font-semibold">
           {new Date(projectData.createdAt).toLocaleDateString()}
-        </div>
-      </div>
-    </div>
-
-    {/* Project Statistics */}
-    <div className="space-y-5">
-      <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Project Statistics</h3>
-      <div className="grid grid-cols-3 gap-6 text-center">
-        <div className="p-4 rounded-xl bg-white border border-blue-900">
-          <div className="text-sm text-black font-medium">Subjects</div>
-          <div className="text-3xl font-bold text-black">{projectData.totalSubjects}</div>
-        </div>
-        <div className="p-4 rounded-xl bg-white border border-blue-900">
-          <div className="text-sm text-black font-medium">Evaluators</div>
-          <div className="text-3xl font-bold text-black">{projectData.totalEvaluators}</div>
-        </div>
-        <div className="p-4 rounded-xl bg-white border border-blue-900">
-          <div className="text-sm text-black font-medium">Surveys</div>
-          <div className="text-3xl font-bold text-black">{projectData.totalSurveys}</div>
         </div>
       </div>
     </div>
