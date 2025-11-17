@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import styles from './AssignSurveyModal.module.css';
@@ -59,7 +59,9 @@ export default function AssignSurveyModal({
   onAssignmentUpdated
 }: AssignSurveyModalProps) {
   const { token } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCsvUploading, setIsCsvUploading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDesignation, setSelectedDesignation] = useState<string>('');
   const [assignedRelationships, setAssignedRelationships] = useState<AssignedRelationship[]>([]);
@@ -211,6 +213,123 @@ export default function AssignSurveyModal({
     setSelectedAssigned(new Set());
   };
 
+  const handleUploadButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleDownloadTemplate = () => {
+    const header = 'EvaluatorId,SubjectId,Relationship\n';
+    const example = 'has101,sal101,Direct\n';
+    const csv = header + example;
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'assignment-template.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Assignment CSV template downloaded');
+  };
+
+  interface AssignmentCsvRow {
+    EvaluatorId: string;
+    SubjectId: string;
+    Relationship: string;
+  }
+
+  const parseCsv = (content: string): AssignmentCsvRow[] => {
+    const sanitizedContent = content.replace(/\r\n/g, '\n').trim();
+
+    if (!sanitizedContent) {
+      throw new Error('Assignment CSV is empty.');
+    }
+
+    const [rawHeader, ...rawRows] = sanitizedContent.split('\n');
+    const header = rawHeader.replace('\uFEFF', '').trim().toLowerCase();
+    const expectedHeader = 'evaluatorid,subjectid,relationship';
+
+    if (header !== expectedHeader) {
+      throw new Error(`Invalid header. Expected "${expectedHeader}" but received "${rawHeader.trim()}".`);
+    }
+
+    const rows: AssignmentCsvRow[] = [];
+
+    rawRows.forEach((line, index) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        return;
+      }
+
+      const columns = trimmed.split(',').map(col => col.trim());
+
+      if (columns.length < 3) {
+        throw new Error(`Row ${index + 2} is missing values. Each row requires EvaluatorId, SubjectId, Relationship.`);
+      }
+
+      const [EvaluatorId, SubjectId, Relationship] = columns;
+
+      rows.push({
+        EvaluatorId,
+        SubjectId,
+        Relationship
+      });
+    });
+
+    if (rows.length === 0) {
+      throw new Error('No valid relationship rows were found in the CSV.');
+    }
+
+    return rows;
+  };
+
+  const handleCsvUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!token) return;
+
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    setIsCsvUploading(true);
+
+    try {
+      const text = await file.text();
+      const rows = parseCsv(text);
+
+      const response = await fetch(
+        `/api/${projectSlug}/surveys/${surveyId}/assign-csv`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ Rows: rows })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || data?.message || 'Failed to process CSV assignments.');
+      }
+
+      toast.success(data?.message || `Successfully uploaded ${rows.length} CSV relationships.`);
+      await loadRelationships();
+      onAssignmentUpdated();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to upload assignment CSV.';
+      toast.error(message);
+      console.error('Assignment CSV upload error:', error);
+    } finally {
+      setIsCsvUploading(false);
+    }
+  };
+
   const getFilteredAvailable = () => {
     return availableRelationships.filter(r => {
       const matchesSearch = !searchTerm || 
@@ -263,7 +382,10 @@ export default function AssignSurveyModal({
   const allDesignations = getAllDesignations();
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      data-designations-count={allDesignations.length}
+    >
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
@@ -287,8 +409,8 @@ export default function AssignSurveyModal({
 
         {/* Search and Filter */}
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-          <div className="flex gap-4">
-            <div className="flex-1">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+            <div className="flex-1 w-full">
               <input
                 type="text"
                 placeholder="Search by name, employee ID, or designation..."
@@ -297,17 +419,47 @@ export default function AssignSurveyModal({
                 className={`w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${styles.searchInput}`}
               />
             </div>
-            <div className="w-64">
-              <select
-                value={selectedDesignation}
-                onChange={(e) => setSelectedDesignation(e.target.value)}
-                className={`w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-              >
-                <option value="">All Designations</option>
-                {allDesignations.map(designation => (
-                  <option key={designation} value={designation}>{designation}</option>
-                ))}
-              </select>
+            <div className="w-full flex flex-col gap-3 lg:flex-row lg:w-auto lg:items-center">
+              {/* <div className="w-full lg:w-64">
+                <select
+                  value={selectedDesignation}
+                  onChange={(e) => setSelectedDesignation(e.target.value)}
+                  className={`w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                >
+                  <option value="">All Designations</option>
+                  {allDesignations.map(designation => (
+                    <option key={designation} value={designation}>{designation}</option>
+                  ))}
+                </select>
+              </div> */}
+              <div className="flex justify-start lg:justify-end">
+                <button
+                  type="button"
+                  onClick={handleUploadButtonClick}
+                  disabled={isCsvUploading || isLoading}
+                  className="px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isCsvUploading && (
+                    <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                  )}
+                  Upload Assignment CSV
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleCsvUpload}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  disabled={isLoading}
+                  className="ml-3 px-4 py-2 text-sm font-medium bg-white text-blue-700 border border-purple-200 rounded-md hover:bg-purple-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  Download Template
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -315,16 +467,6 @@ export default function AssignSurveyModal({
         {/* Tabs */}
         <div className="px-6 border-b border-gray-200">
           <div className="flex gap-4">
-            <button
-              onClick={() => setActiveTab('available')}
-              className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-                activeTab === 'available'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Available ({filteredAvailable.length})
-            </button>
             <button
               onClick={() => setActiveTab('assigned')}
               className={`px-4 py-3 font-medium border-b-2 transition-colors ${
@@ -335,6 +477,17 @@ export default function AssignSurveyModal({
             >
               Already Assigned ({filteredAssigned.length})
             </button>
+            <button
+              onClick={() => setActiveTab('available')}
+              className={`px-4 py-3 font-medium border-b-2 transition-colors ${
+                activeTab === 'available'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Available ({filteredAvailable.length})
+            </button>
+            
           </div>
         </div>
 
@@ -396,7 +549,7 @@ export default function AssignSurveyModal({
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-gray-900">{relationship.SubjectFullName}</span>
-                          <span className="text-gray-400">→</span>
+                          <span className="text-gray-400">is evaluated by</span>
                           <span className="font-medium text-gray-900">{relationship.EvaluatorFullName}</span>
                           <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
                             {relationship.Relationship}
@@ -465,7 +618,7 @@ export default function AssignSurveyModal({
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-gray-900">{relationship.SubjectFullName}</span>
-                          <span className="text-gray-400">→</span>
+                          <span className="text-gray-400">is evaluated by</span>
                           <span className="font-medium text-gray-900">{relationship.EvaluatorFullName}</span>
                           <span className="px-2 py-1 text-xs bg-green-600 text-white rounded-full">
                             {relationship.Relationship}

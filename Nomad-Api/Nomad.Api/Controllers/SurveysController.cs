@@ -270,6 +270,53 @@ public class SurveysController : ControllerBase
     }
 
     /// <summary>
+    /// Assign survey relationships based on a CSV payload
+    /// </summary>
+    /// <param name="id">Survey ID</param>
+    /// <param name="request">CSV assignment payload</param>
+    /// <returns>Assignment result</returns>
+    [HttpPost("{id}/assign-csv")]
+    [ProducesResponseType(typeof(SurveyAssignmentResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<SurveyAssignmentResponse>> AssignSurveyFromCsv(Guid id, [FromBody] AssignSurveyCsvRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var tenantId = GetCurrentTenantId();
+            if (tenantId == null)
+            {
+                return Unauthorized(new { error = "Tenant context not found" });
+            }
+
+            if (request.Rows == null || request.Rows.Count == 0)
+            {
+                return BadRequest(new { error = "CSV payload must include at least one row" });
+            }
+
+            var result = await _surveyAssignmentService.AssignSurveyRelationshipsFromCsvAsync(id, request);
+
+            if (!result.Success && result.AssignedCount == 0)
+            {
+                return BadRequest(new { error = result.Message, details = result.Errors });
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error assigning survey {SurveyId} relationships from CSV", id);
+            return StatusCode(500, new { error = "An error occurred while assigning survey relationships from CSV" });
+        }
+    }
+
+    /// <summary>
     /// Unassign survey from subject-evaluator relationships
     /// </summary>
     /// <param name="id">Survey ID</param>

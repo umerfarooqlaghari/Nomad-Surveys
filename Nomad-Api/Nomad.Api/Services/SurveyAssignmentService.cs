@@ -4,6 +4,7 @@ using Nomad.Api.DTOs.Request;
 using Nomad.Api.DTOs.Response;
 using Nomad.Api.Entities;
 using Nomad.Api.Services.Interfaces;
+using BCrypt.Net;
 
 namespace Nomad.Api.Services;
 
@@ -11,11 +12,20 @@ public class SurveyAssignmentService : ISurveyAssignmentService
 {
     private readonly NomadSurveysDbContext _context;
     private readonly ILogger<SurveyAssignmentService> _logger;
+    private readonly IEmailService _emailService;
+    private readonly IConfiguration _configuration;
+    private const string DefaultPassword = "Password@123";
 
-    public SurveyAssignmentService(NomadSurveysDbContext context, ILogger<SurveyAssignmentService> logger)
+    public SurveyAssignmentService(
+        NomadSurveysDbContext context,
+        ILogger<SurveyAssignmentService> logger,
+        IEmailService emailService,
+        IConfiguration configuration)
     {
         _context = context;
         _logger = logger;
+        _emailService = emailService;
+        _configuration = configuration;
     }
 
     public async Task<SurveyAssignmentResponse> AssignSurveyToRelationshipsAsync(Guid surveyId, AssignSurveyRequest request)
@@ -96,6 +106,30 @@ public class SurveyAssignmentService : ISurveyAssignmentService
 
                 _context.SubjectEvaluatorSurveys.Add(assignment);
                 assignedCount++;
+
+                // Send email notification to evaluator
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        var tenant = await _context.Tenants.FindAsync(survey.TenantId);
+                        var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:3000";
+                        var formLink = $"{frontendUrl}/{tenant?.Slug}/participant/forms/{assignment.Id}";
+
+                        await _emailService.SendFormAssignmentEmailAsync(
+                            relationship.Evaluator.Employee.Email,
+                            relationship.Evaluator.Employee.FullName,
+                            relationship.Subject.Employee.FullName,
+                            survey.Title,
+                            formLink,
+                            tenant?.Name ?? "Nomad Surveys"
+                        );
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogError(emailEx, "Failed to send form assignment email for assignment {AssignmentId}", assignment.Id);
+                    }
+                });
             }
 
             await _context.SaveChangesAsync();
@@ -114,6 +148,258 @@ public class SurveyAssignmentService : ISurveyAssignmentService
             response.Success = false;
             response.Message = "An error occurred while assigning survey";
             response.Errors.Add(ex.Message);
+            return response;
+        }
+    }
+
+    public async Task<SurveyAssignmentResponse> AssignSurveyRelationshipsFromCsvAsync(Guid surveyId, AssignSurveyCsvRequest request)
+    {
+        var response = new SurveyAssignmentResponse();
+        var errors = new List<string>();
+
+        using var transaction = await _context.Database.BeginTransactionAsync();
+
+        try
+        {
+            var survey = await _context.Surveys
+                .FirstOrDefaultAsync(s => s.Id == surveyId && s.IsActive);
+
+            if (survey == null)
+            {
+                response.Success = false;
+                response.Message = "Survey not found";
+                return response;
+            }
+
+            var now = DateTime.UtcNow;
+            var relationshipsProcessed = 0;
+            var assignmentsCreatedOrReactivated = 0;
+
+            for (var index = 0; index < request.Rows.Count; index++)
+            {
+                var row = request.Rows[index];
+                try
+                {
+                    var rowNumber = index + 2; // header offset
+
+                    if (string.IsNullOrWhiteSpace(row.SubjectId) ||
+                        string.IsNullOrWhiteSpace(row.EvaluatorId) ||
+                        string.IsNullOrWhiteSpace(row.Relationship))
+                    {
+                        errors.Add($"Row {rowNumber}: EvaluatorId, SubjectId and Relationship are required.");
+                        continue;
+                    }
+
+                    var subjectEmployeeId = row.SubjectId.Trim();
+                    var evaluatorEmployeeId = row.EvaluatorId.Trim();
+                    var relationship = row.Relationship.Trim();
+
+                    if (relationship.Length == 0)
+                    {
+                        errors.Add($"Row {rowNumber}: Relationship cannot be empty.");
+                        continue;
+                    }
+
+                    if (relationship.Length > 50)
+                    {
+                        errors.Add($"Row {rowNumber}: Relationship exceeds maximum length of 50 characters.");
+                        continue;
+                    }
+
+                    // Step 1: Handle Evaluator - Check if employee exists, then check/create evaluator
+                    var evaluatorEmployee = await _context.Employees
+                        .FirstOrDefaultAsync(e => e.EmployeeId == evaluatorEmployeeId && e.TenantId == survey.TenantId && e.IsActive);
+
+                    if (evaluatorEmployee == null)
+                    {
+                        errors.Add($"Row {rowNumber}: Evaluator Employee '{evaluatorEmployeeId}' not found or is not active in this tenant.");
+                        continue;
+                    }
+
+                    var existingEvaluator = await _context.Evaluators
+                        .FirstOrDefaultAsync(e => e.EmployeeId == evaluatorEmployee.Id && e.TenantId == survey.TenantId);
+
+                    Evaluator evaluator;
+                    if (existingEvaluator != null)
+                    {
+                        if (!existingEvaluator.IsActive)
+                        {
+                            existingEvaluator.IsActive = true;
+                            existingEvaluator.UpdatedAt = now;
+                            _context.Evaluators.Update(existingEvaluator);
+                            await _context.SaveChangesAsync();
+                            _logger.LogInformation("✅ Reactivated evaluator for employee {EmployeeId}", evaluatorEmployeeId);
+                        }
+                        evaluator = existingEvaluator;
+                    }
+                    else
+                    {
+                        evaluator = new Evaluator
+                        {
+                            Id = Guid.NewGuid(),
+                            EmployeeId = evaluatorEmployee.Id,
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            IsActive = true,
+                            CreatedAt = now,
+                            TenantId = survey.TenantId
+                        };
+                        _context.Evaluators.Add(evaluator);
+                        await _context.SaveChangesAsync();
+                        _logger.LogInformation("✅ Created evaluator for employee {EmployeeId}", evaluatorEmployeeId);
+                    }
+
+                    // Step 2: Handle Subject - Check if employee exists, then check/create subject
+                    var subjectEmployee = await _context.Employees
+                        .FirstOrDefaultAsync(e => e.EmployeeId == subjectEmployeeId && e.TenantId == survey.TenantId && e.IsActive);
+
+                    if (subjectEmployee == null)
+                    {
+                        errors.Add($"Row {rowNumber}: Subject Employee '{subjectEmployeeId}' not found or is not active in this tenant.");
+                        continue;
+                    }
+
+                    var existingSubject = await _context.Subjects
+                        .FirstOrDefaultAsync(s => s.EmployeeId == subjectEmployee.Id && s.TenantId == survey.TenantId);
+
+                    Subject subject;
+                    if (existingSubject != null)
+                    {
+                        if (!existingSubject.IsActive)
+                        {
+                            existingSubject.IsActive = true;
+                            existingSubject.UpdatedAt = now;
+                            _context.Subjects.Update(existingSubject);
+                            await _context.SaveChangesAsync();
+                            _logger.LogInformation("✅ Reactivated subject for employee {EmployeeId}", subjectEmployeeId);
+                        }
+                        subject = existingSubject;
+                    }
+                    else
+                    {
+                        subject = new Subject
+                        {
+                            Id = Guid.NewGuid(),
+                            EmployeeId = subjectEmployee.Id,
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            IsActive = true,
+                            CreatedAt = now,
+                            TenantId = survey.TenantId
+                        };
+                        _context.Subjects.Add(subject);
+                        await _context.SaveChangesAsync();
+                        _logger.LogInformation("✅ Created subject for employee {EmployeeId}", subjectEmployeeId);
+                    }
+
+                    // Step 3: Handle SubjectEvaluator relationship
+                    var existingRelationship = await _context.SubjectEvaluators
+                        .FirstOrDefaultAsync(se => se.SubjectId == subject.Id && se.EvaluatorId == evaluator.Id);
+
+                    SubjectEvaluator relationshipEntity;
+                    if (existingRelationship != null)
+                    {
+                        if (!existingRelationship.IsActive)
+                        {
+                            existingRelationship.IsActive = true;
+                            existingRelationship.UpdatedAt = now;
+                            _logger.LogInformation("✅ Reactivated relationship: Subject {SubjectId} -> Evaluator {EvaluatorId}", subjectEmployeeId, evaluatorEmployeeId);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("ℹ️ Relationship already active: Subject {SubjectId} -> Evaluator {EvaluatorId}", subjectEmployeeId, evaluatorEmployeeId);
+                        }
+
+                        // Update relationship type if different
+                        if (!string.Equals(existingRelationship.Relationship, relationship, StringComparison.Ordinal))
+                        {
+                            existingRelationship.Relationship = relationship;
+                            existingRelationship.UpdatedAt = now;
+                        }
+
+                        relationshipEntity = existingRelationship;
+                    }
+                    else
+                    {
+                        relationshipEntity = new SubjectEvaluator
+                        {
+                            Id = Guid.NewGuid(),
+                            SubjectId = subject.Id,
+                            EvaluatorId = evaluator.Id,
+                            Relationship = relationship,
+                            TenantId = survey.TenantId,
+                            IsActive = true,
+                            CreatedAt = now
+                        };
+                        _context.SubjectEvaluators.Add(relationshipEntity);
+                        await _context.SaveChangesAsync();
+                        _logger.LogInformation("✅ Created relationship: Subject {SubjectId} -> Evaluator {EvaluatorId} as {Relationship}", subjectEmployeeId, evaluatorEmployeeId, relationship);
+                    }
+
+                    relationshipsProcessed++;
+
+                    // Step 4: Handle SubjectEvaluatorSurvey assignment
+                    var existingAssignment = await _context.SubjectEvaluatorSurveys
+                        .FirstOrDefaultAsync(ses => ses.SubjectEvaluatorId == relationshipEntity.Id && ses.SurveyId == surveyId);
+
+                    if (existingAssignment != null)
+                    {
+                        if (!existingAssignment.IsActive)
+                        {
+                            existingAssignment.IsActive = true;
+                            existingAssignment.UpdatedAt = now;
+                            assignmentsCreatedOrReactivated++;
+                            _logger.LogInformation("✅ Reactivated survey assignment for relationship {RelationshipId}", relationshipEntity.Id);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("ℹ️ Survey assignment already active for relationship {RelationshipId}", relationshipEntity.Id);
+                        }
+                    }
+                    else
+                    {
+                        var newAssignment = new SubjectEvaluatorSurvey
+                        {
+                            Id = Guid.NewGuid(),
+                            SubjectEvaluatorId = relationshipEntity.Id,
+                            SurveyId = surveyId,
+                            TenantId = survey.TenantId,
+                            CreatedAt = now,
+                            IsActive = true
+                        };
+                        _context.SubjectEvaluatorSurveys.Add(newAssignment);
+                        assignmentsCreatedOrReactivated++;
+                        _logger.LogInformation("✅ Created survey assignment for relationship {RelationshipId}", relationshipEntity.Id);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing CSV row {RowNumber} for survey {SurveyId}", index + 2, surveyId);
+                    errors.Add($"Row {index + 2}: Error processing row - {ex.Message}");
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            response.Success = assignmentsCreatedOrReactivated > 0 || relationshipsProcessed > 0;
+            response.AssignedCount = assignmentsCreatedOrReactivated;
+            response.ErrorCount = errors.Count;
+            response.Errors = errors;
+            response.Message = assignmentsCreatedOrReactivated > 0
+                ? $"Successfully assigned {assignmentsCreatedOrReactivated} relationship(s) from CSV. {errors.Count} error(s) occurred."
+                : relationshipsProcessed > 0
+                    ? $"CSV processed: {relationshipsProcessed} relationship(s) processed but all were already assigned to this survey. {errors.Count} error(s) occurred."
+                    : $"No relationships were processed. {errors.Count} error(s) occurred.";
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            await transaction.RollbackAsync();
+            _logger.LogError(ex, "Error assigning survey {SurveyId} relationships from CSV", surveyId);
+            response.Success = false;
+            response.Message = "An error occurred while assigning survey relationships from CSV";
+            response.Errors.Add(ex.Message);
+            response.ErrorCount = response.Errors.Count;
             return response;
         }
     }

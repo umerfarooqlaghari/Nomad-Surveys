@@ -122,6 +122,7 @@
   border-radius: 0.375rem;
   color: #111827;
   background-color: white;
+  text-color: #09090aff;
 }
 
 .input:focus {
@@ -141,7 +142,7 @@
   padding-right: 3rem;
   border: 1px solid #d1d5db;
   border-radius: 0.375rem;
-  color: #111827;
+  color: #09090aff;
   background-color: white;
 }
 
@@ -150,6 +151,7 @@
   ring: 2px;
   ring-color: #3b82f6;
   border-color: #3b82f6;
+  text-color: black;
 }
 
 .passwordToggle {

@@ -97,10 +97,17 @@ builder.Services.AddAuthorization(AuthorizationPolicies.AddPolicies);
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
+// Configure Email Settings
+builder.Services.Configure<Nomad.Api.Configuration.EmailSettings>(
+    builder.Configuration.GetSection("Email"));
+
 // Add application services
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<SeedDataService>();
+
+// Add email service
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Add participant services
 builder.Services.AddScoped<ISubjectService, SubjectService>();
