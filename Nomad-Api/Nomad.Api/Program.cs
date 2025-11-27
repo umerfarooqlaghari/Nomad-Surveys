@@ -130,6 +130,15 @@ builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 // Add participant portal service
 builder.Services.AddScoped<IParticipantService, ParticipantService>();
 
+// Add reporting service
+builder.Services.AddScoped<IReportingService, ReportingService>();
+
+// Add report generation service
+builder.Services.AddScoped<IReportTemplateService, ReportTemplateService>();
+builder.Services.AddScoped<IReportTemplateSettingsService, ReportTemplateSettingsService>();
+// Cloudinary service for image uploads used by the report template controller
+builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
+
 // Add CORS
 builder.Services.AddCors(options =>
 {

@@ -9,8 +9,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import ProjectProfileTab from '@/components/project/ProjectProfileTab';
 import ProjectAnalyticsTab from '@/components/project/ProjectAnalyticsTab';
 import ProjectReportsTab from '@/components/project/ProjectReportsTab';
-import ProjectSubjectsTab from '@/components/project/ProjectSubjectsTab';
-import ProjectEvaluatorsTab from '@/components/project/ProjectEvaluatorsTab';
+import ProjectParticipantsTab from '@/components/project/ProjectParticipantsTab';
 import ProjectEmployeesTab from '@/components/project/ProjectEmployeesTab';
 import ProjectSurveysTab from '@/components/project/ProjectSurveysTab';
 import ProjectQuestionsTab from '@/components/project/ProjectQuestionsTab';
@@ -19,8 +18,7 @@ const tabs = [
   { id: 'profile', name: 'Profile', icon: "/Icons/people.svg" },
   { id: 'questions', name: 'Questions', icon: "/Icons/ui-checks.svg" },
   { id: 'surveys', name: 'Surveys', icon: "/Icons/wrench-adjustable-circle.svg" },
-  { id: 'subjects', name: 'Subjects', icon: "/Icons/person-add.svg" },
-  { id: 'evaluators', name: 'Evaluators', icon: "/Icons/person-gear.svg" },
+  { id: 'participants', name: 'Participants', icon: "/Icons/person-add.svg" },
   { id: 'employees', name: 'Employees', icon: "/Icons/person-add.svg" },
   { id: 'reports', name: 'Reports', icon: "/Icons/archive.svg" },
   { id: 'analytics', name: 'Analytics', icon: "/Icons/clipboard-data.svg" },
@@ -51,10 +49,8 @@ export default function ProjectDashboard() {
         return <ProjectAnalyticsTab projectSlug={projectSlug} />;
       case 'reports':
         return <ProjectReportsTab projectSlug={projectSlug} />;
-      case 'subjects':
-        return <ProjectSubjectsTab projectSlug={projectSlug} />;
-      case 'evaluators':
-        return <ProjectEvaluatorsTab projectSlug={projectSlug} />;
+      case 'participants':
+        return <ProjectParticipantsTab projectSlug={projectSlug} />;
       case 'employees':
         return <ProjectEmployeesTab projectSlug={projectSlug} />;
       case 'surveys':

@@ -572,4 +572,96 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
             } : null
         };
     }
+
+    public async Task<List<RelationshipWithSurveysResponse>> GetSubjectRelationshipsWithSurveysAsync(Guid subjectId)
+    {
+        try
+        {
+            var relationships = await _context.SubjectEvaluators
+                .Include(se => se.Subject)
+                    .ThenInclude(s => s.Employee)
+                .Include(se => se.Evaluator)
+                    .ThenInclude(e => e.Employee)
+                .Where(se => se.SubjectId == subjectId && se.IsActive)
+                .ToListAsync();
+
+            var relationshipIds = relationships.Select(r => r.Id).ToList();
+            var surveyAssignments = await _context.SubjectEvaluatorSurveys
+                .Include(ses => ses.Survey)
+                .Where(ses => relationshipIds.Contains(ses.SubjectEvaluatorId) && ses.IsActive)
+                .ToListAsync();
+
+            var assignmentsByRelationshipId = surveyAssignments
+                .GroupBy(ses => ses.SubjectEvaluatorId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            return relationships.Select(se => new RelationshipWithSurveysResponse
+            {
+                Id = se.Id,
+                SubjectId = se.SubjectId,
+                EvaluatorId = se.EvaluatorId,
+                Relationship = se.Relationship,
+                SubjectFullName = se.Subject.Employee.FullName,
+                EvaluatorFullName = se.Evaluator.Employee.FullName,
+                SurveyAssignments = assignmentsByRelationshipId.TryGetValue(se.Id, out var assignments)
+                    ? assignments.Select(ses => new SurveyAssignmentInfo
+                    {
+                        SurveyId = ses.SurveyId,
+                        SurveyTitle = ses.Survey.Title
+                    }).ToList()
+                    : new List<SurveyAssignmentInfo>()
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting subject relationships with surveys for subject {SubjectId}", subjectId);
+            throw;
+        }
+    }
+
+    public async Task<List<RelationshipWithSurveysResponse>> GetEvaluatorRelationshipsWithSurveysAsync(Guid evaluatorId)
+    {
+        try
+        {
+            var relationships = await _context.SubjectEvaluators
+                .Include(se => se.Subject)
+                    .ThenInclude(s => s.Employee)
+                .Include(se => se.Evaluator)
+                    .ThenInclude(e => e.Employee)
+                .Where(se => se.EvaluatorId == evaluatorId && se.IsActive)
+                .ToListAsync();
+
+            var relationshipIds = relationships.Select(r => r.Id).ToList();
+            var surveyAssignments = await _context.SubjectEvaluatorSurveys
+                .Include(ses => ses.Survey)
+                .Where(ses => relationshipIds.Contains(ses.SubjectEvaluatorId) && ses.IsActive)
+                .ToListAsync();
+
+            var assignmentsByRelationshipId = surveyAssignments
+                .GroupBy(ses => ses.SubjectEvaluatorId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            return relationships.Select(se => new RelationshipWithSurveysResponse
+            {
+                Id = se.Id,
+                SubjectId = se.SubjectId,
+                EvaluatorId = se.EvaluatorId,
+                Relationship = se.Relationship,
+                SubjectFullName = se.Subject.Employee.FullName,
+                EvaluatorFullName = se.Evaluator.Employee.FullName,
+                SurveyAssignments = assignmentsByRelationshipId.TryGetValue(se.Id, out var assignments)
+                    ? assignments.Select(ses => new SurveyAssignmentInfo
+                    {
+                        SurveyId = ses.SurveyId,
+                        SurveyTitle = ses.Survey.Title
+                    }).ToList()
+                    : new List<SurveyAssignmentInfo>()
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting evaluator relationships with surveys for evaluator {EvaluatorId}", evaluatorId);
+            throw;
+        }
+    }
 }

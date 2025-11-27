@@ -47,6 +47,10 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
     public DbSet<Competency> Competencies { get; set; }
     public DbSet<Question> Questions { get; set; }
 
+    // Report template entity
+    public DbSet<ReportTemplate> ReportTemplates { get; set; }
+    public DbSet<ReportTemplateSettings> ReportTemplateSettings { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -489,6 +493,53 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
             entity.HasIndex(e => e.CompetencyId);
             entity.HasIndex(e => e.CreatedAt);
         });
+
+        // ReportTemplate configurations
+        modelBuilder.Entity<ReportTemplate>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.TemplateSchema).IsRequired().HasColumnType("jsonb");
+            entity.Property(e => e.PlaceholderMappings).HasColumnType("jsonb");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Index for better query performance
+            entity.HasIndex(e => new { e.TenantId, e.IsActive });
+            entity.HasIndex(e => e.CreatedAt);
+        });
+
+        // ReportTemplateSettings configurations
+        modelBuilder.Entity<ReportTemplateSettings>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.CompanyName).HasMaxLength(200);
+            entity.Property(e => e.CompanyLogoUrl).HasMaxLength(1000);
+            entity.Property(e => e.CoverImageUrl).HasMaxLength(1000);
+            entity.Property(e => e.PrimaryColor).HasMaxLength(7);
+            entity.Property(e => e.SecondaryColor).HasMaxLength(7);
+            entity.Property(e => e.TertiaryColor).HasMaxLength(7);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Index for better query performance
+            entity.HasIndex(e => new { e.TenantId, e.IsActive });
+            entity.HasIndex(e => new { e.TenantId, e.IsDefault });
+            entity.HasIndex(e => e.CreatedAt);
+        });
     }
 
     private void ConfigureGlobalQueryFilters(ModelBuilder modelBuilder)
@@ -523,6 +574,10 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         modelBuilder.Entity<Cluster>().HasQueryFilter(c => CurrentTenantId == null || c.TenantId == CurrentTenantId);
         modelBuilder.Entity<Competency>().HasQueryFilter(c => CurrentTenantId == null || c.TenantId == CurrentTenantId);
         modelBuilder.Entity<Question>().HasQueryFilter(q => CurrentTenantId == null || q.TenantId == CurrentTenantId);
+
+        // Report template query filter for tenant isolation
+        modelBuilder.Entity<ReportTemplate>().HasQueryFilter(rt => CurrentTenantId == null || rt.TenantId == CurrentTenantId);
+        modelBuilder.Entity<ReportTemplateSettings>().HasQueryFilter(rts => CurrentTenantId == null || rts.TenantId == CurrentTenantId);
     }
 
     public override int SaveChanges()
