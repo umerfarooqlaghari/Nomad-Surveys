@@ -27,6 +27,8 @@ WORKDIR /app
 
 # Copy the published application from the build stage
 COPY --from=build /app/publish .
+# Copy Templates directory manually
+COPY Nomad.Api/Templates ./Templates
 
 # Create a non-root user for security
 RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app

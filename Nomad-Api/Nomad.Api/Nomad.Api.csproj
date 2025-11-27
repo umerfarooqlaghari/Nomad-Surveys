@@ -26,4 +26,11 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="7.2.0" />
   </ItemGroup>
 
+<ItemGroup>
+  <Content Include="Templates/**/*">
+    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+  </Content>
+</ItemGroup>
+
+
 </Project>
