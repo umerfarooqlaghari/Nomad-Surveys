@@ -1,9 +1,14 @@
-import React, { useEffect, useState } from "react";
-// import ReportTemplateEditor from "../../../components/report-builder/ReportTemplateEditor";
+'use client';
 
+import React, { useEffect, useState, use } from "react";
 
-export default function Page({ params }: { params: { tenantSlug: string } }) {
-  const { tenantSlug } = params;
+interface PageProps {
+  params: Promise<{ tenantSlug: string }>;
+}
+
+export default function Page({ params }: PageProps) {
+  const resolvedParams = use(params);
+  const { tenantSlug } = resolvedParams;
   const [html, setHtml] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [companyLogo, setCompanyLogo] = useState<File | null>(null);
