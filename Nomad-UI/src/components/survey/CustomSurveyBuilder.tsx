@@ -43,7 +43,7 @@ export default function CustomSurveyBuilder({
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [autoAssign, setAutoAssign] = useState<boolean>(true);
+  const [autoAssign, setAutoAssign] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'form' | 'json'>('form');
   const [jsonInput, setJsonInput] = useState('');
 

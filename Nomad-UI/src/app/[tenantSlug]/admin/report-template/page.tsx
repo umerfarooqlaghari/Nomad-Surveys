@@ -1,12 +1,8 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
+// import ReportTemplateEditor from "../../../components/report-builder/ReportTemplateEditor";
 
-interface Props {
-  params: { tenantSlug: string };
-}
 
-export default function ReportTemplateEditor({ params }: Props) {
+export default function Page({ params }: { params: { tenantSlug: string } }) {
   const { tenantSlug } = params;
   const [html, setHtml] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
