@@ -122,3 +122,4 @@ C:\Users\Umer Farooq\Desktop\Nomad Survey Builder\Nomad-Surveys\Nomad-Api\Nomad.
 C:\Users\Umer Farooq\Desktop\Nomad Survey Builder\Nomad-Surveys\Nomad-Api\Nomad.Api.Tests\bin\Debug\net9.0\Microsoft.Extensions.Primitives.dll
 C:\Users\Umer Farooq\Desktop\Nomad Survey Builder\Nomad-Surveys\Nomad-Api\Nomad.Api.Tests\bin\Debug\net9.0\Npgsql.dll
 C:\Users\Umer Farooq\Desktop\Nomad Survey Builder\Nomad-Surveys\Nomad-Api\Nomad.Api.Tests\bin\Debug\net9.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
+C:\Users\Umer Farooq\Desktop\Nomad Survey Builder\Nomad-Surveys\Nomad-Api\Nomad.Api.Tests\obj\Debug\net9.0\Nomad.Api.Tests.sourcelink.json
