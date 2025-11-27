@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>360° Feedback Report</title>
+    <style>
+        /* CSS Variables for Brand Colors - These will be replaced dynamically */
+        :root {
+            --primary-color: {{PRIMARY_COLOR}};
+            --secondary-color: {{SECONDARY_COLOR}};
+            --tertiary-color: {{TERTIARY_COLOR}};
+            --text-color: #434141ff;
+            --border-color: #d3d3d3;
+            --background-color: #ffffff;
+            --light-gray: #f5f5f5;
+            --dark-gray: #666666;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            background-color: var(--background-color);
+            line-height: 1.5;
+            padding: 0;
+            margin: 0;
+            font-size: 11pt;
+        }
+
+        .page {
+            width: 210mm; /* A4 width */
+            min-height: 297mm; /* A4 height */
+            background: white;
+            position: relative;
+            page-break-after: always;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page:last-child {
+            page-break-after: auto;
+        }
+
+        /* On-screen preview: render each page as a separate card for visibility */
+        @media screen {
+            body {
+                background: #f3f4f6;
+                padding: 32px 0;
+            }
+
+            .page {
+                /* keep physical A4 width but show as centered card */
+                margin: 24px auto;
+                box-shadow: 0 8px 20px rgba(16,24,40,0.08);
+                border: 1px solid rgba(0,0,0,0.06);
+                border-radius: 6px;
+                overflow: hidden;
+                background: white;
+            }
+
+            /* visually separate stacked pages */
+            .page + .page {
+                margin-top: 28px;
+            }
+        }
+
+        /* For print/PDF we want the original behavior (no shadows/margins) */
+        @media print {
+            body { background: white; padding: 0; }
+            .page { box-shadow: none; border: none; margin: 0; border-radius: 0; }
+        }
+
+        /* Header - Fixed on every page */
+        .page-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 40mm;
+            padding: 10mm 15mm;
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-start;
+            z-index: 10;
+        }
+
+        .client-logo {
+            max-width: 80mm;
+            max-height: 30mm;
+            object-fit: contain;
+        }
+
+        /* Footer - Fixed on every page */
+        .page-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20mm;
+            padding: 5mm 15mm;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            border-top: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        .ascend-logo {
+            height: 12mm;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .footer-text {
+            font-size: 8pt;
+            color: var(--dark-gray);
+            line-height: 1.4;
+        }
+
+        .page-number {
+            margin-left: auto;
+            font-size: 8pt;
+            color: var(--dark-gray);
+            white-space: nowrap;
+        }
+
+        /* Floating PDF view button for on-screen previews */
+        .pdf-viewer-button {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            z-index: 9999;
+            background: #111827;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        /* Page Content Area - Accounts for header and footer */
+        .page-content {
+            padding: 50mm 15mm 25mm 15mm; /* Top padding for header, bottom for footer */
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* First Page Specific Styles */
+        .cover-page {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .cover-image-container {
+            width: 100%;
+            margin: 0 auto;
+            margin-top: 20mm;
+            margin-bottom: 10mm;
+        }
+
+        .cover-image {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            display: block;
+        }
+
+        .cover-title {
+            width: 90%;
+            margin: 0 auto;
+            margin-bottom: 15mm;
+        }
+
+        .company-survey-text {
+            white-space: nowrap;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 8mm;
+            width: 60%;
+            font-size: clamp(10pt, 4vw, 20pt);
+        }
+
+
+        .intro-page {
+    font-family: 'Arial', sans-serif;
+    font-size: 11pt;
+    line-height: 1.45;
+    color: #000;
+    padding: 18mm 18mm 22mm 18mm; /* accounts for header/footer */
+}
+
+.intro-page-container {
+    display: flex;
+    gap: 5mm;
+    margin-top: 1mm;
+}
+
+.intro-left-column {
+    flex: 1;
+    width: auto;
+    margin-top: 1mm;
+}
+
+.intro-right-column {
+    flex: 1;
+    width: auto;
+}
+
+.section-heading {
+    color: #0455A4;
+    font-size: 18pt;
+    font-weight: bold;
+   // margin-bottom: 10px;
+    margin-top: 70px;;
+}
+
+.section-heading-black {
+    color: black;
+    font-size: 18pt;
+    font-weight: bold;
+   // margin-bottom: 10px;
+    margin-top: 70px;;
+}
+
+.section-subheading {
+    color: #0455A4;
+    font-size: 13pt;
+    font-weight: bold;
+    margin-top: 18px;
+    margin-bottom: 8px;
+}
+.section-subheading-black {
+    color: black;
+    font-size: 13pt;
+    font-weight: bold;
+    margin-top: 18px;
+    margin-bottom: 8px;
+}
+
+.intro-text {
+    margin-bottom: 12px;
+    font-size: 10pt;
+    line-height: 1.5;
+    text-color:var(--text-color);;
+}
+
+.blue-bullets {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 10px;
+    margin-bottom: 18px;
+}
+
+.blue-bullets li {
+    margin-bottom: 6px;
+    padding-left: 12px;
+    position: relative;
+    font-size: 11pt;
+}
+
+.blue-bullets li::before {
+    content: "○";
+    color: #0455A4;
+    font-weight: bold;
+    position: absolute;
+    left: 0;
+    top: 0;
+    font-size: 12pt;
+}
+
+.blue-bullets.compact li {
+    margin-bottom: 8px;
+}
+
+.report-components-list {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 0;
+}
+
+.report-components-list li {
+    margin-bottom: 10px;
+    font-size: 10pt;
+    line-height: 1.5;
+}
+
+.report-components-list li strong {
+    //color: #000;
+    font-weight: bold;
+}
+
+        .subject-name-text {
+            font-size: 18pt;
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 10mm;
+        }
+
+        /* Content Pages */
+        .content-section {
+            margin-bottom: 15mm;
+        }
+
+        .section-title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 10mm;
+            padding-bottom: 5mm;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10mm;
+            margin-bottom: 15mm;
+        }
+
+        .summary-card {
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            padding: 8mm;
+            text-align: center;
+            background-color: white;
+        }
+
+        .summary-card.primary {
+            border-color: var(--primary-color);
+            background-color: #f0f8ff;
+        }
+
+        .summary-label {
+            font-size: 9pt;
+            color: var(--dark-gray);
+            margin-bottom: 5mm;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .summary-score {
+            font-size: 28pt;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 3mm;
+        }
+
+        .summary-rating {
+            font-size: 10pt;
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+
+        .subject-details-box {
+            background-color: var(--light-gray);
+            border: 2px solid var(--border-color);
+            padding: 10mm;
+            margin-bottom: 15mm;
+        }
+
+        .subject-details-title {
+            font-size: 14pt;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 8mm;
+            padding-bottom: 4mm;
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        .subject-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8mm 20mm;
+        }
+
+        .subject-item {
+            display: flex;
+            align-items: center;
+        }
+
+        .subject-label {
+            font-weight: bold;
+            min-width: 100px;
+            font-size: 11pt;
+        }
+
+        .subject-value {
+            flex: 1;
+            font-size: 11pt;
+        }
+
+        .chart-container {
+            margin-bottom: 15mm;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10mm;
+            background-color: white;
+            text-align: center;
+        }
+
+        .chart-title {
+            font-size: 12pt;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: 10mm;
+            text-align: left;
+            padding-bottom: 4mm;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .chart-placeholder {
+            width: 100%;
+            height: 200px;
+            background-color: var(--light-gray);
+            border: 1px dashed var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--dark-gray);
+            font-size: 10pt;
+        }
+
+        .chart-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        .breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid var(--border-color);
+            margin-top: 10mm;
+        }
+
+        .breakdown-table th {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 8mm 6mm;
+            text-align: left;
+            font-weight: bold;
+            font-size: 10pt;
+            border: 1px solid var(--primary-color);
+        }
+
+        .breakdown-table td {
+            padding: 6mm;
+            border: 1px solid var(--border-color);
+            font-size: 10pt;
+        }
+
+        .breakdown-table tr:nth-child(even) {
+            background-color: var(--light-gray);
+        }
+
+        .score-cell {
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+        }
+
+        .rating-badge {
+            display: inline-block;
+            padding: 3mm 8mm;
+            border-radius: 12px;
+            font-size: 9pt;
+            font-weight: 600;
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        /* Page Break */
+        .page-break {
+            page-break-after: always;
+        }
+
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+
+        .font-bold {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Page 1: Cover Page -->
+    <div class="page cover-page">
+        <!-- Header with Client Logo -->
+        <div class="page-header">
+            {{COMPANY_LOGO}}
+        </div>
+
+        <!-- Cover Page Content -->
+        <div class="page-content">
+            <!-- Cover Image -->
+            <div class="cover-image-container">
+                {{COVER_IMAGE}}
+            </div>
+
+            <!-- Title and Subject Name -->
+            <div class="cover-title">
+                <div class="company-survey-text">{{COMPANY_NAME}} - 360° Survey Feedback</div>
+                <div class="subject-name-text">Mr/Ms {{SUBJECT_NAME}}</div>
+            </div>
+        </div>
+
+        <!-- Footer with Ascend Logo -->
+        <div class="page-footer">
+            <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+            <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+            <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span></div>
+        </div>
+    </div>
+
+    <!-- Page 2: Introduction -->
+    <div class="page">
+
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <div class="page-content intro-page">
+
+        <h2 class="section-heading-black">Introduction</h2>
+
+        <div class="intro-page-container">
+            <!-- Left Column -->
+            <div class="intro-left-column">
+                <h3 class="section-subheading-black">What is a 360° Feedback Survey?</h3>
+                <p class="intro-text">
+                    The 360° Feedback Survey is a statistically reliable, valid, and comprehensive instrument. It gathers
+                    feedback from your working relationships about your strengths, growth areas and blindspots. This report
+                    will help participants introspect allowing them to compare their self-perception to how others perceive them.
+                    This report will help you:
+                </p>
+
+                <ul class="blue-bullets">
+                    <li>To develop an awareness of your perceived behaviors within the workplace</li>
+                    <li>To focus on changes that you may need to make to be more effective</li>
+                    <li>To become aware of and build upon what you do well.</li>
+                    <li>To take responsibility for your development.</li>
+                </ul>
+
+                <h3 class="section-subheading-black">How is this report organized?</h3>
+                <p class="intro-text">
+                    This report is organized in sections, ranging from summary data to a detailed analysis of item responses by relationship groups (raters) that provide feedback. Each section has a guide to interpretation to aid understanding of the report and also to help you derive insights for your Action Plan.
+                </p>
+
+                <p class="intro-text">
+             <strong class= "section-subheading-black">Understanding the Report </strong> – This section explains the Top Talent Framework based on Interloop's context and local and global research on leadership behaviors, that has been the basis of seeking and providing feedback as part of Elevate - Unlock Possibilities.
+                </p>
+            </div>
+
+            <!-- Right Column -->
+            <div class="intro-right-column">
+                <ul class="report-components-list">
+                    <li><strong class="section-subheading-black">Top Talent Framework Snapshot</strong> — Snapshot of ratings between Self and Others across all dimensions.</li>
+                    <li><strong class="section-subheading-black">High and Low Scores</strong> — Displays highest and lowest scoring dimensions and items.</li>
+                    <li><strong class="section-subheading-black">Latent Strengths and Blindspots</strong> — Displays dimensions and items where others rated you higher/lower than you rated yourself.</li>
+                    <li><strong class="section-subheading-black">Gap Chart</strong> — Displays the difference in scores between rater groups across dimensions.</li>
+                    <li><strong class="section-subheading-black">Agreement Chart</strong> — Indicates the similarity of scores across dimensions.</li>
+                    <li><strong class="section-subheading-black">Comprehensive Insights</strong> — Provides scores by rater group for each item across all dimensions and items.</li>
+                    <li><strong class="section-subheading-black">Open Ended Feedback</strong> — Written comments provided by your observers to aid explanation of ratings in the report.</li>
+                    <li><strong class="section-subheading-black">My Reflection Summary</strong> — A space to reflect on your feedback and identify areas of development, to help your journey of development as a way forward.</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="page-footer">
+                <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+                <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+                <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span></div>
+        </div>
+
+    </div>
+
+
+    <!-- Page 3: Charts -->
+    <div class="page">
+        <!-- Header -->
+        <div class="page-header">
+            {{COMPANY_LOGO}}
+        </div>
+
+        <!-- Content -->
+    <div class="page-content intro-page">
+
+        <h2 class="section-heading-black">Guide for Interpretation:
+</h2>
+
+        <div class="intro-page-container">
+            <!-- Left Column -->
+            <div class="intro-left-column">
+                <h3 class="section-subheading-black">As you read through this report, keep in mind that:</h3>
+                <ul>
+                    <div>1. No individual will ever attain a perfect score in all
+                    the dimensions. The dimensions are largely
+                    independent, and different combinations of scores
+                    can make for leadership effectiveness.
+                    </div>
+                    <br>
+                    <div>2. Some dimensions will be more relevant to the
+                    participant than to others depending on the nature
+                    of their job and organizational culture. Participants
+                    should consider which dimensions are most
+                    relevant to them in context of current and future
+                    challenges.
+                    </div>
+                    <br>
+                    <div>3. An effective approach is to look at the gaps
+                    between the scores of each, or more important,
+                    rater groups instead of absolute scores. The
+                    objective of this tool is to give you an insight of how
+                    your self-perception differs or coincides with the
+                    perceptions of those around you.
+                    </div>
+                    <br>
+                    <div>4. Consider differences between the ratings
+                    provided by self and by others.
+                    </div>
+                    <br>
+                    <div>5. Pay particular attention to scoring trends by rater
+                    group for items in each dimension.
+                    </div>
+                    <br>
+                    <div>6. A score of 0 signies 'Not Applicable' i.e., the
+                    respondent does not know the participant
+                    adequately enough to provide feedback on a given
+                    question.
+                    </div>
+                </ul>
+            </div>
+
+            <!-- Right Column -->
+            <div class="intro-right-column">
+                <ul class="report-components-list">
+                    <li><strong class="section-subheading-black">How to interpret the rater group summary?</strong> 
+                        <div class = "intro-text"> The rater group summary section shows each of the
+                        dimensions in more detail and includes:
+                        </div>
+                    </li>
+                    <li><strong class="section-subheading-black">Cluster Summary by Rater Group</strong> 
+                        <div class = "intro-text"> This is the rst level of summary and the scores
+                        column shows your actual, or raw cluster score by
+                        each rater group. The clusters, for the purpose of this
+                        report are: Leading Solutions, Impacting People and
+                        Driving Business.
+                        </div>
+                    </li>
+                    <li><strong class="section-subheading-black">Dimension Summary by Rater Group</strong> 
+                        <div class = "intro-text">This is the second level of summary. Within each
+                        cluster, the scores column shows your actual score for
+                        each dimension by each rater group. There are 12
+                        dimensions, for the purpose of this report. A few
+                        examples of dimensions are Inventive Execution,
+                        Purposeful Conversations etc.
+                        </div>
+                    </li>
+                    <li><strong class="section-subheading-black">Item-level Feedback</strong> 
+                        <div class = "intro-text">This is the third component of this section and shows
+                        the greatest level of detail and indicates how your
+                        raters responded to the individual items (questions) in
+                        the survey. The questions were listed in random order
+                        in the survey and are organized by competency in this
+                        report.
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+        <!-- Footer -->
+        <div class="page-footer">
+            <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+            <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+            <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span></div>
+        </div>
+    </div>
+
+    <!-- Page 4: Detailed Breakdown -->
+<div class="page" aria-label="Understanding the report">
+  <style>
+    /* Page-4 specific styles (re-uses root variables from your main stylesheet) */
+    :root {
+      --page4-primary: var(--primary-color, #0455A4);
+      --page4-text: var(--text-color, #434141);
+      --page4-dark: var(--dark-gray, #666666);
+      --frame-border: #1f1f1f;
+    }
+
+    /* Ensure this page content accounts for the existing header/footer spacing */
+    .page-content { 
+      padding: 50mm 15mm 25mm 15mm; /* match your template spacing */
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* White framed area that matches the inspirational image */
+    .understanding-frame {
+      width: calc(100% - 28mm);
+      margin: 10mm auto;
+      padding: 14mm;
+      border: 1px solid var(--frame-border);
+      background: #ffffff;
+      min-height: calc(100% - 70mm);
+      position: relative;
+      box-sizing: border-box;
+    }
+
+    .understanding-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8mm;
+      margin-bottom: 10mm;
+    }
+
+    .understanding-title {
+      color: var(--page4-primary);
+      font-size: 16pt;
+      font-weight: 700;
+      line-height: 1.05;
+      max-width: 66%;
+    }
+
+    /* Logo placeholder on the right (ELEVATE) */
+    .elevate-logo {
+      height: 18mm;
+      width: auto;
+      object-fit: contain;
+      display: inline-block;
+    }
+
+    .understanding-body {
+      display: flex;
+      gap: 12mm;
+      align-items: flex-start;
+      margin-top: 6mm;
+    }
+
+    .understanding-left {
+      flex: 1 1 60%;
+      min-width: 0;
+    }
+
+    .understanding-left p {
+      font-size: 10pt;
+      color: var(--page4-text);
+      margin-bottom: 8px;
+      line-height: 1.45;
+    }
+
+    .understanding-left .note {
+      font-size: 9pt;
+      color: var(--page4-dark);
+      margin-top: 6mm;
+    }
+
+    .understanding-right {
+      flex: 1 1 36%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .wheel-container {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      padding: 6px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .wheel-image {
+      max-width: 100%;
+      max-height: 100%;
+      display:block;
+    }
+
+    /* Small responsive fallback */
+    @media (max-width: 1000px) {
+      .understanding-body { flex-direction: column; }
+      .understanding-right { margin-top: 10mm; }
+      .understanding-title { max-width: 100%; }
+      .wheel-container { width: 140px; height: 140px; }
+    }
+  </style>
+
+  <div class="page-content">
+    <div class="understanding-frame" role="region" aria-label="Understanding the report frame">
+      <div class="understanding-top">
+        <div class="understanding-title">Understanding The Report</div>
+        <!-- Insert your ELEVATE logo markup here (img/svg) -->
+        <div class="elevate-logo" aria-hidden="true">{{ELEVATE_LOGO}}</div>
+      </div>
+
+      <div class="understanding-body">
+        <div class="understanding-left">
+          <p>
+            This 360° Feedback Survey is based on the Top Talent Framework as part of Elevate — Unlock Possibilities.
+            The survey provides insight across three clusters: Leading Solutions, Impacting People and Driving Business.
+          </p>
+
+          <p>
+            Each cluster is measured through several dimensions and items in the survey. These measures help you compare
+            self-perception with others' perceptions and identify strengths, development areas and blindspots.
+          </p>
+
+          <p>
+            The dimensions collectively guide improvement, influence team performance, and support the organization’s growth.
+          </p>
+
+          <p class="note">
+            The figure on the right introduces the 360 Feedback Survey framework.
+          </p>
+        </div>
+
+        <div class="understanding-right" aria-hidden="true">
+          <div class="wheel-container">
+            <!-- Replace with your wheel SVG/IMG. Example placeholder below:
+                 <img src="/images/wheel.png" alt="Top Talent Framework wheel" class="wheel-image" /> -->
+            {{WHEEL_IMAGE}}
+          </div>
+        </div>
+      </div>
+      <!-- intentionally no header/footer here; those are provided by your main template -->
+    </div>
+  </div>
+</div>
+    <script>
+        // Populate page numbers for each .page footer and add a floating 'View as PDF' button
+        (function() {
+            try {
+                var pages = Array.from(document.querySelectorAll('.page'));
+                var total = pages.length;
+                pages.forEach(function(p, idx) {
+                    var idxEls = p.querySelectorAll('.page-number-index');
+                    var totalEls = p.querySelectorAll('.page-number-total');
+                    idxEls.forEach(function(e) { e.textContent = String(idx + 1); });
+                    totalEls.forEach(function(e) { e.textContent = String(total); });
+                });
+
+                // Add floating View as PDF button for on-screen preview (hidden when printing)
+                var btn = document.createElement('button');
+                btn.className = 'pdf-viewer-button';
+                btn.textContent = 'View as PDF';
+                btn.addEventListener('click', function() {
+                    // trigger print dialog (user can save as PDF)
+                    window.print();
+                });
+                document.body.appendChild(btn);
+            } catch (e) {
+                // ignore errors in templated environment
+                console.error(e);
+            }
+        })();
+    </script>
+    </div>
+</body>
+</html>

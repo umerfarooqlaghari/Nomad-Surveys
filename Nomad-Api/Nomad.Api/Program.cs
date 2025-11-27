@@ -97,10 +97,17 @@ builder.Services.AddAuthorization(AuthorizationPolicies.AddPolicies);
 // Add AutoMapper
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
+// Configure Email Settings
+builder.Services.Configure<Nomad.Api.Configuration.EmailSettings>(
+    builder.Configuration.GetSection("Email"));
+
 // Add application services
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<SeedDataService>();
+
+// Add email service
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Add participant services
 builder.Services.AddScoped<ISubjectService, SubjectService>();
@@ -122,6 +129,15 @@ builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 
 // Add participant portal service
 builder.Services.AddScoped<IParticipantService, ParticipantService>();
+
+// Add reporting service
+builder.Services.AddScoped<IReportingService, ReportingService>();
+
+// Add report generation service
+builder.Services.AddScoped<IReportTemplateService, ReportTemplateService>();
+builder.Services.AddScoped<IReportTemplateSettingsService, ReportTemplateSettingsService>();
+// Cloudinary service for image uploads used by the report template controller
+builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
 
 // Add CORS
 builder.Services.AddCors(options =>

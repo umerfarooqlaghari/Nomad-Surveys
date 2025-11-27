@@ -12,4 +12,6 @@ public interface ISubjectEvaluatorService
     Task<List<SubjectEvaluatorResponse>> GetSubjectEvaluatorsAsync(Guid subjectId);
     Task<List<SubjectEvaluatorResponse>> GetEvaluatorSubjectsAsync(Guid evaluatorId);
     Task<bool> AssignmentExistsAsync(Guid subjectId, Guid evaluatorId);
+    Task<List<RelationshipWithSurveysResponse>> GetSubjectRelationshipsWithSurveysAsync(Guid subjectId);
+    Task<List<RelationshipWithSurveysResponse>> GetEvaluatorRelationshipsWithSurveysAsync(Guid evaluatorId);
 }

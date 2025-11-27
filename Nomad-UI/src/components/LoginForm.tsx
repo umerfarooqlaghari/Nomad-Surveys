@@ -7,6 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import toast, { Toaster } from 'react-hot-toast';
 import styles from './LoginForm.module.css';
 import Link from 'next/link';
+import ForgotPasswordModal from './modals/ForgotPasswordModal';
+import VerifyOtpModal from './modals/VerifyOtpModal';
 
 interface LoginFormProps {
   isSuperAdmin?: boolean;
@@ -20,6 +22,9 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [showVerifyOtpModal, setShowVerifyOtpModal] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
 
   const { login, superAdminLogin } = useAuth();
 
@@ -52,6 +57,27 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleForgotPasswordClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    if (!isSuperAdmin && !tenantSlug) {
+      toast.error('Please enter your Company/Tenant ID first');
+      return;
+    }
+
+    setShowForgotPasswordModal(true);
+  };
+
+  const handleOtpSent = (emailAddress: string) => {
+    setResetEmail(emailAddress);
+    setShowVerifyOtpModal(true);
+  };
+
+  const handlePasswordResetSuccess = () => {
+    toast.success('Password reset successfully! You can now login with your new password.');
+    setResetEmail('');
   };
 
   return (
@@ -217,8 +243,12 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
               </label>
             </div>
             <div>
-              <a href="#" className={styles.forgotLink}>
-                Forgot Password?
+              <a
+                href="#"
+                className={styles.forgotLink}
+                onClick={handleForgotPasswordClick}
+              >
+                Reset Password?
               </a>
             </div>
           </div>
@@ -264,6 +294,22 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
         </div>
       </div>
     </div>
+
+    {/* Password Reset Modals */}
+    <ForgotPasswordModal
+      isOpen={showForgotPasswordModal}
+      onClose={() => setShowForgotPasswordModal(false)}
+      onOtpSent={handleOtpSent}
+      tenantSlug={isSuperAdmin ? '' : tenantSlug}
+    />
+
+    <VerifyOtpModal
+      isOpen={showVerifyOtpModal}
+      onClose={() => setShowVerifyOtpModal(false)}
+      onSuccess={handlePasswordResetSuccess}
+      email={resetEmail}
+      tenantSlug={isSuperAdmin ? '' : tenantSlug}
+    />
     </>
   );
 }

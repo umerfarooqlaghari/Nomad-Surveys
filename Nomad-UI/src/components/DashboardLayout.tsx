@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface DashboardLayoutProps {
@@ -39,6 +40,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <span className="ml-2 text-white opacity-75">({tenant.name})</span>
                 )}
               </div>
+              {tenant && (
+                <Link
+                  href={`/${tenant.slug}/admin/report-template`}
+                  className="bg-gray-800 hover:bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium"
+                >
+                  Edit Template
+                </Link>
+              )}
               <button
                 onClick={logout}
                 className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"

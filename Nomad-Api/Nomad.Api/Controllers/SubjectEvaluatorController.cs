@@ -318,4 +318,68 @@ public class SubjectEvaluatorController : ControllerBase
             return StatusCode(500, new { message = "An error occurred while retrieving subject assignments" });
         }
     }
+
+    /// <summary>
+    /// Get all relationships for a subject with their survey assignments
+    /// </summary>
+    /// <param name="subjectId">Subject ID</param>
+    /// <returns>List of relationships with survey assignments</returns>
+    [HttpGet("subjects/{subjectId}/relationships-with-surveys")]
+    public async Task<ActionResult<List<RelationshipWithSurveysResponse>>> GetSubjectRelationshipsWithSurveys(Guid subjectId)
+    {
+        try
+        {
+            var subject = await _subjectService.GetSubjectByIdAsync(subjectId);
+            if (subject == null)
+            {
+                return NotFound(new { message = "Subject not found" });
+            }
+
+            var currentTenantId = GetCurrentTenantId();
+            if (currentTenantId.HasValue && subject.TenantId != currentTenantId)
+            {
+                return Forbid("You can only access subjects from your own tenant");
+            }
+
+            var relationships = await _subjectEvaluatorService.GetSubjectRelationshipsWithSurveysAsync(subjectId);
+            return Ok(relationships);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving relationships with surveys for subject {SubjectId}", subjectId);
+            return StatusCode(500, new { message = "An error occurred while retrieving relationships" });
+        }
+    }
+
+    /// <summary>
+    /// Get all relationships for an evaluator with their survey assignments
+    /// </summary>
+    /// <param name="evaluatorId">Evaluator ID</param>
+    /// <returns>List of relationships with survey assignments</returns>
+    [HttpGet("evaluators/{evaluatorId}/relationships-with-surveys")]
+    public async Task<ActionResult<List<RelationshipWithSurveysResponse>>> GetEvaluatorRelationshipsWithSurveys(Guid evaluatorId)
+    {
+        try
+        {
+            var evaluator = await _evaluatorService.GetEvaluatorByIdAsync(evaluatorId);
+            if (evaluator == null)
+            {
+                return NotFound(new { message = "Evaluator not found" });
+            }
+
+            var currentTenantId = GetCurrentTenantId();
+            if (currentTenantId.HasValue && evaluator.TenantId != currentTenantId)
+            {
+                return Forbid("You can only access evaluators from your own tenant");
+            }
+
+            var relationships = await _subjectEvaluatorService.GetEvaluatorRelationshipsWithSurveysAsync(evaluatorId);
+            return Ok(relationships);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving relationships with surveys for evaluator {EvaluatorId}", evaluatorId);
+            return StatusCode(500, new { message = "An error occurred while retrieving relationships" });
+        }
+    }
 }

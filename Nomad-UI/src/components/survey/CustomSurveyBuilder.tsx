@@ -43,7 +43,7 @@ export default function CustomSurveyBuilder({
   const [isSaving, setIsSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [autoAssign, setAutoAssign] = useState<boolean>(true);
+  const [autoAssign, setAutoAssign] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'form' | 'json'>('form');
   const [jsonInput, setJsonInput] = useState('');
 
@@ -372,7 +372,7 @@ export default function CustomSurveyBuilder({
               </div>
 
               {/* Auto-Assign Option - Only show when creating new survey */}
-              {!surveyId && (
+              {/* {!surveyId && (
                 <div className="pt-4 border-t border-gray-200">
                   <label className="block text-sm font-medium text-black mb-3">
                     Evaluator Assignment <span className="text-red-500">*</span>
@@ -421,7 +421,7 @@ export default function CustomSurveyBuilder({
                       : 'You can manually assign the survey to specific evaluators after creation.'}
                   </p>
                 </div>
-              )}
+              )} */}
             </div>
 
             {/* Pages */}
