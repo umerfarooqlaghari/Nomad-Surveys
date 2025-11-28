@@ -18,8 +18,9 @@ export default function ProjectProfileTab({ projectSlug }: ProjectProfileTabProp
         name: projectSlug.replace('-', ' ').toUpperCase(),
         slug: projectSlug,
         description: 'This is a sample project description',
-        organizationName: 'Sample Organization',
-        adminEmail: 'admin@example.com',
+        // Industry: projectData.industry,
+        // adminEmail: projectData.contactPersonEmail,
+        // adminName: projectData.contactPersonName,
         createdAt: new Date().toISOString(),
         status: 'Active',
         totalSubjects: 0,
@@ -47,28 +48,34 @@ export default function ProjectProfileTab({ projectSlug }: ProjectProfileTabProp
       {/* Project Overview */}
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">
-          Project Profile
+          Company Profile
         </h2>
 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-  <h2 className="text-2xl font-semibold text-gray-900 mb-6">Project Profile</h2>
-
   <div className="grid grid-cols-1 gap-2">
     {/* Basic Information */}
     <div className="space-y-5">
       <h3 className="text-lg font-semibold text-gray-800 border-b pb-2">Basic Information</h3>
       <div className="grid grid-cols-2 gap-y-6 text-sm">
-        <div className="text-gray-500 font-medium">Project Name</div>
+        <div className="text-gray-500 font-medium">Company Name</div>
         <div className="text-gray-900 font-semibold">{projectData.name}</div>
 
         <div className="text-gray-500 font-medium">Project Slug</div>
         <div className="text-gray-900 font-semibold">{projectData.slug}</div>
 
-        <div className="text-gray-500 font-medium">Organization</div>
-        <div className="text-gray-900 font-semibold">{projectData.organizationName}</div>
+        {/* <div className="text-gray-500 font-medium">Industry</div>
+        <div className="text-gray-900 font-semibold">{projectData.Industry}</div>
 
         <div className="text-gray-500 font-medium">Admin Email</div>
-        <div className="text-gray-900 font-semibold">{projectData.adminEmail}</div>
+        <div className="text-gray-900 font-semibold">{projectData.contactPersonEmail}</div>
 
+                <div className="text-gray-500 font-medium">Admin Name</div>
+        <div className="text-gray-900 font-semibold">{projectData.contactPersonName}</div> */}
+
+        <div className="text-gray-500 font-medium">Created</div>
+        <div className="text-gray-900 font-semibold">
+          {new Date(projectData.createdAt).toLocaleDateString()}
+        </div>
+        
         <div className="text-gray-500 font-medium">Status</div>
         <div>
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold 
@@ -79,10 +86,6 @@ export default function ProjectProfileTab({ projectSlug }: ProjectProfileTabProp
           </span>
         </div>
 
-        <div className="text-gray-500 font-medium">Created</div>
-        <div className="text-gray-900 font-semibold">
-          {new Date(projectData.createdAt).toLocaleDateString()}
-        </div>
       </div>
     </div>
   </div>

@@ -37,8 +37,8 @@ export default function ProjectsTab() {
       }
     } catch (err: any) {
       console.error('Error loading tenants:', err);
-      setError(err.message || 'Failed to load projects');
-      toast.error('Failed to load projects');
+      setError(err.message || 'Failed to load companies');
+      toast.error('Failed to load companies');
     } finally {
       setIsLoading(false);
     }
@@ -77,13 +77,13 @@ export default function ProjectsTab() {
 
     try {
       await tenantService.createTenant(formData, token);
-      toast.success('Project created successfully!');
+      toast.success('Company created successfully!');
       setShowForm(false);
       setFormData(tenantService.getDefaultFormData());
       await loadTenants(); // Reload the list
     } catch (err: any) {
       console.error('Error creating tenant:', err);
-      const errorMessage = err.message || 'Failed to create project';
+      const errorMessage = err.message || 'Failed to create Company';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -102,15 +102,15 @@ export default function ProjectsTab() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.headerContent}>
-          <h2>Projects</h2>
-          <p>Manage project onboarding and information</p>
+          <h2>Companies</h2>
+          <p>Manage company onboarding and information</p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
           className={styles.addButton}
           disabled={isLoading}
         >
-          {showForm ? 'Cancel' : 'Add Project'}
+          {showForm ? 'Cancel' : 'Add Company'}
         </button>
       </div>
 
@@ -125,14 +125,14 @@ export default function ProjectsTab() {
       {showForm && (
         <div className={styles.formCard}>
           <div className={styles.formHeader}>
-            <h3 className={styles.formTitle}>Add New Project</h3>
+            <h3 className={styles.formTitle}>Add New Company</h3>
           </div>
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.formGrid}>
               {/* Project Name */}
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Project Name <span className={styles.required}>*</span>
+                  Project Name <span className={styles.required}></span>
                 </label>
                 <input
                   type="text"
@@ -148,7 +148,7 @@ export default function ProjectsTab() {
               {/* Company Name */}
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Company Name <span className={styles.required}>*</span>
+                  Company Name <span className={styles.required}></span>
                 </label>
                 <input
                   type="text"
@@ -164,7 +164,7 @@ export default function ProjectsTab() {
               {/* Admin Details */}
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Admin First Name <span className={styles.required}>*</span>
+                  Admin First Name <span className={styles.required}></span>
                 </label>
                 <input
                   type="text"
@@ -179,7 +179,7 @@ export default function ProjectsTab() {
 
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Admin Last Name <span className={styles.required}>*</span>
+                  Admin Last Name <span className={styles.required}></span>
                 </label>
                 <input
                   type="text"
@@ -194,7 +194,7 @@ export default function ProjectsTab() {
 
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Admin Email <span className={styles.required}>*</span>
+                  Admin Email <span className={styles.required}></span>
                 </label>
                 <input
                   type="email"
@@ -209,7 +209,7 @@ export default function ProjectsTab() {
 
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Admin Password <span className={styles.required}>*</span>
+                  Admin Password <span className={styles.required}></span>
                 </label>
                 <div className={styles.passwordContainer}>
                   <input
@@ -233,20 +233,20 @@ export default function ProjectsTab() {
             </div>
 
             <div className={styles.formActions}>
-              <button
+              {/* <button
                 type="button"
                 onClick={() => setShowForm(false)}
                 className={styles.cancelButton}
                 disabled={isLoading}
               >
                 Cancel
-              </button>
+              </button> */}
               <button
                 type="submit"
                 className={styles.submitButton}
                 disabled={isLoading}
               >
-                {isLoading ? 'Creating...' : 'Create Project'}
+                {isLoading ? 'Creating...' : 'Add Company'}
               </button>
             </div>
           </form>
@@ -256,14 +256,14 @@ export default function ProjectsTab() {
       {/* Projects List */}
       <div className={styles.companiesCard}>
         <div className={styles.companiesHeader}>
-          <h3 className={styles.companiesTitle}>Projects List</h3>
+          <h3 className={styles.companiesTitle}>Companies List</h3>
         </div>
         <div className={styles.tableContainer}>
           <table className={styles.table}>
             <thead className={styles.tableHead}>
               <tr>
-                <th className={styles.tableHeader}>Project</th>
-                <th className={styles.tableHeader}>Project Slug</th>
+                <th className={styles.tableHeader}>Company</th>
+                <th className={styles.tableHeader}>Company Slug</th>
                 <th className={styles.tableHeader}>Users</th>
                 <th className={styles.tableHeader}>Status</th>
                 <th className={styles.tableHeader}>Created</th>
@@ -274,13 +274,13 @@ export default function ProjectsTab() {
               {isLoading ? (
                 <tr>
                   <td colSpan={6} className={styles.tableCell}>
-                    Loading projects...
+                    Loading Companies...
                   </td>
                 </tr>
               ) : tenants.length === 0 ? (
                 <tr>
                   <td colSpan={6} className={styles.tableCell}>
-                    No projects found. Create your first project above.
+                    No Companies found. Create your first Company above.
                   </td>
                 </tr>
               ) : (

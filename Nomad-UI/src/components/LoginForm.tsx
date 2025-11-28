@@ -212,7 +212,7 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
             {!isSuperAdmin && (
               <div className={styles.fieldGroup}>
                 <label htmlFor="tenantSlug" className={styles.label}>
-                  Company/Tenant ID
+                  Company ID
                 </label>
                 <input
                   id="tenantSlug"
