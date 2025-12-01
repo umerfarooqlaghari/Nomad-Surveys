@@ -516,7 +516,7 @@ export default function AssignSurveyModal({
               </div>
 
               {filteredAvailable.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No available relationships found</p>
+                <p className="text-center text-gray-500 py-8">No unassigned relationships found</p>
               ) : (
                 <div className="space-y-2">
                   {filteredAvailable.map(relationship => {

@@ -268,19 +268,22 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
       const { employees, errors } = employeeService.parseCSV(fileContent);
       console.log('✅ [EMPLOYEES] Parsed:', employees.length, 'employees,', errors.length, 'errors');
 
+      // Show parsing errors but don't stop processing valid entries
       if (errors.length > 0) {
-        toast.dismiss(loadingToast);
-        const errorMessage = `CSV parsing errors:\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? `\n... and ${errors.length - 5} more errors` : ''}`;
-        toast.error(errorMessage, { duration: 10000 });
+        const errorSummary = `⚠️ ${errors.length} row(s) skipped due to errors:\n${errors.slice(0, 3).join('\n')}${errors.length > 3 ? `\n... and ${errors.length - 3} more` : ''}`;
+        toast.error(errorSummary, { duration: 10000 });
         console.error('CSV parsing errors:', errors);
+      }
+
+      // Only stop if there are no valid employees to process
+      if (employees.length === 0) {
+        toast.dismiss(loadingToast);
+        toast.error('No valid employees found in CSV file');
         return;
       }
 
-      if (employees.length === 0) {
-        toast.dismiss(loadingToast);
-        toast.error('No valid employees found in CSV');
-        return;
-      }
+      // Update loading message to show we're uploading
+      toast.loading(`Uploading ${employees.length} valid employee(s)...`, { id: loadingToast });
 
       // Bulk create employees
       console.log('📤 [EMPLOYEES] Sending bulk create request...');
@@ -290,6 +293,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
         token
       );
 
+      // Dismiss loading toast after API call completes
       toast.dismiss(loadingToast);
 
       if (error) {
@@ -298,15 +302,23 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
       }
 
       if (data) {
-        const successMessage = `Successfully processed ${data.TotalRequested} employees:\n` +
-          `✅ Created: ${data.SuccessfullyCreated}\n` +
-          `🔄 Updated: ${data.UpdatedCount}\n` +
-          `❌ Failed: ${data.Failed}`;
+        // Build comprehensive summary
+        const totalRows = employees.length + errors.length;
+        const successMessage = `📊 Import Summary:\n` +
+          `• Total rows in CSV: ${totalRows}\n` +
+          `• Successfully created: ${data.SuccessfullyCreated}\n` +
+          `• Updated: ${data.UpdatedCount}\n` +
+          `• Skipped during parsing: ${errors.length}\n` +
+          `• Failed during upload: ${data.Failed}`;
 
         if (data.Failed > 0 && data.Errors.length > 0) {
           const errorDetails = data.Errors.slice(0, 3).join('\n');
-          toast.error(`${successMessage}\n\nErrors:\n${errorDetails}${data.Errors.length > 3 ? `\n... and ${data.Errors.length - 3} more` : ''}`, { duration: 10000 });
+          toast.error(`${successMessage}\n\n❌ Upload Errors:\n${errorDetails}${data.Errors.length > 3 ? `\n... and ${data.Errors.length - 3} more` : ''}`, { duration: 10000 });
+        } else if (errors.length > 0) {
+          // Some rows were skipped during parsing but upload was successful
+          toast.success(`${successMessage}\n\n✅ Valid entries were processed successfully`, { duration: 8000 });
         } else {
+          // Everything succeeded
           toast.success(successMessage, { duration: 5000 });
         }
 

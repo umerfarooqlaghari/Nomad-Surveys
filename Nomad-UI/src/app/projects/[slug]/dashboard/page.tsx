@@ -13,6 +13,7 @@ import ProjectParticipantsTab from '@/components/project/ProjectParticipantsTab'
 import ProjectEmployeesTab from '@/components/project/ProjectEmployeesTab';
 import ProjectSurveysTab from '@/components/project/ProjectSurveysTab';
 import ProjectQuestionsTab from '@/components/project/ProjectQuestionsTab';
+import { Toaster } from 'react-hot-toast';
 
 const tabs = [
   { id: 'profile', name: 'Profile', icon: "/Icons/people.svg" },
@@ -64,6 +65,28 @@ export default function ProjectDashboard() {
 
   return (
     <ProtectedRoute allowedRoles={['SuperAdmin', 'TenantAdmin']}>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            style: {
+              background: '#10B981',
+            },
+          },
+          error: {
+            duration: 5000,
+            style: {
+              background: '#EF4444',
+            },
+          },
+        }}
+      />
       <div className="min-h-screen bg-gray-50">
         {/* Navigation */}
         <nav className="bg-white shadow-sm border-b border-blue-700">
