@@ -263,8 +263,9 @@ class EmployeeService {
         return { employees, errors };
       }
 
-      // Track duplicate EmployeeIds within the CSV
+      // Track duplicate EmployeeIds and Emails within the CSV
       const seenEmployeeIds = new Set<string>();
+      const seenEmails = new Set<string>();
 
       // Process data rows
       for (let i = 1; i < lines.length; i++) {
@@ -275,7 +276,7 @@ class EmployeeService {
           const values = this.parseCSVLine(lines[i]);
 
           if (values.length < headers.length) {
-            errors.push(`Row ${lineNumber}: Insufficient columns (expected ${headers.length}, got ${values.length})`);
+            errors.push(`Row ${lineNumber} skipped: Missing some required information (expected ${headers.length} columns, found ${values.length})`);
             continue;
           }
 
@@ -289,37 +290,78 @@ class EmployeeService {
           const firstName = getField('firstname');
           const lastName = getField('lastname');
           const email = getField('email');
+          const number = getField('number');
 
           // Validate required fields
           if (!firstName) {
-            errors.push(`Row ${lineNumber}: FirstName is required`);
+            errors.push(`Row ${lineNumber} skipped${employeeId ? ` (ID: ${employeeId})` : ''}: First name is missing`);
             continue;
           }
           if (!lastName) {
-            errors.push(`Row ${lineNumber}: LastName is required`);
+            errors.push(`Row ${lineNumber} skipped${employeeId ? ` (ID: ${employeeId})` : ''}: Last name is missing`);
             continue;
           }
           if (!email) {
-            errors.push(`Row ${lineNumber}: Email is required`);
+            errors.push(`Row ${lineNumber} skipped${employeeId ? ` (ID: ${employeeId})` : ''}: Email address is missing`);
             continue;
           }
           if (!employeeId) {
-            errors.push(`Row ${lineNumber}: EmployeeId is required`);
+            errors.push(`Row ${lineNumber} skipped: Employee ID is missing`);
+            continue;
+          }
+
+          // Validate minimum character length for names (at least 2 characters)
+          if (firstName.length < 2) {
+            errors.push(`Row ${lineNumber} skipped (ID: ${employeeId}): First name must be at least 2 characters long`);
+            continue;
+          }
+          if (lastName.length < 2) {
+            errors.push(`Row ${lineNumber} skipped (ID: ${employeeId}): Last name must be at least 2 characters long`);
+            continue;
+          }
+
+          // Validate maximum character length for names (reasonable limit)
+          if (firstName.length > 50) {
+            errors.push(`Row ${lineNumber} skipped (ID: ${employeeId}): First name is too long (maximum 50 characters)`);
+            continue;
+          }
+          if (lastName.length > 50) {
+            errors.push(`Row ${lineNumber} skipped (ID: ${employeeId}): Last name is too long (maximum 50 characters)`);
             continue;
           }
 
           // Check for duplicate EmployeeId within CSV
           if (seenEmployeeIds.has(employeeId.toLowerCase())) {
-            errors.push(`Row ${lineNumber}: Duplicate EmployeeId "${employeeId}" found in CSV (only first occurrence will be processed)`);
+            errors.push(`Row ${lineNumber} skipped (ID: ${employeeId}): This employee ID appears multiple times in the file`);
             continue;
           }
           seenEmployeeIds.add(employeeId.toLowerCase());
 
-          // Validate email format
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          // Validate email format (more robust regex)
+          const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
           if (!emailRegex.test(email)) {
-            errors.push(`Row ${lineNumber}: Invalid email format "${email}"`);
+            errors.push(`Row ${lineNumber} skipped (ID: ${employeeId}): Email address "${email}" is not valid`);
             continue;
+          }
+
+          // Check for duplicate Email within CSV
+          if (seenEmails.has(email.toLowerCase())) {
+            errors.push(`Row ${lineNumber} skipped (ID: ${employeeId}): Email address "${email}" appears multiple times in the file`);
+            continue;
+          }
+          seenEmails.add(email.toLowerCase());
+
+          // Validate phone number format if provided
+          if (number) {
+            // Remove common separators for validation
+            const cleanNumber = number.replace(/[\s\-\(\)\.]/g, '');
+
+            // Check if it contains only digits and optional + at the start
+            const phoneRegex = /^\+?[0-9]{7,15}$/;
+            if (!phoneRegex.test(cleanNumber)) {
+              errors.push(`Row ${lineNumber} skipped (ID: ${employeeId}): Phone number "${number}" is not valid (must be 7-15 digits)`);
+              continue;
+            }
           }
 
           // Parse tenure
@@ -328,7 +370,7 @@ class EmployeeService {
           if (tenureStr) {
             tenure = parseInt(tenureStr, 10);
             if (isNaN(tenure) || tenure < 0 || tenure > 100) {
-              errors.push(`Row ${lineNumber}: Invalid tenure value "${tenureStr}" (must be 0-100)`);
+              errors.push(`Row ${lineNumber} skipped (ID: ${employeeId}): Tenure value "${tenureStr}" is not valid (must be between 0 and 100)`);
               continue;
             }
           }
@@ -355,7 +397,7 @@ class EmployeeService {
             FirstName: firstName,
             LastName: lastName,
             Email: email,
-            Number: getField('number') || undefined,
+            Number: number || undefined,
             EmployeeId: employeeId,
             CompanyName: getField('companyname') || undefined,
             Designation: getField('designation') || undefined,
@@ -369,16 +411,16 @@ class EmployeeService {
 
           employees.push(employee);
         } catch (rowError: any) {
-          errors.push(`Row ${lineNumber}: ${rowError.message}`);
+          errors.push(`Row ${lineNumber} skipped: ${rowError.message}`);
         }
       }
 
       if (employees.length === 0 && errors.length === 0) {
-        errors.push('No valid data rows found in CSV');
+        errors.push('No employee data found in the CSV file');
       }
 
     } catch (error: any) {
-      errors.push(`CSV parsing error: ${error.message}`);
+      errors.push(`Unable to read CSV file: ${error.message}`);
     }
 
     return { employees, errors };

@@ -323,6 +323,8 @@ public class TenantService : ITenantService
             company.ContactPersonRole = request.ContactPersonRole;
             company.ContactPersonPhone = request.ContactPersonPhone;
             company.UpdatedAt = DateTime.UtcNow;
+            company.LogoUrl = request.LogoUrl;
+
 
             await _context.SaveChangesAsync();
 

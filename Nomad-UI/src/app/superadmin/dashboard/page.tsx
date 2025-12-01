@@ -13,7 +13,7 @@ import ReportsTab from '@/components/superadmin/ReportsTab';
 
 const tabs = [
   { id: 'overview', name: 'Overview', icon: "/Icons/yelp.svg" },
-  { id: 'projects', name: 'Projects', icon: "/Icons/buildings.svg" },
+  { id: 'projects', name: 'Companies', icon: "/Icons/buildings.svg" },
   // { id: 'survey-builder', name: 'Survey Builder', icon: "/Icons/wrench-adjustable-circle.svg" },
   // { id: 'reports', name: 'Reports', icon: "/Icons/archive.svg" },
 ];

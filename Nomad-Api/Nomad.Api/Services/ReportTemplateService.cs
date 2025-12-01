@@ -42,6 +42,35 @@ public class ReportTemplateService : IReportTemplateService
         }
     }
 
+      private async Task<string> LoadTemplateAsync()
+    {
+        // Try multiple paths to find the template file
+        var possiblePaths = new List<string>
+        {
+            _templatePath,
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Templates", "ReportTemplate.html"),
+            Path.Combine(Directory.GetCurrentDirectory(), "Templates", "ReportTemplate.html"),
+            Path.Combine(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "", "Templates", "ReportTemplate.html")
+        };
+
+        foreach (var path in possiblePaths)
+        {
+            if (File.Exists(path))
+            {
+                _logger.LogInformation("Loading template from: {TemplatePath}", path);
+                var content = await File.ReadAllTextAsync(path);
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    return content;
+                }
+            }
+        }
+
+        // If no template found, log all attempted paths
+        _logger.LogError("Template file not found. Attempted paths: {Paths}", string.Join(", ", possiblePaths));
+        throw new FileNotFoundException($"Template file not found. Attempted paths: {string.Join(", ", possiblePaths)}");
+    }
+
     public async Task<string> GeneratePreviewHtmlAsync(
         string companyName,
         string? companyLogoUrl = null,
@@ -53,20 +82,22 @@ public class ReportTemplateService : IReportTemplateService
         try
         {
             // Check if template file exists
-            if (!File.Exists(_templatePath))
-            {
-                _logger.LogError("Template file not found at path: {TemplatePath}", _templatePath);
-                throw new FileNotFoundException($"Template file not found at path: {_templatePath}");
-            }
+            // if (!File.Exists(_templatePath))
+            // {
+            //     _logger.LogError("Template file not found at path: {TemplatePath}", _templatePath);
+            //     throw new FileNotFoundException($"Template file not found at path: {_templatePath}");
+            // }
 
-            // Load HTML template
-            var htmlTemplate = await File.ReadAllTextAsync(_templatePath);
+            // // Load HTML template
+            // var htmlTemplate = await File.ReadAllTextAsync(_templatePath);
 
-            if (string.IsNullOrWhiteSpace(htmlTemplate))
-            {
-                _logger.LogError("Template file is empty at path: {TemplatePath}", _templatePath);
-                throw new InvalidOperationException($"Template file is empty at path: {_templatePath}");
-            }
+            // if (string.IsNullOrWhiteSpace(htmlTemplate))
+            // {
+            //     _logger.LogError("Template file is empty at path: {TemplatePath}", _templatePath);
+            //     throw new InvalidOperationException($"Template file is empty at path: {_templatePath}");
+            // }
+                        var htmlTemplate = await LoadTemplateAsync();
+
 
             // Use mock data for preview
             var html = ReplacePlaceholdersForPreview(htmlTemplate, companyName, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor);
@@ -98,7 +129,9 @@ public class ReportTemplateService : IReportTemplateService
         try
         {
             // Load HTML template
-            var htmlTemplate = await File.ReadAllTextAsync(_templatePath);
+            // var htmlTemplate = await File.ReadAllTextAsync(_templatePath);
+                        var htmlTemplate = await LoadTemplateAsync();
+
 
             // Fetch comprehensive report data
             var reportData = await _reportingService.GetComprehensiveReportAsync(
