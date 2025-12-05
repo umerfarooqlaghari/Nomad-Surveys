@@ -220,7 +220,7 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
                   type="text"
                   required
                   className={styles.input}
-                  placeholder="Company/Tenant ID"
+                  placeholder="Company ID"
                   value={tenantSlug}
                   onChange={(e) => setTenantSlug(e.target.value)}
                 />

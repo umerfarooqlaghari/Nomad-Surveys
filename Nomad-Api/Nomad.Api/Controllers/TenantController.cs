@@ -115,7 +115,7 @@ public class TenantController : ControllerBase
     /// </summary>
     [HttpPut("{id:guid}")]
     [AuthorizeSuperAdmin]
-    public async Task<ActionResult> UpdateTenant(Guid id, [FromBody] CreateTenantRequest request)
+    public async Task<ActionResult> UpdateTenant(Guid id, [FromBody] UpdateTenantRequest request)
     {
         try
         {

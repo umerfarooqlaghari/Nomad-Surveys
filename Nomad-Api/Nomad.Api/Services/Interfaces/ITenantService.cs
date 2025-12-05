@@ -9,7 +9,7 @@ public interface ITenantService
     Task<TenantResponse?> GetTenantByIdAsync(Guid tenantId);
     Task<TenantResponse?> GetTenantBySlugAsync(string slug);
     Task<List<TenantListResponse>> GetTenantsAsync();
-    Task<bool> UpdateTenantAsync(Guid tenantId, CreateTenantRequest request);
+    Task<bool> UpdateTenantAsync(Guid tenantId, UpdateTenantRequest request);
     Task<bool> DeactivateTenantAsync(Guid tenantId);
     Task<bool> ActivateTenantAsync(Guid tenantId);
     Task<CompanyResponse?> GetCompanyByTenantIdAsync(Guid tenantId);

@@ -275,15 +275,10 @@ class EmployeeService {
           // Parse CSV line handling quoted fields with commas
           const values = this.parseCSVLine(lines[i]);
 
-          if (values.length < headers.length) {
-            errors.push(`Row ${lineNumber} skipped: Missing some required information (expected ${headers.length} columns, found ${values.length})`);
-            continue;
-          }
-
-          // Extract field values
+          // Extract field values (allow missing optional columns)
           const getField = (fieldName: string): string => {
             const index = headers.indexOf(fieldName.toLowerCase());
-            return index !== -1 ? values[index].trim() : '';
+            return index !== -1 && index < values.length ? values[index].trim() : '';
           };
 
           const employeeId = getField('employeeid');
@@ -464,34 +459,36 @@ class EmployeeService {
 
   /**
    * Generate CSV template with sample data
-   * Note: Any additional columns beyond the standard ones will be treated as custom attributes
+   * Note: Only firstName, lastName, email, and employeeId are REQUIRED
+   * All other columns are OPTIONAL and can be omitted from the CSV
+   * Any additional columns beyond the standard ones will be treated as custom attributes
    */
   generateCSVTemplate(): string {
     const headers = [
-      'firstName',
-      'lastName',
-      'email',
-      'number',
-      'employeeId',
-      'companyName',
-      'designation',
-      'department',
-      'tenure',
-      'grade',
-      'gender',
-      'managerId',
+      'firstName',      // REQUIRED
+      'lastName',       // REQUIRED
+      'email',          // REQUIRED
+      'employeeId',     // REQUIRED
+      'number',         // Optional
+      'companyName',    // Optional
+      'designation',    // Optional
+      'department',     // Optional
+      'tenure',         // Optional
+      'grade',          // Optional
+      'gender',         // Optional
+      'managerId',      // Optional
       // Add custom attribute columns here - they will be stored in MoreInfo
-      'skills',
-      'certifications',
-      'languages'
+      'skills',         // Optional (custom attribute)
+      'certifications', // Optional (custom attribute)
+      'languages'       // Optional (custom attribute)
     ];
 
     const sampleRow = [
       'John',
       'Doe',
       'john.doe@example.com',
-      '+1234567890',
       'EMP001',
+      '+1234567890',
       'Acme Corp',
       'Software Engineer',
       'Engineering',

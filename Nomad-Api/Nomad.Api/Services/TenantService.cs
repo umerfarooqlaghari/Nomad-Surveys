@@ -123,15 +123,53 @@ public class TenantService : ITenantService
                 .IgnoreQueryFilters()
                 .Include(t => t.Company)
                 .ThenInclude(c => c!.ContactPerson)
+                .Include(t => t.Users)
                 .FirstOrDefaultAsync(t => t.Id == tenantId);
 
-            return tenant != null ? _mapper.Map<TenantResponse>(tenant) : null;
+            if (tenant == null)
+            {
+                return null;
+            }
+
+            var response = _mapper.Map<TenantResponse>(tenant);
+
+            // Find the tenant admin user
+            var tenantAdminUser = await _context.Users
+                .IgnoreQueryFilters()
+                .Include(u => u.UserTenantRoles)
+                .ThenInclude(utr => utr.Role)
+                .Where(u => u.TenantId == tenantId &&
+                           u.UserTenantRoles.Any(utr => utr.Role.Name == "TenantAdmin" && utr.IsActive))
+                .FirstOrDefaultAsync();
+
+            if (tenantAdminUser != null)
+            {
+                response.TenantAdmin = _mapper.Map<UserResponse>(tenantAdminUser);
+                response.TenantAdmin.Roles = await GetUserRolesAsync(tenantAdminUser.Id, tenantId);
+            }
+
+            return response;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting tenant {TenantId}", tenantId);
             return null;
         }
+    }
+
+    private async Task<List<string>> GetUserRolesAsync(Guid userId, Guid? tenantId)
+    {
+        var userRoles = await _context.UserTenantRoles
+            .IgnoreQueryFilters()
+            .Include(utr => utr.Role)
+            .Where(utr => utr.UserId == userId &&
+                         utr.IsActive &&
+                         (utr.ExpiresAt == null || utr.ExpiresAt > DateTime.UtcNow) &&
+                         (tenantId == null || utr.TenantId == tenantId || utr.TenantId == null))
+            .Select(utr => utr.Role.Name!)
+            .ToListAsync();
+
+        return userRoles;
     }
 
     public async Task<TenantResponse?> GetTenantBySlugAsync(string slug)
@@ -171,7 +209,8 @@ public class TenantService : ITenantService
                 IsActive = t.IsActive,
                 CreatedAt = t.CreatedAt,
                 UserCount = t.Users.Count(u => u.IsActive),
-                CompanyName = t.Company?.Name
+                CompanyName = t.Company?.Name,
+                LogoUrl = t.Company?.LogoUrl
             }).ToList();
 
             return tenantResponses;
@@ -183,12 +222,14 @@ public class TenantService : ITenantService
         }
     }
 
-    public async Task<bool> UpdateTenantAsync(Guid tenantId, CreateTenantRequest request)
+    public async Task<bool> UpdateTenantAsync(Guid tenantId, UpdateTenantRequest request)
     {
         try
         {
             var tenant = await _context.Tenants
                 .IgnoreQueryFilters()
+                .Include(t => t.Company)
+                .Include(t => t.Users)
                 .FirstOrDefaultAsync(t => t.Id == tenantId);
 
             if (tenant == null)
@@ -213,6 +254,42 @@ public class TenantService : ITenantService
             tenant.Slug = request.Slug;
             tenant.Description = request.Description;
             tenant.UpdatedAt = DateTime.UtcNow;
+
+            // Update company information if it exists
+            if (tenant.Company != null)
+            {
+                tenant.Company.Name = request.Company.Name;
+                tenant.Company.NumberOfEmployees = request.Company.NumberOfEmployees;
+                tenant.Company.Location = request.Company.Location;
+                tenant.Company.Industry = request.Company.Industry;
+                tenant.Company.ContactPersonName = request.Company.ContactPersonName;
+                tenant.Company.ContactPersonEmail = request.Company.ContactPersonEmail;
+                tenant.Company.ContactPersonRole = request.Company.ContactPersonRole;
+                tenant.Company.ContactPersonPhone = request.Company.ContactPersonPhone;
+                tenant.Company.LogoUrl = request.Company.LogoUrl;
+                tenant.Company.UpdatedAt = DateTime.UtcNow;
+            }
+
+            // Update tenant admin user if it exists
+            var tenantAdminUser = await _context.Users
+                .IgnoreQueryFilters()
+                .Include(u => u.UserTenantRoles)
+                .ThenInclude(utr => utr.Role)
+                .Where(u => u.TenantId == tenantId &&
+                           u.UserTenantRoles.Any(utr => utr.Role.Name == "TenantAdmin" && utr.IsActive))
+                .FirstOrDefaultAsync();
+
+            if (tenantAdminUser != null)
+            {
+                tenantAdminUser.FirstName = request.TenantAdmin.FirstName;
+                tenantAdminUser.LastName = request.TenantAdmin.LastName;
+                tenantAdminUser.Email = request.TenantAdmin.Email;
+                tenantAdminUser.UserName = request.TenantAdmin.Email; // Keep username in sync with email
+                tenantAdminUser.UpdatedAt = DateTime.UtcNow;
+
+                // Password and phone number are NOT updated here
+                // They should be updated through separate user management endpoints
+            }
 
             await _context.SaveChangesAsync();
 

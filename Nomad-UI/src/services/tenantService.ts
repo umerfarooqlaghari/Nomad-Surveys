@@ -27,34 +27,52 @@ export interface CreateTenantData {
 }
 
 export interface TenantListItem {
-  id: string;
+  Id: string;
   Name: string;
   Slug: string;
   IsActive: boolean;
   CreatedAt: string;
   UserCount: number;
   CompanyName: string;
+  LogoUrl?: string;
 }
 
 export interface TenantResponse {
-  id: string;
+  Id: string;
   Name: string;
   Slug: string;
   Description: string;
   IsActive: boolean;
-  createdAt: string;
-  updatedAt?: string;
-  company?: {
-    id: string;
-    name: string;
-    numberOfEmployees: number;
-    location: string;
-    industry: string;
-    contactPersonName: string;
-    contactPersonEmail: string;
-    contactPersonRole: string;
-    contactPersonPhone: string;
-    logoUrl?: string;
+  CreatedAt: string;
+  UpdatedAt?: string;
+  Company?: {
+    Id: string;
+    Name: string;
+    NumberOfEmployees: number;
+    Location: string;
+    Industry: string;
+    ContactPersonName: string;
+    ContactPersonEmail: string;
+    ContactPersonRole: string;
+    ContactPersonPhone: string;
+    LogoUrl?: string;
+  };
+  TenantAdmin?: {
+    Id: string;
+    UserName: string;
+    Email: string;
+    FirstName: string;
+    LastName: string;
+    FullName: string;
+    IsActive: boolean;
+    EmailConfirmed: boolean;
+    PhoneNumber?: string;
+    CreatedAt: string;
+    UpdatedAt?: string;
+    LastLoginAt?: string;
+    TenantId?: string;
+    Roles: string[];
+    Permissions: string[];
   };
 }
 
@@ -62,23 +80,22 @@ export interface UpdateTenantData {
   Name: string;
   Slug: string;
   Description: string;
-  company: {
-    name: string;
-    numberOfEmployees: number;
-    location: string;
-    industry: string;
-    contactPersonName: string;
-    contactPersonEmail: string;
-    contactPersonRole: string;
-    contactPersonPhone: string;
-    logoUrl: string;
+  Company: {
+    Name: string;
+    NumberOfEmployees: number;
+    Location: string;
+    Industry: string;
+    ContactPersonName: string;
+    ContactPersonEmail: string;
+    ContactPersonRole: string;
+    ContactPersonPhone: string;
+    LogoUrl: string;
   };
-  tenantAdmin: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phoneNumber: string;
-    password?: string; // Optional for updates
+  TenantAdmin: {
+    FirstName: string;
+    LastName: string;
+    Email: string;
+    // Password and PhoneNumber are NOT included in updates
   };
 }
 

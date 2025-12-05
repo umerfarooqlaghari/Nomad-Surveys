@@ -10,15 +10,16 @@ interface ProjectProfileTabProps {
 export default function ProjectProfileTab({ projectSlug }: ProjectProfileTabProps) {
   const [projectData, setProjectData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // const [companyData] = useState<CompanyListItems[]>([]);
 
   useEffect(() => {
     // Simulate loading project data
     setTimeout(() => {
       setProjectData({
-        name: projectSlug.replace('-', ' ').toUpperCase(),
+        name: projectSlug.replace('-', ' '),
         slug: projectSlug,
         description: 'This is a sample project description',
-        // Industry: projectData.industry,
+        // industry: companyData.Industry ,
         // adminEmail: projectData.contactPersonEmail,
         // adminName: projectData.contactPersonName,
         createdAt: new Date().toISOString(),
@@ -30,6 +31,8 @@ export default function ProjectProfileTab({ projectSlug }: ProjectProfileTabProp
       setIsLoading(false);
     }, 1000);
   }, [projectSlug]);
+
+    console.log(projectData);
 
   if (isLoading) {
     return (
@@ -75,7 +78,7 @@ export default function ProjectProfileTab({ projectSlug }: ProjectProfileTabProp
         <div className="text-gray-900 font-semibold">
           {new Date(projectData.createdAt).toLocaleDateString()}
         </div>
-        
+
         <div className="text-gray-500 font-medium">Status</div>
         <div>
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold 

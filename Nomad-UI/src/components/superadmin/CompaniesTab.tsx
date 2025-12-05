@@ -15,6 +15,11 @@ export default function CompaniesTab() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<CreateTenantData>(tenantService.getDefaultFormData());
+  const [logoPreview, setLogoPreview] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // Load tenants on component mount
   useEffect(() => {
@@ -125,6 +130,18 @@ export default function CompaniesTab() {
       return;
     }
 
+    // Check if logo is still uploading
+    if (isUploadingLogo) {
+      toast.error('Please wait for logo upload to complete');
+      return;
+    }
+
+    // Check if logo file is selected but not uploaded
+    if (logoFile && !formData.company.logoUrl) {
+      toast.error('Please wait for logo upload to complete');
+      return;
+    }
+
     // Validate form data
     const validation = tenantService.validateTenantData(formData);
     if (!validation.isValid) {
@@ -159,6 +176,196 @@ export default function CompaniesTab() {
 
   const resetForm = () => {
     setFormData(tenantService.getDefaultFormData());
+    setLogoPreview('');
+    setLogoFile(null);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    try {
+      setIsUploadingLogo(true);
+      setLogoFile(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload to Cloudinary
+      const formDataUpload = new FormData();
+      formDataUpload.append('images', file);
+
+      const response = await fetch('/api/admin/cloudinary/upload/bulk?folder=company-logos', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formDataUpload,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload logo');
+      }
+
+      const result = await response.json();
+
+      if (result.results && result.results.length > 0 && result.results[0].Success) {
+        const logoUrl = result.results[0].Url;
+        setFormData(prev => ({
+          ...prev,
+          company: {
+            ...prev.company,
+            logoUrl: logoUrl,
+          },
+        }));
+        toast.success('Logo uploaded successfully');
+      } else {
+        throw new Error('Upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      toast.error('Failed to upload logo');
+      setLogoPreview('');
+      setLogoFile(null);
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleEditClick = async (tenantId: string) => {
+    if (!token) return;
+
+    try {
+      setIsLoading(true);
+      const { data, error } = await tenantService.getTenantById(tenantId, token);
+
+      if (error || !data) {
+        toast.error(error || 'Failed to load tenant details');
+        return;
+      }
+
+      // Convert TenantResponse to CreateTenantData format for editing
+      setFormData({
+        name: data.Name,
+        slug: data.Slug,
+        description: data.Description || '',
+        company: {
+          name: data.Company?.Name || '',
+          numberOfEmployees: data.Company?.NumberOfEmployees || 0,
+          location: data.Company?.Location || '',
+          industry: data.Company?.Industry || '',
+          contactPersonName: data.Company?.ContactPersonName || '',
+          contactPersonEmail: data.Company?.ContactPersonEmail || '',
+          contactPersonRole: data.Company?.ContactPersonRole || '',
+          contactPersonPhone: data.Company?.ContactPersonPhone || '',
+          logoUrl: data.Company?.LogoUrl || '',
+        },
+        tenantAdmin: {
+          firstName: data.TenantAdmin?.FirstName || '',
+          lastName: data.TenantAdmin?.LastName || '',
+          email: data.TenantAdmin?.Email || '',
+          phoneNumber: data.TenantAdmin?.PhoneNumber || '',
+          password: '', // Password is never returned from API for security
+        },
+      });
+
+      setLogoPreview(data.Company?.LogoUrl || '');
+      setEditingTenantId(tenantId);
+      setIsEditMode(true);
+      setShowForm(true);
+    } catch (err) {
+      toast.error('Failed to load tenant details');
+      console.error('Error loading tenant:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false);
+    setEditingTenantId(null);
+    setShowForm(false);
+    resetForm();
+  };
+
+  const handleUpdateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!token || !editingTenantId) return;
+
+    // Check if logo is still uploading
+    if (isUploadingLogo) {
+      toast.error('Please wait for logo upload to complete');
+      return;
+    }
+
+    // Check if logo file is selected but not uploaded
+    if (logoFile && !formData.company.logoUrl) {
+      toast.error('Please wait for logo upload to complete');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError('');
+
+      const updateData = {
+        Name: formData.name,
+        Slug: formData.slug,
+        Description: formData.description,
+        Company: {
+          Name: formData.company.name,
+          NumberOfEmployees: formData.company.numberOfEmployees,
+          Location: formData.company.location,
+          Industry: formData.company.industry,
+          ContactPersonName: formData.company.contactPersonName,
+          ContactPersonEmail: formData.company.contactPersonEmail,
+          ContactPersonRole: formData.company.contactPersonRole,
+          ContactPersonPhone: formData.company.contactPersonPhone,
+          LogoUrl: formData.company.logoUrl,
+        },
+        TenantAdmin: {
+          FirstName: formData.tenantAdmin.firstName,
+          LastName: formData.tenantAdmin.lastName,
+          Email: formData.tenantAdmin.email,
+          // Password and PhoneNumber are NOT sent during updates
+        },
+      };
+
+      const { error } = await tenantService.updateTenant(editingTenantId, updateData, token);
+
+      if (error) {
+        setError(error);
+        toast.error(error);
+        return;
+      }
+
+      toast.success('Company updated successfully!');
+      handleCancelEdit();
+      await loadTenants();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update company';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -167,10 +374,16 @@ export default function CompaniesTab() {
       <div className={styles.header}>
         <div className={styles.headerContent}>
           <h2>Companies</h2>
-          <p>Manage organization onboarding and information</p>
+          <p>Manage organization onboarding and information (Updated)</p>
         </div>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (showForm) {
+              handleCancelEdit();
+            } else {
+              setShowForm(true);
+            }
+          }}
           className={styles.addButton}
           disabled={isLoading}
         >
@@ -188,8 +401,10 @@ export default function CompaniesTab() {
       {/* Onboarding Form */}
       {showForm && (
         <div className={styles.formCard}>
-          <h3 className={styles.formTitle}>Organization Onboarding</h3>
-          <form onSubmit={handleSubmit} className={styles.form}>
+          <h3 className={styles.formTitle}>
+            {isEditMode ? 'Edit Company' : 'Organization Onboarding'}
+          </h3>
+          <form onSubmit={isEditMode ? handleUpdateSubmit : handleSubmit} className={styles.form}>
             <div className={styles.formGrid}>
               {/* Tenant Information */}
               <div className={styles.formSection}>
@@ -299,16 +514,36 @@ export default function CompaniesTab() {
 
                 <div className={styles.fieldGroup}>
                   <label className={styles.label}>
-                    Logo URL
+                    Company Logo
                   </label>
                   <input
-                    type="url"
-                    name="company.logoUrl"
-                    value={formData.company.logoUrl}
-                    onChange={handleInputChange}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
                     className={styles.input}
-                    placeholder="https://example.com/logo.png"
+                    disabled={isUploadingLogo}
                   />
+                  {isUploadingLogo && (
+                    <p style={{ fontSize: '14px', color: '#7c3aed', marginTop: '8px' }}>
+                      Uploading logo...
+                    </p>
+                  )}
+                  {logoPreview && (
+                    <div style={{ marginTop: '12px' }}>
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        style={{
+                          maxWidth: '128px',
+                          maxHeight: '128px',
+                          objectFit: 'contain',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '4px',
+                          padding: '8px'
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -337,8 +572,9 @@ export default function CompaniesTab() {
             </div>
 
             {/* Tenant Admin Information - Auto-syncs with Contact Person */}
-            <div className={styles.formSection}>
-              <h4 className={styles.sectionTitle}>Tenant Admin Account</h4>
+            {!isEditMode && (
+              <div className={styles.formSection}>
+                <h4 className={styles.sectionTitle}>Tenant Admin Account</h4>
               <div className={styles.formGrid}>
                 <div className={styles.fieldGroup}>
                   <label className={`${styles.label} ${styles.required}`}>
@@ -348,7 +584,7 @@ export default function CompaniesTab() {
                     type="text"
                     value={formData.tenantAdmin.firstName}
                     onChange={(e) => handleTenantAdminChange('firstName', e.target.value)}
-                    required
+                    required={!isEditMode}
                     className={styles.input}
                     placeholder="First name"
                   />
@@ -362,7 +598,7 @@ export default function CompaniesTab() {
                     type="text"
                     value={formData.tenantAdmin.lastName}
                     onChange={(e) => handleTenantAdminChange('lastName', e.target.value)}
-                    required
+                    required={!isEditMode}
                     className={styles.input}
                     placeholder="Last name"
                   />
@@ -376,55 +612,61 @@ export default function CompaniesTab() {
                     type="email"
                     value={formData.tenantAdmin.email}
                     onChange={(e) => handleTenantAdminChange('email', e.target.value)}
-                    required
+                    required={!isEditMode}
                     className={styles.input}
                     placeholder="admin@company.com"
                   />
                 </div>
 
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.tenantAdmin.phoneNumber}
-                    onChange={(e) => handleTenantAdminChange('phoneNumber', e.target.value)}
-                    className={styles.input}
-                    placeholder="+1 (555) 123-4567"
-                  />
-                </div>
+                {/* Phone Number and Password - Only show in create mode */}
+                {!isEditMode && (
+                  <>
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Phone Number
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.tenantAdmin.phoneNumber}
+                        onChange={(e) => handleTenantAdminChange('phoneNumber', e.target.value)}
+                        className={styles.input}
+                        placeholder="+1 (555) 123-4567"
+                      />
+                    </div>
 
-                <div className={styles.fieldGroup}>
-                  <label className={`${styles.label} ${styles.required}`}>
-                    Password
-                  </label>
-                  <div className={styles.passwordContainer}>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={formData.tenantAdmin.password}
-                      onChange={(e) => handleTenantAdminChange('password', e.target.value)}
-                      required
-                      minLength={6}
-                      className={styles.input}
-                      placeholder="Minimum 6 characters"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className={styles.passwordToggle}
-                    >
-                      {showPassword ? 'HIDE' : 'SHOW'}
-                    </button>
-                  </div>
-                </div>
+                    <div className={styles.fieldGroup}>
+                      <label className={`${styles.label} ${styles.required}`}>
+                        Password
+                      </label>
+                      <div className={styles.passwordContainer}>
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={formData.tenantAdmin.password}
+                          onChange={(e) => handleTenantAdminChange('password', e.target.value)}
+                          required
+                          minLength={6}
+                          className={styles.input}
+                          placeholder="Minimum 6 characters"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className={styles.passwordToggle}
+                        >
+                          {showPassword ? 'HIDE' : 'SHOW'}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
+            )}
 
             <div className={styles.formActions}>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={handleCancelEdit}
                 className={styles.cancelButton}
                 disabled={isLoading}
               >
@@ -435,7 +677,10 @@ export default function CompaniesTab() {
                 className={styles.submitButton}
                 disabled={isLoading}
               >
-                {isLoading ? 'Creating...' : 'Create Company'}
+                {isLoading
+                  ? (isEditMode ? 'Updating...' : 'Creating...')
+                  : (isEditMode ? 'Update Company' : 'Create Company')
+                }
               </button>
             </div>
           </form>
@@ -474,11 +719,28 @@ export default function CompaniesTab() {
                 </tr>
               ) : (
                 tenants.map((tenant) => (
-                  <tr key={tenant.id} className={styles.tableRow}>
+                  <tr key={tenant.Id} className={styles.tableRow}>
                     <td className={styles.tableCell}>
                       <div className={styles.companyInfo}>
                         <div className={styles.logoContainer}>
-                          <div className={styles.logoPlaceholder}>LOGO</div>
+                          {tenant.LogoUrl ? (
+                            <img
+                              src={tenant.LogoUrl}
+                              alt={`${tenant.CompanyName || tenant.Name} logo`}
+                              className={styles.logoImage}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (placeholder) placeholder.style.display = 'flex';
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className={styles.logoPlaceholder}
+                            style={{ display: tenant.LogoUrl ? 'none' : 'flex' }}
+                          >
+                            {tenant.CompanyName?.[0] || tenant.Name?.[0] || 'C'}
+                          </div>
                         </div>
                         <div className={styles.companyDetails}>
                           <div className={styles.companyName}>{tenant.CompanyName || tenant.Name}</div>
@@ -503,7 +765,11 @@ export default function CompaniesTab() {
                         <button className={`${styles.actionButton} ${styles.viewButton}`}>
                           View
                         </button>
-                        <button className={`${styles.actionButton} ${styles.editButton}`}>
+                        <button
+                          className={`${styles.actionButton} ${styles.editButton}`}
+                          onClick={() => handleEditClick(tenant.Id)}
+                          disabled={isLoading}
+                        >
                           Edit
                         </button>
                       </div>
@@ -515,6 +781,7 @@ export default function CompaniesTab() {
           </table>
         </div>
       </div>
+
     </div>
   );
 }
