@@ -115,12 +115,6 @@ export default function ProjectDashboard() {
                   <span className="font-medium">{user?.fullName}</span>
                 </div>
                 <button
-                  onClick={() => window.close()}
-                  className="bg-gray-500 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors mr-2"
-                >
-                  Close
-                </button>
-                <button
                   onClick={logout}
                   className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
                 >

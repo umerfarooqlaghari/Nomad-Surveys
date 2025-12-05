@@ -127,32 +127,7 @@ export default function OverviewTab() {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">Recent Activity</h3>
-        </div>
-        <div className="divide-y divide-gray-200">
-          {recentActivity.map((activity) => (
-            <div key={activity.id} className="px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                  <p className="text-sm text-gray-500">{activity.company}</p>
-                </div>
-              </div>
-              <div className="text-sm text-gray-400">{activity.time}</div>
-            </div>
-          ))}
-        </div>
-        <div className="px-6 py-3 bg-gray-50 text-center">
-          <button className="text-sm text-blue-600 hover:text-blue-500">
-            View all activity
-          </button>
-        </div>
-      </div>
+      
     </div>
   );
 }

@@ -304,7 +304,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
       if (data) {
         // Build comprehensive summary
         const totalRows = employees.length + errors.length;
-        const successMessage = `📊 Import Summary:\n` +
+        const successMessage = ` Import Summary:\n` +
           `• Total rows in CSV: ${totalRows}\n` +
           `• Successfully created: ${data.SuccessfullyCreated}\n` +
           `• Updated: ${data.UpdatedCount}\n` +
@@ -316,10 +316,10 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
           toast.error(`${successMessage}\n\n❌ Upload Errors:\n${errorDetails}${data.Errors.length > 3 ? `\n... and ${data.Errors.length - 3} more` : ''}`, { duration: 10000 });
         } else if (errors.length > 0) {
           // Some rows were skipped during parsing but upload was successful
-          toast.success(`${successMessage}\n\n✅ Valid entries were processed successfully`, { duration: 8000 });
+          toast.success(`${successMessage}\n\n Valid entries were processed successfully`, { duration: 8000 });
         } else {
           // Everything succeeded
-          toast.success(successMessage, { duration: 5000 });
+          toast.success(successMessage, { duration: 10000 });
         }
 
         await fetchEmployees();

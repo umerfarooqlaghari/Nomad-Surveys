@@ -153,7 +153,7 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
         if (result.error) {
           toast.error(`Failed to create cluster: ${result.error}`);
         } else {
-          toast.success('✅ Cluster created successfully');
+          toast.success('Cluster created successfully');
           setIsAddingCluster(false);
           loadAllData();
         }
@@ -167,7 +167,7 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
         if (result.error) {
           toast.error(`Failed to update cluster: ${result.error}`);
         } else {
-          toast.success('✅ Cluster updated successfully');
+          toast.success('Cluster updated successfully');
           setEditingClusterId(null);
           loadAllData();
         }
@@ -198,7 +198,7 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
       const result = await questionService.deleteCluster(tenantSlug, clusterId, token);
       toast.dismiss(loadingToast);
       if (result.success) {
-        toast.success('✅ Cluster deleted successfully');
+        toast.success('Cluster deleted successfully');
         loadAllData();
       } else {
         toast.error(`Failed to delete cluster: ${result.error || 'Unknown error'}`);
@@ -244,7 +244,7 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
         if (result.error) {
           toast.error(`Failed to create competency: ${result.error}`);
         } else {
-          toast.success('✅ Competency created successfully');
+          toast.success(' Competency created successfully');
           setAddingCompetencyToCluster(null);
           loadAllData();
         }
@@ -259,7 +259,7 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
         if (result.error) {
           toast.error(`Failed to update competency: ${result.error}`);
         } else {
-          toast.success('✅ Competency updated successfully');
+          toast.success('Competency updated successfully');
           setEditingCompetencyId(null);
           loadAllData();
         }
@@ -290,7 +290,7 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
       const result = await questionService.deleteCompetency(tenantSlug, competencyId, token);
       toast.dismiss(loadingToast);
       if (result.success) {
-        toast.success('✅ Competency deleted successfully');
+        toast.success('Competency deleted successfully');
         loadAllData();
       } else {
         toast.error(`Failed to delete competency: ${result.error || 'Unknown error'}`);
@@ -340,7 +340,7 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
         if (result.error) {
           toast.error(`Failed to create question: ${result.error}`);
         } else {
-          toast.success('✅ Question created successfully');
+          toast.success('Question created successfully');
           setAddingQuestionToCompetency(null);
           loadAllData();
         }
@@ -355,7 +355,7 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
         if (result.error) {
           toast.error(`Failed to update question: ${result.error}`);
         } else {
-          toast.success('✅ Question updated successfully');
+          toast.success('Question updated successfully');
           setEditingQuestionId(null);
           loadAllData();
         }
@@ -386,7 +386,7 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
       const result = await questionService.deleteQuestion(tenantSlug, questionId, token);
       toast.dismiss(loadingToast);
       if (result.success) {
-        toast.success('✅ Question deleted successfully');
+        toast.success('Question deleted successfully');
         loadAllData();
       } else {
         toast.error(`Failed to delete question: ${result.error || 'Unknown error'}`);

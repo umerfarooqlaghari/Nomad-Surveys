@@ -10,6 +10,7 @@ public class TenantResponse
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public CompanyResponse? Company { get; set; }
+    public UserResponse? TenantAdmin { get; set; }
 }
 
 public class TenantListResponse
@@ -21,6 +22,7 @@ public class TenantListResponse
     public DateTime CreatedAt { get; set; }
     public int UserCount { get; set; }
     public string? CompanyName { get; set; }
+    public string? LogoUrl { get; set; }
 }
 
 public class CompanyResponse
