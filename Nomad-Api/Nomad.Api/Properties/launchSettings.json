@@ -7,7 +7,10 @@
       "launchBrowser": false,
       "applicationUrl": "http://localhost:5232",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "CLOUDINARY_CLOUD_NAME": "dp6u85kkx",
+        "CLOUDINARY_API_KEY": "257221466619946",
+        "CLOUDINARY_API_SECRET": "JYo-xIQQeywLhircNkyLPUgjhFw"
       }
     },
     "https": {
@@ -16,7 +19,10 @@
       "launchBrowser": false,
       "applicationUrl": "https://localhost:7105;http://localhost:5232",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "CLOUDINARY_CLOUD_NAME": "dp6u85kkx",
+        "CLOUDINARY_API_KEY": "257221466619946",
+        "CLOUDINARY_API_SECRET": "JYo-xIQQeywLhircNkyLPUgjhFw"
       }
     }
   }

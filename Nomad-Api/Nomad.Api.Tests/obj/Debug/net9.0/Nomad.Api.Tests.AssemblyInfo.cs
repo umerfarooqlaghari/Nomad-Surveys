@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Nomad.Api.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9772a6aa4d5039ac1df8690962ac69f309a5dfe7")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+30de7098806fb59434479ba69e3cf8a8b6ed2a55")]
 [assembly: System.Reflection.AssemblyProductAttribute("Nomad.Api.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Nomad.Api.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -201,3 +201,4 @@ C:\Users\Umer Farooq\Desktop\Nomad Survey Builder\Nomad-Surveys\Nomad-Api\Nomad.
 C:\Users\Umer Farooq\Desktop\Nomad Survey Builder\Nomad-Surveys\Nomad-Api\Nomad.Api\bin\Debug\net9.0\PuppeteerSharp.dll
 C:\Users\Umer Farooq\Desktop\Nomad Survey Builder\Nomad-Surveys\Nomad-Api\Nomad.Api\bin\Debug\net9.0\CloudinaryDotNet.dll
 C:\Users\Umer Farooq\Desktop\Nomad Survey Builder\Nomad-Surveys\Nomad-Api\Nomad.Api\bin\Debug\net9.0\Newtonsoft.Json.dll
+C:\Users\Umer Farooq\Desktop\Nomad Survey Builder\Nomad-Surveys\Nomad-Api\Nomad.Api\bin\Debug\net9.0\Templates\ReportTemplate.html
