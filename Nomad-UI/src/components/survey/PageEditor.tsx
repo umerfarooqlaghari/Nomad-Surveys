@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useState } from 'react';
-import { SurveyPage, Question, createDefaultQuestion, generateQuestionId } from '@/types/survey';
+import React, { useState, useEffect } from 'react';
+import { SurveyPage, Question, createDefaultQuestion, generateQuestionId, TenantSettings, DEFAULT_QUESTION_CONFIGS } from '@/types/survey';
 import QuestionEditor from './QuestionEditor';
 import ImportQuestionModal from './ImportQuestionModal';
 import toast from 'react-hot-toast';
@@ -13,6 +13,7 @@ interface PageEditorProps {
   totalPages: number;
   tenantSlug: string;
   token: string;
+  tenantSettings: TenantSettings | null;
   onUpdate: (updatedPage: SurveyPage) => void;
   onDelete: () => void;
   onMoveUp?: () => void;
@@ -25,6 +26,7 @@ export default function PageEditor({
   totalPages,
   tenantSlug,
   token,
+  tenantSettings,
   onUpdate,
   onDelete,
   onMoveUp,
@@ -33,6 +35,11 @@ export default function PageEditor({
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+
+  // Log when tenantSettings changes
+  useEffect(() => {
+    console.log('🔄 [PageEditor] tenantSettings updated:', tenantSettings);
+  }, [tenantSettings]);
 
   // Update page title
   const handleTitleChange = (title: string) => {
@@ -46,7 +53,29 @@ export default function PageEditor({
 
   // Add a new custom question
   const handleAddQuestion = (type: Question['type']) => {
-    const newQuestion = createDefaultQuestion(type);
+    // Use tenant settings if available, otherwise use the provided type
+    const questionType = tenantSettings?.defaultQuestionType || type;
+    const newQuestion = createDefaultQuestion(questionType);
+
+    console.log('🔧 Adding question:', {
+      requestedType: type,
+      actualType: questionType,
+      tenantSettings,
+      hasRatingOptions: tenantSettings?.defaultRatingOptions?.length,
+    });
+
+    // If the question type is rating and we have custom rating options, replace the config
+    if (questionType === 'rating' && tenantSettings?.defaultRatingOptions && tenantSettings.defaultRatingOptions.length > 0) {
+      newQuestion.config = {
+        ratingOptions: tenantSettings.defaultRatingOptions.map(opt => ({
+          id: opt.id,
+          text: opt.text,
+          order: opt.order,
+        })),
+      };
+      console.log('✅ Applied rating options:', newQuestion.config.ratingOptions);
+    }
+
     newQuestion.order = page.questions.length;
 
     onUpdate({
@@ -58,16 +87,48 @@ export default function PageEditor({
 
   // Import question from library
   const handleImportQuestion = (importedQuestion: any) => {
+    console.log('📥 [IMPORT] Starting import with tenantSettings:', tenantSettings);
+    console.log('📥 [IMPORT] Imported question data:', importedQuestion);
+
+    // Use tenant settings for default question type if available
+    const questionType = tenantSettings?.defaultQuestionType || mapQuestionType(importedQuestion.QuestionType);
+
+    console.log('📥 [IMPORT] Question type decision:', {
+      'tenantSettings exists': !!tenantSettings,
+      'tenantSettings.defaultQuestionType': tenantSettings?.defaultQuestionType,
+      'originalType from backend': importedQuestion.QuestionType,
+      'mappedType': mapQuestionType(importedQuestion.QuestionType),
+      'FINAL questionType': questionType,
+      'hasRatingOptions': tenantSettings?.defaultRatingOptions?.length,
+    });
+
+    // Determine the config based on question type and tenant settings
+    let questionConfig;
+    if (questionType === 'rating' && tenantSettings?.defaultRatingOptions && tenantSettings.defaultRatingOptions.length > 0) {
+      // Use tenant settings rating options
+      questionConfig = {
+        ratingOptions: tenantSettings.defaultRatingOptions.map(opt => ({
+          id: opt.id,
+          text: opt.text,
+          order: opt.order,
+        })),
+      };
+      console.log('✅ Using tenant settings rating options for imported question:', questionConfig.ratingOptions);
+    } else {
+      // Use default config for the question type
+      questionConfig = getDefaultConfigForType(questionType);
+    }
+
     // Map imported question to our schema
     const newQuestion: Question = {
       id: generateQuestionId(),
       name: `question_${Date.now()}`,
-      type: mapQuestionType(importedQuestion.QuestionType),
+      type: questionType,
       selfText: importedQuestion.SelfQuestion,
       othersText: importedQuestion.OthersQuestion,
       required: false,
       order: page.questions.length,
-      config: getDefaultConfigForType(mapQuestionType(importedQuestion.QuestionType)),
+      config: questionConfig,
       showTo: 'everyone',
       importedFrom: {
         questionId: importedQuestion.Id,
@@ -75,6 +136,13 @@ export default function PageEditor({
         competencyId: importedQuestion.CompetencyId,
       },
     };
+
+    console.log('📋 [IMPORT] Final question object:', {
+      type: newQuestion.type,
+      config: newQuestion.config,
+      hasRatingOptions: !!newQuestion.config.ratingOptions,
+      ratingOptionsCount: newQuestion.config.ratingOptions?.length,
+    });
 
     onUpdate({
       ...page,

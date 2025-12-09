@@ -105,38 +105,22 @@ builder.Services.Configure<Nomad.Api.Configuration.EmailSettings>(
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ITenantService, TenantService>();
 builder.Services.AddScoped<SeedDataService>();
-
-// Add email service
 builder.Services.AddScoped<IEmailService, EmailService>();
-
-// Add participant services
 builder.Services.AddScoped<ISubjectService, SubjectService>();
 builder.Services.AddScoped<IEvaluatorService, EvaluatorService>();
 builder.Services.AddScoped<ISubjectEvaluatorService, SubjectEvaluatorService>();
 builder.Services.AddScoped<IRelationshipService, RelationshipService>();
-
-// Add survey services
 builder.Services.AddScoped<ISurveyService, SurveyService>();
 builder.Services.AddScoped<ISurveyAssignmentService, SurveyAssignmentService>();
-
-// Add cluster, competency, question services
+builder.Services.AddScoped<ITenantSettingsService, TenantSettingsService>();
 builder.Services.AddScoped<IClusterService, ClusterService>();
 builder.Services.AddScoped<ICompetencyService, CompetencyService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
-
-// Add employee service
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
-
-// Add participant portal service
 builder.Services.AddScoped<IParticipantService, ParticipantService>();
-
-// Add reporting service
 builder.Services.AddScoped<IReportingService, ReportingService>();
-
-// Add report generation service
 builder.Services.AddScoped<IReportTemplateService, ReportTemplateService>();
 builder.Services.AddScoped<IReportTemplateSettingsService, ReportTemplateSettingsService>();
-// Cloudinary service for image uploads used by the report template controller
 builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
 
 // Add CORS

@@ -36,6 +36,9 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
     // Survey entity
     public DbSet<Survey> Surveys { get; set; }
 
+    // Tenant settings entity
+    public DbSet<TenantSettings> TenantSettings { get; set; }
+
     // Survey assignment entity
     public DbSet<SubjectEvaluatorSurvey> SubjectEvaluatorSurveys { get; set; }
 
@@ -345,6 +348,24 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
             entity.HasIndex(e => e.CreatedAt);
         });
 
+        // TenantSettings configurations
+        modelBuilder.Entity<TenantSettings>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DefaultQuestionType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.DefaultRatingOptions).HasColumnType("jsonb");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Unique constraint: one settings per tenant
+            entity.HasIndex(e => e.TenantId).IsUnique();
+
+            // Foreign key to Tenant (one-to-one relationship)
+            entity.HasOne(e => e.Tenant)
+                .WithOne()
+                .HasForeignKey<TenantSettings>(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // SubjectEvaluatorSurvey configurations (junction table for survey assignments)
         modelBuilder.Entity<SubjectEvaluatorSurvey>(entity =>
         {
@@ -563,6 +584,9 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
 
         // Survey query filter for tenant isolation
         modelBuilder.Entity<Survey>().HasQueryFilter(s => CurrentTenantId == null || s.TenantId == CurrentTenantId);
+
+        // Tenant settings query filter for tenant isolation
+        modelBuilder.Entity<TenantSettings>().HasQueryFilter(ts => CurrentTenantId == null || ts.TenantId == CurrentTenantId);
 
         // Survey assignment query filter for tenant isolation
         modelBuilder.Entity<SubjectEvaluatorSurvey>().HasQueryFilter(ses => CurrentTenantId == null || ses.TenantId == CurrentTenantId);

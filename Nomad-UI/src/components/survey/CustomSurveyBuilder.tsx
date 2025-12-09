@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import {
   SurveySchema,
@@ -11,9 +11,12 @@ import {
   createDefaultPage,
   validateSurvey,
   generatePageId,
+  TenantSettings,
+  DEFAULT_TENANT_SETTINGS,
 } from '@/types/survey';
 import PageEditor from './PageEditor';
 import PreviewModal from './PreviewModal';
+import SurveySettingsTab from './SurveySettingsTab';
 
 interface CustomSurveyBuilderProps {
   tenantSlug: string;
@@ -44,8 +47,87 @@ export default function CustomSurveyBuilder({
   const [showPreview, setShowPreview] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [autoAssign, setAutoAssign] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'form' | 'json'>('form');
+  const [activeTab, setActiveTab] = useState<'form' | 'settings' | 'json'>('form');
   const [jsonInput, setJsonInput] = useState('');
+  const [tenantSettings, setTenantSettings] = useState<TenantSettings | null>(null);
+
+  // Load tenant settings on mount
+  useEffect(() => {
+    if (token) {
+      loadTenantSettings();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  const loadTenantSettings = async () => {
+    try {
+      // Try to get token from props or localStorage
+      const authToken = token || localStorage.getItem('token');
+      console.log('🔑 Loading tenant settings with token:', authToken ? 'Present' : 'Missing');
+
+      if (!authToken) {
+        console.warn('⚠️ No token available, using default settings');
+        setTenantSettings({
+          ...DEFAULT_TENANT_SETTINGS,
+        });
+        return;
+      }
+
+      const response = await fetch(`/api/${tenantSlug}/settings`, {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      console.log('📡 Settings API response:', response.status, response.statusText);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📦 Settings data (raw from API):', data);
+
+        // If data is null, settings don't exist yet - use defaults
+        if (data === null) {
+          console.log('⚠️ No settings found, using defaults');
+          setTenantSettings({
+            ...DEFAULT_TENANT_SETTINGS,
+          });
+        } else {
+          // Transform PascalCase to camelCase
+          const transformedSettings: TenantSettings = {
+            id: data.Id,
+            tenantId: data.TenantId,
+            defaultQuestionType: data.DefaultQuestionType || DEFAULT_TENANT_SETTINGS.defaultQuestionType,
+            defaultRatingOptions: data.DefaultRatingOptions?.map((opt: any) => ({
+              id: opt.Id || opt.id,
+              text: opt.Text || opt.text,
+              order: opt.Order ?? opt.order,
+            })) || DEFAULT_TENANT_SETTINGS.defaultRatingOptions,
+            numberOfOptions: data.NumberOfOptions ?? DEFAULT_TENANT_SETTINGS.numberOfOptions,
+          };
+          console.log('✅ Settings loaded and transformed:', transformedSettings);
+          console.log('⚠️ Missing fields check:', {
+            hasDefaultRatingOptions: !!data.DefaultRatingOptions,
+            hasNumberOfOptions: data.NumberOfOptions !== undefined && data.NumberOfOptions !== null,
+            rawData: data,
+          });
+          setTenantSettings(transformedSettings);
+        }
+      } else {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Settings API error:', response.status, errorData);
+        // Use defaults on error
+        setTenantSettings({
+          ...DEFAULT_TENANT_SETTINGS,
+        });
+      }
+    } catch (error) {
+      console.error('💥 Error loading tenant settings:', error);
+      // Use defaults on error
+      setTenantSettings({
+        ...DEFAULT_TENANT_SETTINGS,
+      });
+    }
+  };
 
   // Update survey title
   const handleTitleChange = useCallback((title: string) => {
@@ -275,13 +357,6 @@ export default function CustomSurveyBuilder({
             Reset
           </button>
           <button
-            onClick={handleExportJson}
-            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            title="Export survey as JSON file"
-          >
-             Export JSON
-          </button>
-          <button
             onClick={() => setShowPreview(true)}
             className="px-4 py-2 text-blue-700 bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100 transition-colors"
           >
@@ -324,6 +399,30 @@ export default function CustomSurveyBuilder({
               }`}
             >
                Form Editor
+            </button>
+            <button
+              onClick={() => {
+                if (activeTab === 'json') {
+                  // Sync JSON to form before switching
+                  try {
+                    const parsed = JSON.parse(jsonInput);
+                    if (parsed.title && parsed.pages && Array.isArray(parsed.pages)) {
+                      setSurvey(parsed as SurveySchema);
+                      setHasUnsavedChanges(true);
+                    }
+                  } catch (error) {
+                    // Ignore JSON errors when switching tabs
+                  }
+                }
+                setActiveTab('settings');
+              }}
+              className={`px-6 py-3 font-medium border-b-2 transition-colors ${
+                activeTab === 'settings'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+               Settings
             </button>
             <button
               onClick={handleSwitchToJsonTab}
@@ -433,6 +532,7 @@ export default function CustomSurveyBuilder({
             totalPages={survey.pages.length}
             tenantSlug={tenantSlug}
             token={token}
+            tenantSettings={tenantSettings}
             onUpdate={(updatedPage: SurveyPage) => handleUpdatePage(page.id, updatedPage)}
             onDelete={() => handleDeletePage(page.id)}
             onMoveUp={
@@ -464,6 +564,9 @@ export default function CustomSurveyBuilder({
               + Add Page
             </button>
           </>
+        ) : activeTab === 'settings' ? (
+          /* Settings Tab */
+          <SurveySettingsTab tenantSlug={tenantSlug} token={token} />
         ) : (
           /* JSON Editor Tab */
           <div className="bg-white rounded-lg border border-gray-200 p-6">

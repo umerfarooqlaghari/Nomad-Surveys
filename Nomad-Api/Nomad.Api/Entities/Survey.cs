@@ -33,7 +33,7 @@ public class Survey
     
     // Tenant isolation
     public Guid TenantId { get; set; }
-    
+
     // Navigation properties
     public virtual Tenant Tenant { get; set; } = null!;
 }
