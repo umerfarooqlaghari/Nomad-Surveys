@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nomad.Api.DTOs.Common;
 using Nomad.Api.Data;
@@ -14,9 +15,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Nomad.Api.Migrations
 {
     [DbContext(typeof(NomadSurveysDbContext))]
-    partial class NomadSurveysDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251205120428_settings")]
+    partial class settings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -943,6 +946,47 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Surveys");
                 });
 
+            modelBuilder.Entity("Nomad.Api.Entities.SurveySettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("DefaultQuestionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<JsonDocument>("DefaultRatingOptions")
+                        .HasColumnType("jsonb");
+
+                    b.Property<int?>("NumberOfOptions")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SurveyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SurveyId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("SurveySettings");
+                });
+
             modelBuilder.Entity("Nomad.Api.Entities.SurveySubmission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1088,42 +1132,6 @@ namespace Nomad.Api.Migrations
                     b.HasIndex("TenantId");
 
                     b.ToTable("Roles", (string)null);
-                });
-
-            modelBuilder.Entity("Nomad.Api.Entities.TenantSettings", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("DefaultQuestionType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<JsonDocument>("DefaultRatingOptions")
-                        .HasColumnType("jsonb");
-
-                    b.Property<int?>("NumberOfOptions")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId")
-                        .IsUnique();
-
-                    b.ToTable("TenantSettings");
                 });
 
             modelBuilder.Entity("Nomad.Api.Entities.UserTenantRole", b =>
@@ -1467,6 +1475,25 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("Nomad.Api.Entities.SurveySettings", b =>
+                {
+                    b.HasOne("Nomad.Api.Entities.Survey", "Survey")
+                        .WithOne("Settings")
+                        .HasForeignKey("Nomad.Api.Entities.SurveySettings", "SurveyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Survey");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("Nomad.Api.Entities.SurveySubmission", b =>
                 {
                     b.HasOne("Nomad.Api.Entities.Evaluator", "Evaluator")
@@ -1516,17 +1543,6 @@ namespace Nomad.Api.Migrations
                         .WithMany("TenantRoles")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("Nomad.Api.Entities.TenantSettings", b =>
-                {
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
-                        .WithOne()
-                        .HasForeignKey("Nomad.Api.Entities.TenantSettings", "TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("Tenant");
                 });
@@ -1594,6 +1610,11 @@ namespace Nomad.Api.Migrations
             modelBuilder.Entity("Nomad.Api.Entities.Subject", b =>
                 {
                     b.Navigation("SubjectEvaluators");
+                });
+
+            modelBuilder.Entity("Nomad.Api.Entities.Survey", b =>
+                {
+                    b.Navigation("Settings");
                 });
 
             modelBuilder.Entity("Nomad.Api.Entities.Tenant", b =>

@@ -223,7 +223,7 @@
 }
 
 .section-heading {
-    color: #0455A4;
+    color: var(--primary-color);
     font-size: 18pt;
     font-weight: bold;
    // margin-bottom: 10px;
@@ -252,6 +252,15 @@
     margin-top: 18px;
     margin-bottom: 8px;
 }
+
+.section-subheading-small {
+    color: black;
+    font-size: 13pt;
+    font-weight: bold;
+    margin-top: 10px;
+    margin-bottom: 3px;
+}
+
 
 .intro-text {
     margin-bottom: 12px;
@@ -498,6 +507,337 @@
         .font-bold {
             font-weight: bold;
         }
+
+        .understanding-report-page {
+            margin-top: 80px;
+            padding: 20px 40px;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .section-heading-black {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+        }
+
+        .section-description {
+            font-size: 12px;
+            line-height: 1.6;
+            color: #666565ff;
+            margin-bottom: 40px;
+            text-align: justify;
+        }
+        .section-description-small {
+            font-size: 10px;
+            line-height: 1;
+            color: #666565ff;
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+
+        .framework-image-placeholder {
+            width: 100%;
+            height: 350px;
+            border: 2px dashed #999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #777;
+            font-size: 16px;
+            border-radius: 8px;
+        }
+
+/* Self Assessment Table */
+/* ===== PAGE 5 CLEAN CSS ===== */
+
+.respondent-summary-page {
+    padding: 40px 50px;
+    font-family: Arial, sans-serif;
+}
+
+/* Main heading */
+.respondent-heading {
+    font-size: 26px;
+    font-weight: 700;
+}
+
+/* Self-assessment table */
+.self-assessment-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 14px;
+}
+
+.self-assessment-table td {
+    padding: 12px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.sa-label {
+    color: #555;
+}
+
+.sa-status {
+    text-align: right;
+    font-weight: bold;
+}
+
+/* ===== REPORT SUMMARY TABLE ===== */
+
+.report-summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    font-size: 14px;
+}
+
+/* Header */
+.report-summary-table th {
+    padding: 10px 0;
+    font-weight: 600;
+    color: #555;
+    text-align: left;
+    border-bottom: 2px solid #dcdcdc;
+}
+
+/* Column widths to match screenshot layout */
+.report-summary-table th:nth-child(1),
+.report-summary-table td:nth-child(1) {
+    width: 50%;
+}
+
+.report-summary-table th:nth-child(2),
+.report-summary-table td:nth-child(2) {
+    width: 25%;
+}
+
+.report-summary-table td:nth-child(2) {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;   /* limits to 2 lines */
+    -webkit-box-orient: vertical;
+    white-space: normal;
+}
+
+
+.report-summary-table th:nth-child(3),
+.report-summary-table td:nth-child(3) {
+    width: 25%;
+}
+
+/* Body rows */
+.report-summary-table td {
+    padding: 14px 0;
+    border-bottom: 1px solid #eee;
+}
+
+/* Alignments EXACTLY like screenshot */
+.report-summary-table td:nth-child(1) {
+    text-align: left;
+    padding-right: 50px;
+}
+
+.report-summary-table td:nth-child(2) {
+    text-align: right;
+     white-space: normal; 
+         max-width: 280px;
+      /* allows wrapping */
+}
+
+.report-summary-table td:nth-child(3) {
+    text-align: left;
+}
+
+.blue-divider {
+    width: 100%;
+    height: 5px;
+    background-color: var(--primary-color); /* same blue as heading */
+    margin: 25px 0; /* space above and below */
+}
+
+.page-gap{
+    height: 100px;
+}
+
+
+
+/* --- GAP CHART STYLING --- */
+/* --- GAP CHART STYLING --- */
+
+.gap-chart-container {
+    width: 100%;
+    margin-top: 15px;
+    padding-bottom: 20px;
+}
+
+/* --- Body and Grid-like Structure --- */
+.gap-chart-body {
+    display: flex;
+    flex-direction: column;
+    /* Vertical lines for the grid (0, 1, 2, 3, 4) */
+    background-size: calc(70% / 4) 100%; 
+    background-position: 30% 0; /* Start grid lines at the 30% offset (start of chart area) */
+    padding-bottom: 20px; 
+}
+
+
+.gap-chart-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 0; 
+}
+
+.gap-chart-item:last-of-type {
+    border-bottom: none; 
+}
+
+/* --- Item Label (Competency Name) --- */
+.item-label {
+    width: 30%; 
+    font-size: 10pt;
+    font-weight: 500;
+    color: #333;
+}
+
+/* --- Chart Bar Area (The main plotting space) --- */
+.chart-bar-area {
+    width: 70%; 
+    height: 15px; 
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+/* --- Gap Score Value --- */
+.gap-value {
+    position: absolute;
+    font-size: 9pt;
+    color: #333;
+    
+    /* MODIFIED: Align the value's right edge just behind the Self point. 
+       Requires '--point-pos' variable (representing the Self score position) to be passed 
+       to the .gap-value element in the HTML. */
+    left: var(--point-pos);
+    top: 50%;
+    /* 100% of text width (left offset) + 5px margin + 4px (half the 8px point width) */
+    transform: translate(calc(-100% - 5px - 4px), -50%); 
+}
+
+/* --- The Line/Bar connecting the points --- */
+.bar-line {
+    position: absolute;
+    height: 2px;
+    background-color: #3b82f6; 
+    
+    /* MODIFIED: Ensures line runs exactly through the vertical center of the points. */
+    top: 50%; 
+    
+    /* Uses dynamic variables to connect the two points */
+    left: var(--line-start); 
+    width: calc(var(--line-end) - var(--line-start));
+}
+
+/* --- The Point Markers (Self and Others) --- */
+.point {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    
+    /* MODIFIED: Dual-axis centering to ensure line passes exactly through the middle. */
+    top: 50%;
+    transform: translate(-50%, -50%); 
+    
+    left: var(--point-pos); /* Dynamic horizontal position */
+    z-index: 10; /* Ensure points sit above the line */
+}
+
+/* --- The specific point styles remain unchanged but are listed for completeness --- */
+
+.self-point {
+    /* Self point: Open circle */
+    background-color: white; 
+    border: 1.5px solid #3b82f6;
+}
+
+.others-point {
+    /* Others point: Filled circle */
+    background-color: #3b82f6; 
+    border: none;
+}
+
+/* --- X-Axis (Score Scale) --- */
+.x-axis {
+    width: 70%;
+    margin-left: 30%; 
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+    position: relative;
+}
+
+.x-axis::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: #ccc;
+    transform: translateY(-10px); 
+    z-index: 0;
+}
+
+.axis-label {
+    font-size: 10pt;
+    color: #333;
+    width: 20%; 
+    text-align: center;
+}
+.axis-label:first-child {
+    margin-left: -5px; 
+}
+.axis-label:last-child {
+    margin-right: -10px; 
+}
+
+/* --- Legend --- */
+.gap-chart-legend {
+    display: flex;
+    gap: 25px;
+    margin-top: 15px;
+    margin-bottom: 20px;
+    font-size: 10pt;
+    font-weight: 500;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.legend-circle {
+    width: 10px; 
+    height: 10px;
+    border-radius: 50%;
+}
+
+.legend-circle.self-point {
+    border: 1.5px solid #3b82f6; 
+    background-color: white;
+}
+
+.legend-circle.others-point {
+    background-color: #3b82f6; 
+    border: none; 
+}
+
+/* --- Footer Description Alignment --- */
+.gap-footer-description {
+    margin-top: 10px;
+}
+
     </style>
 </head>
 <body>
@@ -539,7 +879,7 @@
 
     <div class="page-content intro-page">
 
-        <h2 class="section-heading-black">Introduction</h2>
+        <h2 class="section-heading">Introduction</h2>
 
         <div class="intro-page-container">
             <!-- Left Column -->
@@ -605,9 +945,7 @@
         <!-- Content -->
     <div class="page-content intro-page">
 
-        <h2 class="section-heading-black">Guide for Interpretation:
-</h2>
-
+        <h2 class="section-heading">Guide for Interpretation:</h2>
         <div class="intro-page-container">
             <!-- Left Column -->
             <div class="intro-left-column">
@@ -663,8 +1001,8 @@
                         <div class = "intro-text"> This is the rst level of summary and the scores
                         column shows your actual, or raw cluster score by
                         each rater group. The clusters, for the purpose of this
-                        report are: Leading Solutions, Impacting People and
-                        Driving Business.
+                        report are: <strong>Leading Solutions, Impacting People</strong> and
+                        <strong>Driving Business</strong>.
                         </div>
                     </li>
                     <li><strong class="section-subheading-black">Dimension Summary by Rater Group</strong> 
@@ -699,161 +1037,668 @@
     </div>
 
     <!-- Page 4: Detailed Breakdown -->
-<div class="page" aria-label="Understanding the report">
-  <style>
-    /* Page-4 specific styles (re-uses root variables from your main stylesheet) */
-    :root {
-      --page4-primary: var(--primary-color, #0455A4);
-      --page4-text: var(--text-color, #434141);
-      --page4-dark: var(--dark-gray, #666666);
-      --frame-border: #1f1f1f;
-    }
-
-    /* Ensure this page content accounts for the existing header/footer spacing */
-    .page-content { 
-      padding: 50mm 15mm 25mm 15mm; /* match your template spacing */
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* White framed area that matches the inspirational image */
-    .understanding-frame {
-      width: calc(100% - 28mm);
-      margin: 10mm auto;
-      padding: 14mm;
-      border: 1px solid var(--frame-border);
-      background: #ffffff;
-      min-height: calc(100% - 70mm);
-      position: relative;
-      box-sizing: border-box;
-    }
-
-    .understanding-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 8mm;
-      margin-bottom: 10mm;
-    }
-
-    .understanding-title {
-      color: var(--page4-primary);
-      font-size: 16pt;
-      font-weight: 700;
-      line-height: 1.05;
-      max-width: 66%;
-    }
-
-    /* Logo placeholder on the right (ELEVATE) */
-    .elevate-logo {
-      height: 18mm;
-      width: auto;
-      object-fit: contain;
-      display: inline-block;
-    }
-
-    .understanding-body {
-      display: flex;
-      gap: 12mm;
-      align-items: flex-start;
-      margin-top: 6mm;
-    }
-
-    .understanding-left {
-      flex: 1 1 60%;
-      min-width: 0;
-    }
-
-    .understanding-left p {
-      font-size: 10pt;
-      color: var(--page4-text);
-      margin-bottom: 8px;
-      line-height: 1.45;
-    }
-
-    .understanding-left .note {
-      font-size: 9pt;
-      color: var(--page4-dark);
-      margin-top: 6mm;
-    }
-
-    .understanding-right {
-      flex: 1 1 36%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-width: 0;
-    }
-
-    .wheel-container {
-      width: 160px;
-      height: 160px;
-      border-radius: 50%;
-      background: #ffffff;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      padding: 6px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-
-    .wheel-image {
-      max-width: 100%;
-      max-height: 100%;
-      display:block;
-    }
-
-    /* Small responsive fallback */
-    @media (max-width: 1000px) {
-      .understanding-body { flex-direction: column; }
-      .understanding-right { margin-top: 10mm; }
-      .understanding-title { max-width: 100%; }
-      .wheel-container { width: 140px; height: 140px; }
-    }
-  </style>
-
-  <div class="page-content">
-    <div class="understanding-frame" role="region" aria-label="Understanding the report frame">
-      <div class="understanding-top">
-        <div class="understanding-title">Understanding The Report</div>
-        <!-- Insert your ELEVATE logo markup here (img/svg) -->
-        <div class="elevate-logo" aria-hidden="true">{{ELEVATE_LOGO}}</div>
-      </div>
-
-      <div class="understanding-body">
-        <div class="understanding-left">
-          <p>
-            This 360° Feedback Survey is based on the Top Talent Framework as part of Elevate — Unlock Possibilities.
-            The survey provides insight across three clusters: Leading Solutions, Impacting People and Driving Business.
-          </p>
-
-          <p>
-            Each cluster is measured through several dimensions and items in the survey. These measures help you compare
-            self-perception with others' perceptions and identify strengths, development areas and blindspots.
-          </p>
-
-          <p>
-            The dimensions collectively guide improvement, influence team performance, and support the organization’s growth.
-          </p>
-
-          <p class="note">
-            The figure on the right introduces the 360 Feedback Survey framework.
-          </p>
+ <div class="page">
+        <!-- Header -->
+        <div class="page-header">
+            {{COMPANY_LOGO}}
         </div>
 
-        <div class="understanding-right" aria-hidden="true">
-          <div class="wheel-container">
-            <!-- Replace with your wheel SVG/IMG. Example placeholder below:
-                 <img src="/images/wheel.png" alt="Top Talent Framework wheel" class="wheel-image" /> -->
-            {{WHEEL_IMAGE}}
-          </div>
-        </div>
-      </div>
-      <!-- intentionally no header/footer here; those are provided by your main template -->
+        <!-- Content -->
+    <div class="page-content understanding-report-page">
+
+    <h2 class="section-heading-black">Understanding The Report</h2>
+
+    <p class="section-description">
+        This 360° Feedback Survey is based on the Top Talent Framework as part of Elevate – Unlock Possibilities.
+        The survey provides you insight across three clusters: <strong>Leading Solutions, Impacting People and Driving Business</strong>.
+        <br><br>
+        Each cluster has 9 dimensions that have been measured using several items, or questions, in the survey.
+        Each cluster also has an X-Factor that gives you an edge to master each leadership cluster.
+        <br><br>
+        The 9 Dimensions and 3 X-factors, collectively, will help you guide insights to introspect, direct and influence the
+        performance and experience of your team, and to drive organization’s growth and success.
+        <br><br>
+        The figure below illustrates the Interloop 360 Feedback Survey Framework.
+    </p>
+
+    <!-- Placeholder Image -->
+    <div class="framework-image-placeholder">
+        <span>IMAGE PLACEHOLDER</span>
     </div>
-  </div>
+
 </div>
-    <script>
+
+        <!-- Footer -->
+        <div class="page-footer">
+            <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+            <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+            <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span></div>
+        </div>
+    </div>
+
+
+
+        <!-- page 5 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <!-- CONTENT -->
+    <div class="page-content respondent-summary-page">
+
+        <!-- Main Heading -->
+        <h2 class="respondent-heading" style="margin-top: 80px; color: var(--primary-color);">
+            Respondent Summary
+        </h2>
+
+        <!-- Self Assessment Row -->
+        <table class="self-assessment-table">
+            <tr>
+                <td class="sa-label">Self-assessment</td>
+                <td class="sa-status">{{SELF_ASSESSMENT_STATUS}}</td>
+            </tr>
+        </table>
+
+        <!-- Subheading -->
+      <h3 class="section-subheading-black" style="margin-top: 40px;">
+    Report Summary
+</h3>
+
+<table class="report-summary-table">
+    <thead>
+        <tr>
+            <th>Group</th>
+            <th>Completed<br>responses</th>
+            <th>% complete</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        <tr>
+            <td>Direct Reports</td>
+            <td>{{DIRECT_REPORTS_COMPLETED}} / {{DIRECT_REPORTS_TOTAL}}</td>
+            <td>{{DIRECT_REPORTS_PERCENT}}%</td>
+        </tr>
+        <tr>
+            <td>Line-Manager</td>
+            <td>{{LINE_MANAGER_COMPLETED}} / {{LINE_MANAGER_TOTAL}}</td>
+            <td>{{LINE_MANAGER_PERCENT}}%</td>
+        </tr>
+        <tr>
+            <td>Peers</td>
+            <td>{{PEERS_COMPLETED}} / {{PEERS_TOTAL}}</td>
+            <td>{{PEERS_PERCENT}}%</td>
+        </tr>
+        <tr>
+            <td>Stakeholders</td>
+            <td>{{STAKEHOLDERS_COMPLETED}} / {{STAKEHOLDERS_TOTAL}}</td>
+            <td>{{STAKEHOLDERS_PERCENT}}%</td>
+        </tr>
+    </tbody>
+</table>
+    </div>
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+
+</div>
+
+    <!-- Page 6: Detailed Breakdown -->
+ <div class="page">
+        <!-- Header -->
+        <div class="page-header">
+            {{COMPANY_LOGO}}
+        </div>
+
+        <!-- Content -->
+    <div class="page-content understanding-report-page">
+
+    <h2 class="section-heading">Top Talent Framework Snapshot
+    </h2>
+
+    <p class="section-description">
+       The radar chart below displays the difference between self and others across all dimensions.
+    </p>
+
+    <!-- Placeholder Image -->
+    <div class="framework-image-placeholder">
+        <span>IMAGE PLACEHOLDER</span>
+    </div>
+
+    <div class="blue-divider"></div>
+
+
+    <div>
+    <h2 class="section-Subheading">Guide for Interpretation:
+    </h2>
+
+    <p class="section-description">
+        <li> The gap between the two lines denoting Self and Others signies the difference in perception
+        between yourself and people around you.
+        </li>
+        <li> Observe any trends of the two lines converging or diverging and at which dimension(s) to identify
+        similarity and differences in perception.  
+        </li>
+      </p>
+    </div>
+
+
+        <!-- Footer -->
+        <div class="page-footer">
+            <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+            <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+            <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span></div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Page 7 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <!-- CONTENT -->
+    <div class="page-content respondent-summary-page">
+        <!-- Main Heading -->
+        <h2 class="respondent-heading" style="margin-top: 80px; color: var(--primary-color);">
+            High and Low Scores
+        </h2>
+        <div class="section-description">The high/low table displays items based on the dimensions where others rated you highest and lowest.</div>
+        
+        <div class="section-subheading-black">Highest Scores</div>
+        
+        <table class="report-summary-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Dimensions</th>
+                    <th>Item</th>
+                    <th>Average</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>{{HIGHEST_DIMENSION_1}}</td>
+                    <td>{{HIGHEST_ITEM_1}}</td>
+                    <td>{{AVERAGE_1}}</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>{{HIGHEST_DIMENSION_2}}</td>
+                    <td>{{HIGHEST_ITEM_2}}</td>
+                    <td>{{HIGHEST_AVERAGE_2}}</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>{{HIGHEST_DIMENSION_3}}</td>
+                    <td>{{HIGHEST_ITEM_3}}</td>
+                    <td>{{HIGHEST_AVERAGE_3}}</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>{{HIGHEST_DIMENSION_4}}</td>
+                    <td>{{HIGHEST_ITEM_4}}</td>
+                    <td>{{HIGHEST_AVERAGE_4}}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="section-subheading-black">Lowest Scores</div>
+        
+        <table class="report-summary-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Dimensions</th>
+                    <th>Item</th>
+                    <th>Average</th>
+
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>{{LOWEST_DIMENSION_1}}</td>
+                    <td>{{LOWEST_ITEM_1}}</td>
+                    <td>{{LOWEST_AVERAGE_1}}</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>{{LOWEST_DIMENSION_2}}</td>
+                    <td>{{LOWEST_ITEM_2}}</td>
+                    <td>{{LOWEST_AVERAGE_2}}</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>{{LOWEST_DIMENSION_3}}</td>
+                    <td>{{LOWEST_ITEM_3}}</td>
+                    <td>{{LOWEST_AVERAGE_3}}</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>{{LOWEST_DIMENSION_4}}</td>
+                    <td>{{LOWEST_ITEM_4}}</td>
+                    <td>{{LOWEST_AVERAGE_4}}</td>
+                </tr>
+            </tbody>
+        </table>
+
+
+
+        <div class="blue-divider"></div>
+        <div>
+        <h2 class="section-Subheading-small">Guide for Interpretation:
+        </h2>
+        <p class="section-description-small">
+            <li>
+                The highest and lowest scores are provided by item or question within each dimension.
+            </li>
+            <li>  
+                It is important to look for any dimension(s) repeatedly occurring in the tables in this section.  
+            </li>
+            <li>   
+                Items appearing against dimensions in both highest and lowest scores give an insight on
+                behavioral level.
+            </li>
+        </p>
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+
+</div>
+
+
+
+
+
+<!-- Page 8 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <!-- CONTENT -->
+    <div class="page-content respondent-summary-page">
+        <!-- Main Heading -->
+        <h2 class="respondent-heading" style="margin-top: 80px; color: var(--primary-color);">
+            Latent Strengths & Blindspots
+        </h2>
+        <div class="section-description-small">The rst column of scores indicates how you scored yourself. The second column indicates the average
+score of others. The third column indicates the difference between how you scored yourself and how
+others scored you.
+</div>
+  <div class="section-description-small">Latent strengths show where others rated you signicantly higher than you rated yourself. Blindspots
+show where others rated you signicantly lower than you rated yourself. Both sections are ranked f rom
+largest to the smallest gap.
+</div>
+        
+        <div class="section-subheading-black">Latent Strengths</div>
+        
+        <table class="report-summary-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Dimensions</th>
+                    <th>Item</th>
+                    <th>Average</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>{{HIGHEST_DIMENSION_1}}</td>
+                    <td>{{HIGHEST_ITEM_1}}</td>
+                    <td>{{AVERAGE_1}}</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>{{HIGHEST_DIMENSION_2}}</td>
+                    <td>{{HIGHEST_ITEM_2}}</td>
+                    <td>{{HIGHEST_AVERAGE_2}}</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>{{HIGHEST_DIMENSION_3}}</td>
+                    <td>{{HIGHEST_ITEM_3}}</td>
+                    <td>{{HIGHEST_AVERAGE_3}}</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>{{HIGHEST_DIMENSION_4}}</td>
+                    <td>{{HIGHEST_ITEM_4}}</td>
+                    <td>{{HIGHEST_AVERAGE_4}}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="section-subheading-black">Blindspots</div>
+        
+        <table class="report-summary-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Dimensions</th>
+                    <th>Item</th>
+                    <th>Average</th>
+
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>1</td>
+                    <td>{{LOWEST_DIMENSION_1}}</td>
+                    <td>{{LOWEST_ITEM_1}}</td>
+                    <td>{{LOWEST_AVERAGE_1}}</td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>{{LOWEST_DIMENSION_2}}</td>
+                    <td>{{LOWEST_ITEM_2}}</td>
+                    <td>{{LOWEST_AVERAGE_2}}</td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>{{LOWEST_DIMENSION_3}}</td>
+                    <td>{{LOWEST_ITEM_3}}</td>
+                    <td>{{LOWEST_AVERAGE_3}}</td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>{{LOWEST_DIMENSION_4}}</td>
+                    <td>{{LOWEST_ITEM_4}}</td>
+                    <td>{{LOWEST_AVERAGE_4}}</td>
+                </tr>
+            </tbody>
+        </table>
+
+
+
+        <div class="blue-divider"></div>
+        <div>
+        <h2 class="section-Subheading-small">Guide for Interpretation:
+        </h2>
+        <p class="section-description-small">
+            <li>
+                The highest and lowest scores are provided by item or question within each dimension.
+            </li>
+            <li>  
+                It is important to look for any dimension(s) repeatedly occurring in the tables in this section.  
+            </li>
+            <li>   
+                Items appearing against dimensions in both highest and lowest scores give an insight on
+                behavioral level.
+            </li>
+        </p>
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+
+</div>
+
+
+
+<!-- Page 9 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <!-- CONTENT -->
+    <div class="page-content respondent-summary-page">
+        <!-- Main Heading -->
+  <div class="page-gap"></div>
+        <div class="blue-divider"></div>
+        <div>
+        <h2 class="section-Subheading-small">Guide for Interpretation:
+        </h2>
+        <p class="section-description-small">
+            <li>
+                Some dimensions or items maybe known to you and some may appear as a surprise 
+            </li>
+            <li>  
+                It is important to look for any dimensions repeatedly occurring in the tables in this section.
+            </li>
+            <li>   
+               Dimensions appearing against items in both Latent Strengths and Blindspots give an insight on
+                behavioral tendency.
+            </li>
+            <li>  
+                The gap against each item signies the magnitude of difference between perceptions.
+            </li>
+        </p>
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 10 -->
+<div class="page">
+
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <div class="page-content respondent-summary-page">
+        <div class="page-gap"></div>
+        <div class="blue-divider"></div>
+        <div>
+            <h2 class="section-heading">Gap Chart
+            </h2>
+            <div class="section-description-small">
+                The gap chart displays the difference in scores between self and others. A positive(+)
+                difference means others rated you higher than the rating you provided for yourself. A
+                negative(-) difference means others rated you lower than the rating you provided for
+                yourself.
+            </div>
+        </div>
+
+        <div class="gap-chart-container">
+            <div class="gap-chart-body">
+                
+                <div class="gap-chart-item">
+                    <div class="item-label">Inventive Execution</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.78</span>
+                        <div class="bar-line" style="--line-start: 85%; --line-end: 95%;"></div> 
+                        <div class="point self-point" style="--point-pos: 85%;"></div>
+                        <div class="point others-point" style="--point-pos: 95%;"></div>
+                    </div>
+                </div>
+
+                <div class="gap-chart-item">
+                    <div class="item-label">Expansive Thinking</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.35</span>
+                        <div class="bar-line" style="--line-start: 90%; --line-end: 95%;"></div> 
+                        <div class="point self-point" style="--point-pos: 90%;"></div>
+                        <div class="point others-point" style="--point-pos: 95%;"></div>
+                    </div>
+                </div>
+
+                <div class="gap-chart-item">
+                    <div class="item-label">Decision Making</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.33</span>
+                        <div class="bar-line" style="--line-start: 92%; --line-end: 98%;"></div> 
+                        <div class="point self-point" style="--point-pos: 92%;"></div>
+                        <div class="point others-point" style="--point-pos: 98%;"></div>
+                    </div>
+                </div>
+                
+                <div class="gap-chart-item">
+                    <div class="item-label">Dynamic Sensing</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.73</span>
+                        <div class="bar-line" style="--line-start: 75%; --line-end: 95%;"></div> 
+                        <div class="point self-point" style="--point-pos: 75%;"></div>
+                        <div class="point others-point" style="--point-pos: 95%;"></div>
+                    </div>
+                </div>
+                
+                <div class="gap-chart-item">
+                    <div class="item-label">Nurture Growth</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.32</span>
+                        <div class="bar-line" style="--line-start: 90%; --line-end: 98%;"></div> 
+                        <div class="point self-point" style="--point-pos: 90%;"></div>
+                        <div class="point others-point" style="--point-pos: 98%;"></div>
+                    </div>
+                </div>
+                
+                <div class="gap-chart-item">
+                    <div class="item-label">Purposeful Conversations</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.53</span>
+                        <div class="bar-line" style="--line-start: 80%; --line-end: 95%;"></div> 
+                        <div class="point self-point" style="--point-pos: 80%;"></div>
+                        <div class="point others-point" style="--point-pos: 95%;"></div>
+                    </div>
+                </div>
+                
+                <div class="gap-chart-item">
+                    <div class="item-label">Network and Influence</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.39</span>
+                        <div class="bar-line" style="--line-start: 88%; --line-end: 95%;"></div> 
+                        <div class="point self-point" style="--point-pos: 88%;"></div>
+                        <div class="point others-point" style="--point-pos: 95%;"></div>
+                    </div>
+                </div>
+                
+                <div class="gap-chart-item">
+                    <div class="item-label">People Agility</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.48</span>
+                        <div class="bar-line" style="--line-start: 82%; --line-end: 95%;"></div> 
+                        <div class="point self-point" style="--point-pos: 82%;"></div>
+                        <div class="point others-point" style="--point-pos: 95%;"></div>
+                    </div>
+                </div>
+                
+                <div class="gap-chart-item">
+                    <div class="item-label">Unprecedented Excellence</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.44</span>
+                        <div class="bar-line" style="--line-start: 85%; --line-end: 98%;"></div> 
+                        <div class="point self-point" style="--point-pos: 85%;"></div>
+                        <div class="point others-point" style="--point-pos: 98%;"></div>
+                    </div>
+                </div>
+                
+                <div class="gap-chart-item">
+                    <div class="item-label">Catalytic Learning</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.48</span>
+                        <div class="bar-line" style="--line-start: 82%; --line-end: 98%;"></div> 
+                        <div class="point self-point" style="--point-pos: 82%;"></div>
+                        <div class="point others-point" style="--point-pos: 98%;"></div>
+                    </div>
+                </div>
+                
+                <div class="gap-chart-item">
+                    <div class="item-label">Enterprising Drive</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.52</span>
+                        <div class="bar-line" style="--line-start: 80%; --line-end: 98%;"></div> 
+                        <div class="point self-point" style="--point-pos: 80%;"></div>
+                        <div class="point others-point" style="--point-pos: 98%;"></div>
+                    </div>
+                </div>
+                
+                <div class="gap-chart-item">
+                    <div class="item-label">Organizational Relatability</div>
+                    <div class="chart-bar-area">
+                        <span class="gap-value">-0.48</span>
+                        <div class="bar-line" style="--line-start: 82%; --line-end: 95%;"></div> 
+                        <div class="point self-point" style="--point-pos: 82%;"></div>
+                        <div class="point others-point" style="--point-pos: 95%;"></div>
+                    </div>
+                </div>
+
+                <div class="x-axis">
+                    <div class="axis-label">0</div>
+                    <div class="axis-label">1</div>
+                    <div class="axis-label">2</div>
+                    <div class="axis-label">3</div>
+                    <div class="axis-label">4</div>
+                </div>
+            </div>
+            
+            <div class="gap-chart-legend">
+                <div class="legend-item">
+                    <div class="legend-circle self-point"></div>
+                    <span>Self</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-circle others-point"></div>
+                    <span>Others</span>
+                </div>
+            </div>
+            
+            <div class="section-description-small gap-footer-description">
+                The gap chart indicates the +/- difference between two rater groups.
+            </div>
+        </div>
+    </div>
+
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
         // Populate page numbers for each .page footer and add a floating 'View as PDF' button
         (function() {
             try {

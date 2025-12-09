@@ -252,11 +252,46 @@ export function createDefaultPage(): SurveyPage {
 export function createDefaultSurvey(): SurveySchema {
   const firstPage = createDefaultPage();
   firstPage.title = 'Page 1';
-  
+
   return {
     title: 'New Survey',
     description: '',
     pages: [firstPage],
   };
 }
+
+// Survey Settings Types
+export interface RatingOption {
+  id: string;
+  text: string;
+  order: number;
+}
+
+export interface TenantSettings {
+  id?: string;
+  tenantId?: string;
+  defaultQuestionType: QuestionType;
+  defaultRatingOptions?: RatingOption[];
+  numberOfOptions?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UpdateTenantSettingsRequest {
+  defaultQuestionType: QuestionType;
+  defaultRatingOptions?: RatingOption[];
+  numberOfOptions?: number;
+}
+
+export const DEFAULT_TENANT_SETTINGS: Omit<TenantSettings, 'id' | 'tenantId'> = {
+  defaultQuestionType: 'rating',
+  defaultRatingOptions: [
+    { id: '1', text: 'Very Unsatisfied', order: 0 },
+    { id: '2', text: 'Unsatisfied', order: 1 },
+    { id: '3', text: 'Neutral', order: 2 },
+    { id: '4', text: 'Satisfied', order: 3 },
+    { id: '5', text: 'Very Satisfied', order: 4 },
+  ],
+  numberOfOptions: 5,
+};
 
