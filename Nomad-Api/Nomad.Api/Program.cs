@@ -122,6 +122,7 @@ builder.Services.AddScoped<IReportingService, ReportingService>();
 builder.Services.AddScoped<IReportTemplateService, ReportTemplateService>();
 builder.Services.AddScoped<IReportTemplateSettingsService, ReportTemplateSettingsService>();
 builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
+builder.Services.AddScoped<Nomad.Api.Repository.ReportAnalyticsRepository>();
 
 // Add CORS
 builder.Services.AddCors(options =>
