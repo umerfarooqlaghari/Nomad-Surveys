@@ -10,7 +10,10 @@ public interface IReportTemplateService
         string? coverImageUrl = null,
         string? primaryColor = null,
         string? secondaryColor = null,
-        string? tertiaryColor = null);
+        string? tertiaryColor = null,
+        Guid? subjectId = null,
+        Guid? surveyId = null,
+        Guid? tenantId = null);
 
     Task<string> GenerateReportHtmlAsync(
         Guid subjectId,

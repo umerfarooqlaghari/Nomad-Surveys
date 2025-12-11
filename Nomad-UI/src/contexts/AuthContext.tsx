@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Set activity timer directly
       const activityTimer = setTimeout(() => {
         logout();
-      }, 30 * 60 * 1000);
+      }, 60 * 60 * 1000);
       setActivityTimer(activityTimer);
 
       // Don't redirect here - let the route guards handle it
@@ -152,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Set activity timer directly
       const activityTimer = setTimeout(() => {
         logout();
-      }, 30 * 60 * 1000);
+      }, 60 * 60 * 1000);
       setActivityTimer(activityTimer);
 
       // Don't redirect here - let the route guards handle it
@@ -201,7 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Set 30-minute inactivity timer
         const activityTimer = setTimeout(() => {
           logout();
-        }, 30 * 60 * 1000);
+        }, 60 * 60 * 1000);
         setActivityTimer(activityTimer);
       } else {
         AuthService.clearAuth();
@@ -227,7 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Set 30-minute inactivity timer
       const newTimer = setTimeout(() => {
         logout();
-      }, 30 * 60 * 1000);
+      }, 60 * 60 * 1000);
 
       setActivityTimer(newTimer);
     };

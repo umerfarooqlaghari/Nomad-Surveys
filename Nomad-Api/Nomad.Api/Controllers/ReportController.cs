@@ -27,7 +27,7 @@ public class ReportController : ControllerBase
     private Guid? GetCurrentTenantId() => HttpContext.Items["TenantId"] as Guid?;
 
     /// <summary>
-    /// Preview report HTML (without requiring Subject ID)
+    /// Preview report HTML (optionally with Subject ID to show real subject name)
     /// </summary>
     [HttpPost("preview")]
     public async Task<ActionResult> PreviewReport(
@@ -47,7 +47,10 @@ public class ReportController : ControllerBase
                 request.CoverImageUrl,
                 request.PrimaryColor,
                 request.SecondaryColor,
-                request.TertiaryColor);
+                request.TertiaryColor,
+                request.SubjectId,
+                request.SurveyId,
+                tenantId);
 
             return Content(html, "text/html");
         }
@@ -136,6 +139,8 @@ public class PreviewReportRequest
     public string? PrimaryColor { get; set; }
     public string? SecondaryColor { get; set; }
     public string? TertiaryColor { get; set; }
+    public Guid? SubjectId { get; set; }
+    public Guid? SurveyId { get; set; }
 }
 
 public class ReportGenerationRequest

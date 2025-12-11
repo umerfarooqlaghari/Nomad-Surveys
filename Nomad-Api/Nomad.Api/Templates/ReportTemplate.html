@@ -1097,7 +1097,7 @@
         <!-- Self Assessment Row -->
         <table class="self-assessment-table">
             <tr>
-                <td class="sa-label">Self-assessment</td>
+                <td class="sa-label">Self-assessment status</td>
                 <td class="sa-status">{{SELF_ASSESSMENT_STATUS}}</td>
             </tr>
         </table>
@@ -1117,26 +1117,7 @@
     </thead>
 
     <tbody>
-        <tr>
-            <td>Direct Reports</td>
-            <td>{{DIRECT_REPORTS_COMPLETED}} / {{DIRECT_REPORTS_TOTAL}}</td>
-            <td>{{DIRECT_REPORTS_PERCENT}}%</td>
-        </tr>
-        <tr>
-            <td>Line-Manager</td>
-            <td>{{LINE_MANAGER_COMPLETED}} / {{LINE_MANAGER_TOTAL}}</td>
-            <td>{{LINE_MANAGER_PERCENT}}%</td>
-        </tr>
-        <tr>
-            <td>Peers</td>
-            <td>{{PEERS_COMPLETED}} / {{PEERS_TOTAL}}</td>
-            <td>{{PEERS_PERCENT}}%</td>
-        </tr>
-        <tr>
-            <td>Stakeholders</td>
-            <td>{{STAKEHOLDERS_COMPLETED}} / {{STAKEHOLDERS_TOTAL}}</td>
-            <td>{{STAKEHOLDERS_PERCENT}}%</td>
-        </tr>
+        {{RELATIONSHIP_COMPLETION_ROWS}}
     </tbody>
 </table>
     </div>

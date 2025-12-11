@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using Nomad.Api.DTOs.Request;
 using Nomad.Api.DTOs.Response;
+using Nomad.Api.Repository;
 using Nomad.Api.Services.Interfaces;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -18,6 +19,8 @@ public class ReportTemplateService : IReportTemplateService
 {
     private readonly IReportingService _reportingService;
     private readonly IReportTemplateSettingsService? _templateSettingsService;
+    private readonly ISubjectService? _subjectService;
+    private readonly ReportAnalyticsRepository? _reportAnalyticsRepository;
     private readonly ILogger<ReportTemplateService> _logger;
     private readonly string _templatePath;
 
@@ -30,7 +33,7 @@ public class ReportTemplateService : IReportTemplateService
         _reportingService = reportingService;
         _logger = logger;
         _templatePath = Path.Combine(environment.ContentRootPath, "Templates", "ReportTemplate.html");
-        
+
         // Get template settings service if available (optional dependency)
         try
         {
@@ -39,6 +42,26 @@ public class ReportTemplateService : IReportTemplateService
         catch
         {
             _templateSettingsService = null;
+        }
+
+        // Get subject service if available (optional dependency)
+        try
+        {
+            _subjectService = serviceProvider.GetService<ISubjectService>();
+        }
+        catch
+        {
+            _subjectService = null;
+        }
+
+        // Get report analytics repository if available (optional dependency)
+        try
+        {
+            _reportAnalyticsRepository = serviceProvider.GetService<ReportAnalyticsRepository>();
+        }
+        catch
+        {
+            _reportAnalyticsRepository = null;
         }
     }
 
@@ -77,30 +100,58 @@ public class ReportTemplateService : IReportTemplateService
         string? coverImageUrl = null,
         string? primaryColor = null,
         string? secondaryColor = null,
-        string? tertiaryColor = null)
+        string? tertiaryColor = null,
+        Guid? subjectId = null,
+        Guid? surveyId = null,
+        Guid? tenantId = null)
     {
         try
         {
-            // Check if template file exists
-            // if (!File.Exists(_templatePath))
-            // {
-            //     _logger.LogError("Template file not found at path: {TemplatePath}", _templatePath);
-            //     throw new FileNotFoundException($"Template file not found at path: {_templatePath}");
-            // }
+            var htmlTemplate = await LoadTemplateAsync();
 
-            // // Load HTML template
-            // var htmlTemplate = await File.ReadAllTextAsync(_templatePath);
+            // Fetch subject name if subjectId is provided
+            string? subjectName = null;
+            Guid? subjectTenantId = null;
+            if (subjectId.HasValue && _subjectService != null)
+            {
+                var subject = await _subjectService.GetSubjectByIdAsync(subjectId.Value);
+                if (subject?.Employee != null)
+                {
+                    subjectName = subject.Employee.FullName;
+                    subjectTenantId = subject.TenantId;
+                }
+            }
 
-            // if (string.IsNullOrWhiteSpace(htmlTemplate))
-            // {
-            //     _logger.LogError("Template file is empty at path: {TemplatePath}", _templatePath);
-            //     throw new InvalidOperationException($"Template file is empty at path: {_templatePath}");
-            // }
-                        var htmlTemplate = await LoadTemplateAsync();
+            // Get self-assessment status and relationship completion stats if subjectId, surveyId, and tenantId are provided
+            string selfAssessmentStatus = "Completed"; // Default for preview
+            List<RelationshipCompletionStats>? relationshipStats = null;
+            var effectiveTenantId = tenantId ?? subjectTenantId;
+            if (subjectId.HasValue && surveyId.HasValue && effectiveTenantId.HasValue && _reportAnalyticsRepository != null)
+            {
+                try
+                {
+                    selfAssessmentStatus = await _reportAnalyticsRepository.GetSelfAssessmentStatusAsync(
+                        subjectId.Value, surveyId.Value, effectiveTenantId.Value);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get self-assessment status for preview. Using default value.");
+                    selfAssessmentStatus = "Completed"; // Fallback for preview
+                }
 
+                try
+                {
+                    relationshipStats = await _reportAnalyticsRepository.GetRelationshipCompletionStatsAsync(
+                        subjectId.Value, surveyId.Value, effectiveTenantId.Value);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get relationship completion stats for preview. Using mock data.");
+                }
+            }
 
-            // Use mock data for preview
-            var html = ReplacePlaceholdersForPreview(htmlTemplate, companyName, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor);
+            // Use mock data for preview, but use real subject name if available
+            var html = ReplacePlaceholdersForPreview(htmlTemplate, companyName, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor, subjectName, selfAssessmentStatus, relationshipStats);
 
             return html;
         }
@@ -129,9 +180,7 @@ public class ReportTemplateService : IReportTemplateService
         try
         {
             // Load HTML template
-            // var htmlTemplate = await File.ReadAllTextAsync(_templatePath);
-                        var htmlTemplate = await LoadTemplateAsync();
-
+            var htmlTemplate = await LoadTemplateAsync();
 
             // Fetch comprehensive report data
             var reportData = await _reportingService.GetComprehensiveReportAsync(
@@ -142,8 +191,35 @@ public class ReportTemplateService : IReportTemplateService
                 throw new InvalidOperationException($"No report data found for subject {subjectId}");
             }
 
+            // Get self-assessment status and relationship completion stats
+            string selfAssessmentStatus = "Not Available";
+            List<RelationshipCompletionStats>? relationshipStats = null;
+            if (surveyId.HasValue && _reportAnalyticsRepository != null)
+            {
+                try
+                {
+                    selfAssessmentStatus = await _reportAnalyticsRepository.GetSelfAssessmentStatusAsync(
+                        subjectId, surveyId.Value, tenantId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get self-assessment status for subject {SubjectId}", subjectId);
+                    selfAssessmentStatus = "Not Available";
+                }
+
+                try
+                {
+                    relationshipStats = await _reportAnalyticsRepository.GetRelationshipCompletionStatsAsync(
+                        subjectId, surveyId.Value, tenantId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get relationship completion stats for subject {SubjectId}", subjectId);
+                }
+            }
+
             // Replace placeholders with actual data
-            var html = ReplacePlaceholders(htmlTemplate, reportData, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor);
+            var html = ReplacePlaceholders(htmlTemplate, reportData, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor, selfAssessmentStatus, relationshipStats);
 
             // Save template settings if provided
             await SaveTemplateSettingsIfProvided(
@@ -245,7 +321,10 @@ public class ReportTemplateService : IReportTemplateService
         string? coverImageUrl,
         string? primaryColor,
         string? secondaryColor,
-        string? tertiaryColor)
+        string? tertiaryColor,
+        string? subjectName = null,
+        string? selfAssessmentStatus = null,
+        List<RelationshipCompletionStats>? relationshipStats = null)
     {
         var html = template;
 
@@ -256,35 +335,41 @@ public class ReportTemplateService : IReportTemplateService
 
         // Replace company information
         html = html.Replace("{{COMPANY_NAME}}", companyName ?? "Company Name");
-        
+
         // Replace logo in header
         if (!string.IsNullOrEmpty(companyLogoUrl))
         {
-            html = html.Replace("{{COMPANY_LOGO}}", 
+            html = html.Replace("{{COMPANY_LOGO}}",
                 $"<img src=\"{companyLogoUrl}\" alt=\"Company Logo\" class=\"client-logo\" />");
         }
         else
         {
-            html = html.Replace("{{COMPANY_LOGO}}", 
+            html = html.Replace("{{COMPANY_LOGO}}",
                 "<div class=\"client-logo\" style=\"width: 80mm; height: 30mm; background: #f0f0f0; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 10pt; color: #999;\">CLIENT LOGO</div>");
         }
 
-        // Mock subject information for preview
+        // Subject information for preview - use real name if provided, otherwise mock data
         html = html.Replace("{{SUBJECT_TITLE}}", "Mr.");
-        html = html.Replace("{{SUBJECT_NAME}}", "Umer Farooq");
+        html = html.Replace("{{SUBJECT_NAME}}", subjectName ?? "Umer Farooq");
         html = html.Replace("{{SUBJECT_DEPARTMENT}}", "Sales Department");
         html = html.Replace("{{SUBJECT_POSITION}}", "Senior Sales Executive");
         html = html.Replace("{{SUBJECT_EMPLOYEE_ID}}", "EMP-12345");
-        
+
+        // Replace self-assessment status (computed from ReportAnalyticsRepository)
+        html = html.Replace("{{SELF_ASSESSMENT_STATUS}}", selfAssessmentStatus ?? "Completed");
+
+        // Replace relationship completion rows
+        html = html.Replace("{{RELATIONSHIP_COMPLETION_ROWS}}", GenerateRelationshipCompletionRows(relationshipStats));
+
         // Cover image
         if (!string.IsNullOrEmpty(coverImageUrl))
         {
-            html = html.Replace("{{COVER_IMAGE}}", 
+            html = html.Replace("{{COVER_IMAGE}}",
                 $"<img src=\"{coverImageUrl}\" alt=\"Cover Image\" class=\"cover-image\" style=\"width: 100%; height: auto; object-fit: cover;\" />");
         }
         else
         {
-            html = html.Replace("{{COVER_IMAGE}}", 
+            html = html.Replace("{{COVER_IMAGE}}",
                 "<div class=\"cover-image\" style=\"width: 100%; height: 200mm; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24pt; font-weight: bold;\">Cover Image Placeholder</div>");
         }
 
@@ -313,17 +398,62 @@ public class ReportTemplateService : IReportTemplateService
         html = html.Replace("{{IMPROVEMENT_SCORE}}", "75.0");
 
         // Replace charts (placeholder boxes)
-        html = html.Replace("{{CHART_OVERALL_SATISFACTION}}", 
+        html = html.Replace("{{CHART_OVERALL_SATISFACTION}}",
             "<div class=\"chart-placeholder\">Overall Satisfaction Chart - Chart will be rendered here</div>");
-        html = html.Replace("{{CHART_QUESTION_PERFORMANCE}}", 
+        html = html.Replace("{{CHART_QUESTION_PERFORMANCE}}",
             "<div class=\"chart-placeholder\">Question Performance Chart - Chart will be rendered here</div>");
-        html = html.Replace("{{CHART_SELF_VS_EVALUATOR}}", 
+        html = html.Replace("{{CHART_SELF_VS_EVALUATOR}}",
             "<div class=\"chart-placeholder\">Self vs Evaluator Comparison Chart - Chart will be rendered here</div>");
 
         // Replace questions table with mock data
         html = html.Replace("{{QUESTIONS_TABLE}}", GenerateMockQuestionsTable());
 
         return html;
+    }
+
+    /// <summary>
+    /// Generates HTML table rows for relationship completion statistics
+    /// </summary>
+    private string GenerateRelationshipCompletionRows(List<RelationshipCompletionStats>? stats)
+    {
+        if (stats == null || stats.Count == 0)
+        {
+            // Return mock data if no stats available
+            return @"
+        <tr>
+            <td>Direct Reports</td>
+            <td>0 / 0</td>
+            <td>0%</td>
+        </tr>
+        <tr>
+            <td>Line-Manager</td>
+            <td>0 / 0</td>
+            <td>0%</td>
+        </tr>
+        <tr>
+            <td>Peers</td>
+            <td>0 / 0</td>
+            <td>0%</td>
+        </tr>
+        <tr>
+            <td>Stakeholders</td>
+            <td>0 / 0</td>
+            <td>0%</td>
+        </tr>";
+        }
+
+        var sb = new StringBuilder();
+        foreach (var stat in stats)
+        {
+            sb.AppendLine($@"
+        <tr>
+            <td>{stat.RelationshipType}</td>
+            <td>{stat.Completed} / {stat.Total}</td>
+            <td>{stat.PercentComplete:0}%</td>
+        </tr>");
+        }
+
+        return sb.ToString();
     }
 
     private string ReplacePlaceholders(
@@ -333,7 +463,9 @@ public class ReportTemplateService : IReportTemplateService
         string? coverImageUrl,
         string? primaryColor,
         string? secondaryColor,
-        string? tertiaryColor)
+        string? tertiaryColor,
+        string? selfAssessmentStatus = null,
+        List<RelationshipCompletionStats>? relationshipStats = null)
     {
         var html = template;
 
@@ -345,28 +477,28 @@ public class ReportTemplateService : IReportTemplateService
         // Replace company information (use companyName parameter if available)
         // This will be passed through the GenerateReportHtmlAsync method signature
         html = html.Replace("{{COMPANY_NAME}}", "Company Name"); // TODO: Get from tenant settings or request
-        
+
         // Replace logo in header
         if (!string.IsNullOrEmpty(companyLogoUrl))
         {
-            html = html.Replace("{{COMPANY_LOGO}}", 
+            html = html.Replace("{{COMPANY_LOGO}}",
                 $"<img src=\"{companyLogoUrl}\" alt=\"Company Logo\" class=\"client-logo\" />");
         }
         else
         {
-            html = html.Replace("{{COMPANY_LOGO}}", 
+            html = html.Replace("{{COMPANY_LOGO}}",
                 "<div class=\"client-logo\" style=\"width: 80mm; height: 30mm; background: #f0f0f0; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 10pt; color: #999;\">CLIENT LOGO</div>");
         }
-        
+
         // Cover image
         if (!string.IsNullOrEmpty(coverImageUrl))
         {
-            html = html.Replace("{{COVER_IMAGE}}", 
+            html = html.Replace("{{COVER_IMAGE}}",
                 $"<img src=\"{coverImageUrl}\" alt=\"Cover Image\" class=\"cover-image\" style=\"width: 100%; height: auto; object-fit: cover;\" />");
         }
         else
         {
-            html = html.Replace("{{COVER_IMAGE}}", 
+            html = html.Replace("{{COVER_IMAGE}}",
                 "<div class=\"cover-image\" style=\"width: 100%; height: 200mm; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-size: 24pt; font-weight: bold;\">Cover Image</div>");
         }
 
@@ -376,6 +508,12 @@ public class ReportTemplateService : IReportTemplateService
         html = html.Replace("{{SUBJECT_DEPARTMENT}}", "N/A"); // TODO: Get from subject entity
         html = html.Replace("{{SUBJECT_POSITION}}", "N/A"); // TODO: Get from subject entity
         html = html.Replace("{{SUBJECT_EMPLOYEE_ID}}", reportData.SubjectId.ToString());
+
+        // Replace self-assessment status (computed from ReportAnalyticsRepository)
+        html = html.Replace("{{SELF_ASSESSMENT_STATUS}}", selfAssessmentStatus ?? "Not Available");
+
+        // Replace relationship completion rows
+        html = html.Replace("{{RELATIONSHIP_COMPLETION_ROWS}}", GenerateRelationshipCompletionRows(relationshipStats));
 
         // Replace dates
         var now = DateTime.Now;
@@ -402,20 +540,20 @@ public class ReportTemplateService : IReportTemplateService
 
         // Replace performance indicators
         html = html.Replace("{{SATISFACTION_SCORE}}", FormatScore(overallScore));
-        html = html.Replace("{{IMPROVEMENT_SCORE}}", 
+        html = html.Replace("{{IMPROVEMENT_SCORE}}",
             FormatScore(CalculateImprovementScore(reportData)));
-        html = html.Replace("{{ORGANIZATION_COMPARISON}}", 
+        html = html.Replace("{{ORGANIZATION_COMPARISON}}",
             FormatScore(reportData.SubjectVsOrganizationDifference));
-        html = html.Replace("{{ORGANIZATION_RATING}}", 
-            reportData.PerformanceLevel == PerformanceLevel.AbovePar ? "Above Average" : 
+        html = html.Replace("{{ORGANIZATION_RATING}}",
+            reportData.PerformanceLevel == PerformanceLevel.AbovePar ? "Above Average" :
             reportData.PerformanceLevel == PerformanceLevel.BelowPar ? "Below Average" : "Average");
 
         // Replace charts (placeholder - will be replaced with actual chart images)
-        html = html.Replace("{{CHART_OVERALL_SATISFACTION}}", 
+        html = html.Replace("{{CHART_OVERALL_SATISFACTION}}",
             "<div class=\"chart-placeholder\">Overall Satisfaction Chart - Chart will be rendered here</div>");
-        html = html.Replace("{{CHART_QUESTION_PERFORMANCE}}", 
+        html = html.Replace("{{CHART_QUESTION_PERFORMANCE}}",
             "<div class=\"chart-placeholder\">Question Performance Chart - Chart will be rendered here</div>");
-        html = html.Replace("{{CHART_SELF_VS_EVALUATOR}}", 
+        html = html.Replace("{{CHART_SELF_VS_EVALUATOR}}",
             "<div class=\"chart-placeholder\">Self vs Evaluator Comparison Chart - Chart will be rendered here</div>");
 
         // Replace questions table

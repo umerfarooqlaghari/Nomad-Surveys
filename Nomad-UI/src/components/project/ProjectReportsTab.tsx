@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
-import SubjectSelectorModal from './SubjectSelectorModal';
 import ImageLibrary from './ImageLibrary';
 
 interface ProjectReportsTabProps {
@@ -19,6 +18,21 @@ interface LoadedTemplateSettings {
   tertiaryColor: string;
 }
 
+interface SurveyListItem {
+  Id: string;
+  Title: string;
+  Description?: string;
+  IsActive: boolean;
+}
+
+interface SubjectFromSurvey {
+  SubjectId: string;
+  SubjectFullName: string;
+  SubjectEmail: string;
+  SubjectEmployeeIdString: string;
+  SubjectDesignation?: string;
+}
+
 export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProps) {
   const { token } = useAuth();
   const [companyName, setCompanyName] = useState('Alpha Devs');
@@ -31,9 +45,6 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
   const [tertiaryColor, setTertiaryColor] = useState('#6C757D');
   const [previewHtml, setPreviewHtml] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
-  const [showSubjectModal, setShowSubjectModal] = useState(false);
-  const [isGeneratingBulk, setIsGeneratingBulk] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(true);
   const [loadedTemplate, setLoadedTemplate] = useState<LoadedTemplateSettings | null>(null);
@@ -42,6 +53,14 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLIFrameElement>(null);
+
+  // Survey and Subject selection state
+  const [surveys, setSurveys] = useState<SurveyListItem[]>([]);
+  const [selectedSurveyId, setSelectedSurveyId] = useState<string>('');
+  const [subjectsForSurvey, setSubjectsForSurvey] = useState<SubjectFromSurvey[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>('');
+  const [isLoadingSurveys, setIsLoadingSurveys] = useState(false);
+  const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -94,6 +113,8 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
         primaryColor,
         secondaryColor,
         tertiaryColor,
+        surveyId: selectedSurveyId || null,
+        subjectId: selectedSubjectId || null,
       };
 
       console.log('Updating preview with data:', previewData);
@@ -273,95 +294,84 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
       updatePreview();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [companyName, logoPreview, coverImagePreview, primaryColor, secondaryColor, tertiaryColor, isLoadingTemplate]);
+  }, [companyName, logoPreview, coverImagePreview, primaryColor, secondaryColor, tertiaryColor, isLoadingTemplate, selectedSurveyId, selectedSubjectId]);
 
-  const handleGenerateReport = async (format: 'html' | 'pdf', subjectIds?: string[]) => {
-    const subjectsToProcess = subjectIds || selectedSubjectIds;
-    
-    if (subjectsToProcess.length === 0) {
-      toast.error('Please select at least one subject');
-      setShowSubjectModal(true);
-      return;
-    }
+  // Fetch surveys on mount
+  useEffect(() => {
+    const fetchSurveys = async () => {
+      if (!token) return;
 
-    try {
-      setIsGeneratingBulk(true);
-      const logoUrl = logoPreview || '';
-      const errors: string[] = [];
-      const success: string[] = [];
+      setIsLoadingSurveys(true);
+      try {
+        const response = await fetch(`/api/${projectSlug}/surveys`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      // Process reports sequentially to avoid overwhelming the server
-      for (const subjectId of subjectsToProcess) {
-        try {
-          const response = await fetch(`/api/${projectSlug}/reports/generate/${format}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              subjectId,
-              surveyId: null,
-              companyName,
-              companyLogoUrl: logoUrl,
-              coverImageUrl: coverImagePreview || '',
-              primaryColor,
-              secondaryColor,
-              tertiaryColor,
-            }),
-          });
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            errors.push(`Subject ${subjectId}: ${errorText}`);
-            continue;
-          }
-
-          if (format === 'pdf') {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `report_${subjectId}_${Date.now()}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-          } else {
-            const html = await response.text();
-            const newWindow = window.open('', '_blank');
-            if (newWindow) {
-              newWindow.document.write(html);
-              newWindow.document.close();
-            }
-          }
-          success.push(subjectId);
-        } catch (error) {
-          console.error(`Error generating report for subject ${subjectId}:`, error);
-          errors.push(`Subject ${subjectId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSurveys(data.filter((s: SurveyListItem) => s.IsActive));
+        } else {
+          console.error('Failed to fetch surveys');
         }
+      } catch (error) {
+        console.error('Error fetching surveys:', error);
+      } finally {
+        setIsLoadingSurveys(false);
+      }
+    };
+
+    fetchSurveys();
+  }, [projectSlug, token]);
+
+  // Fetch subjects when survey changes
+  useEffect(() => {
+    const fetchSubjectsForSurvey = async () => {
+      if (!token || !selectedSurveyId) {
+        setSubjectsForSurvey([]);
+        setSelectedSubjectId('');
+        return;
       }
 
-      if (success.length > 0) {
-        toast.success(`Successfully generated ${success.length} report(s)`);
-      }
-      if (errors.length > 0) {
-        toast.error(`Failed to generate ${errors.length} report(s). Check console for details.`);
-        console.error('Generation errors:', errors);
-      }
-    } catch (error) {
-      console.error('Error generating reports:', error);
-      toast.error('Failed to generate reports. Check console for details.');
-    } finally {
-      setIsGeneratingBulk(false);
-    }
-  };
+      setIsLoadingSubjects(true);
+      try {
+        const response = await fetch(`/api/${projectSlug}/surveys/${selectedSurveyId}/assigned-relationships`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-  const handleSubjectSelect = (subjectIds: string[]) => {
-    setSelectedSubjectIds(subjectIds);
-    setShowSubjectModal(false);
-    toast.success(`${subjectIds.length} subject(s) selected`);
-  };
+        if (response.ok) {
+          const data = await response.json();
+          // Extract unique subjects from the assigned relationships
+          const uniqueSubjects = new Map<string, SubjectFromSurvey>();
+          data.forEach((rel: { SubjectId: string; SubjectFullName: string; SubjectEmail: string; SubjectEmployeeIdString: string; SubjectDesignation?: string }) => {
+            if (!uniqueSubjects.has(rel.SubjectId)) {
+              uniqueSubjects.set(rel.SubjectId, {
+                SubjectId: rel.SubjectId,
+                SubjectFullName: rel.SubjectFullName,
+                SubjectEmail: rel.SubjectEmail,
+                SubjectEmployeeIdString: rel.SubjectEmployeeIdString,
+                SubjectDesignation: rel.SubjectDesignation,
+              });
+            }
+          });
+          setSubjectsForSurvey(Array.from(uniqueSubjects.values()));
+        } else {
+          console.error('Failed to fetch subjects for survey');
+          setSubjectsForSurvey([]);
+        }
+      } catch (error) {
+        console.error('Error fetching subjects for survey:', error);
+        setSubjectsForSurvey([]);
+      } finally {
+        setIsLoadingSubjects(false);
+      }
+    };
+
+    fetchSubjectsForSurvey();
+  }, [projectSlug, token, selectedSurveyId]);
 
   const handleSaveTemplate = async () => {
     if (!token) {
@@ -801,45 +811,57 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
               </div>
             </div>
 
-            {/* Subject Selection Button */}
+            {/* Survey Selection Dropdown */}
             <div className="pt-4 border-t border-gray-200">
-              <button
-                onClick={() => setShowSubjectModal(true)}
-                className="w-full px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md font-medium transition-colors flex items-center justify-center gap-2"
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Survey
+              </label>
+              <select
+                value={selectedSurveyId}
+                onChange={(e) => {
+                  setSelectedSurveyId(e.target.value);
+                  setSelectedSubjectId(''); // Reset subject when survey changes
+                }}
+                disabled={isLoadingSurveys}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black bg-white"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                Select Subjects
-                {selectedSubjectIds.length > 0 && (
-                  <span className="px-2 py-1 bg-blue-600 text-white rounded-full text-xs">
-                    {selectedSubjectIds.length}
-                  </span>
-                )}
-              </button>
-              {selectedSubjectIds.length > 0 && (
-                <p className="mt-2 text-xs text-gray-600 text-center">
-                  {selectedSubjectIds.length} subject(s) selected
-                </p>
-              )}
+                <option value="">
+                  {isLoadingSurveys ? 'Loading surveys...' : '-- Select a Survey --'}
+                </option>
+                {surveys.map((survey) => (
+                  <option key={survey.Id} value={survey.Id}>
+                    {survey.Title}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Generate Buttons */}
-            <div className="pt-4 border-t border-gray-200 space-y-3">
-              <button
-                onClick={() => handleGenerateReport('html')}
-                disabled={isGeneratingBulk || selectedSubjectIds.length === 0}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-3 rounded-md font-medium transition-colors"
+            {/* Subject Selection Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Subject
+              </label>
+              <select
+                value={selectedSubjectId}
+                onChange={(e) => setSelectedSubjectId(e.target.value)}
+                disabled={!selectedSurveyId || isLoadingSubjects}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
-                {isGeneratingBulk ? 'Generating...' : 'Generate HTML'}
-              </button>
-              <button
-                onClick={() => handleGenerateReport('pdf')}
-                disabled={isGeneratingBulk || selectedSubjectIds.length === 0}
-                className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-4 py-3 rounded-md font-medium transition-colors"
-              >
-                {isGeneratingBulk ? 'Generating...' : 'Generate PDF'}
-              </button>
+                <option value="">
+                  {!selectedSurveyId
+                    ? '-- Select a Survey first --'
+                    : isLoadingSubjects
+                      ? 'Loading subjects...'
+                      : subjectsForSurvey.length === 0
+                        ? '-- No subjects assigned --'
+                        : '-- Select a Subject --'}
+                </option>
+                {subjectsForSurvey.map((subject) => (
+                  <option key={subject.SubjectId} value={subject.SubjectId}>
+                    {subject.SubjectFullName} ({subject.SubjectEmployeeIdString})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
@@ -873,14 +895,6 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
           </div>
         </div>
       </div>
-
-      {/* Subject Selector Modal */}
-      <SubjectSelectorModal
-        isOpen={showSubjectModal}
-        onClose={() => setShowSubjectModal(false)}
-        onConfirm={handleSubjectSelect}
-        projectSlug={projectSlug}
-      />
 
       {/* Image Library Modal */}
       <ImageLibrary
