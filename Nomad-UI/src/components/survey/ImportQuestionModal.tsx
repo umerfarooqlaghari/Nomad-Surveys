@@ -110,18 +110,34 @@ export default function ImportQuestionModal({
 
 
   const handleImport = () => {
-    // Find selected question from hierarchical data
-    const selectedQuestion = clusters
-      .flatMap((c) => c?.Competencies || [])
-      .flatMap((comp) => comp?.Questions || [])
-      .find((q) => q?.Id === selectedQuestionId);
+    // Find selected question from hierarchical data along with its cluster info
+    let selectedQuestion = null;
+    let questionClusterId = '';
+
+    for (const cluster of clusters) {
+      for (const comp of cluster?.Competencies || []) {
+        const question = comp?.Questions?.find((q) => q?.Id === selectedQuestionId);
+        if (question) {
+          selectedQuestion = question;
+          questionClusterId = cluster.Id;
+          break;
+        }
+      }
+      if (selectedQuestion) break;
+    }
 
     if (!selectedQuestion) {
       toast.error('Please select a question to import');
       return;
     }
 
-    onImport(selectedQuestion);
+    // Include clusterId in the question object for the import handler
+    const questionWithCluster = {
+      ...selectedQuestion,
+      ClusterId: questionClusterId,
+    };
+
+    onImport(questionWithCluster);
     handleClose();
   };
 
