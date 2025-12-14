@@ -838,11 +838,463 @@
     margin-top: 10px;
 }
 
+
+/* --- AGREEMENT CHART STYLING --- */
+
+.agreement-chart-container {
+    width: 100%;
+    margin-top: 20px;
+    padding-bottom: 20px;
+}
+
+/* --- Body and Grid Structure --- */
+.agreement-chart-body {
+    display: flex;
+    flex-direction: column;
+    /* Vertical lines for the grid (0, 1, 2, 3, 4) */
+    
+    background-size: calc(75% / 4) 100%; /* Chart area is 75% wide, divided by 4 segments */
+    background-repeat: repeat-x;
+    background-position: 25% 0; /* Start grid lines after the label column (25% offset) */
+    padding-bottom: 20px; 
+    border-top: 1px solid #e6e1e1ff; /* Top border for the chart area */
+}
+
+/* --- Item Row --- */
+.agreement-chart-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 0; /* Vertical spacing between items */
+    position: relative;
+    /* Horizontal line between items is a subtle top border */
+    border-bottom: 1px dotted #ccc; 
+}
+.agreement-chart-item:last-of-type {
+    border-bottom: none;
+}
+
+/* --- Item Label (Competency Name) --- */
+.agreement-chart-item .item-label {
+    width: 25%; /* Fixed width for the label column */
+    font-size: 10pt;
+    font-weight: 500;
+    color: #333;
+}
+
+/* --- Bubble Area (The main plotting space) --- */
+.bubble-area {
+    width: 75%; /* Remaining width for the chart */
+    height: 15px; 
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* --- Dynamic Bubbles --- */
+.bubble {
+    position: absolute;
+    border-radius: 50%;
+    background-color: #3b82f6; /* Blue fill color */
+    
+    /* Center bubble precisely on its X position */
+    top: 50%;
+    transform: translate(-50%, -50%); 
+    left: var(--x-pos); /* Dynamic horizontal position (0% to 100%) */
+}
+
+/* Bubble Sizes (Based on the legend: 1 response to 5+ responses) */
+.bubble.size-1 {
+    width: 4px;
+    height: 4px;
+    opacity: 0.8;
+}
+.bubble.size-2 {
+    width: 6px;
+    height: 6px;
+    opacity: 0.9;
+}
+.bubble.size-3 {
+    width: 8px;
+    height: 8px;
+}
+.bubble.size-4 {
+    width: 10px;
+    height: 10px;
+}
+.bubble.size-5 {
+    width: 12px;
+    height: 12px;
+}
+
+
+/* --- X-Axis (Score Scale) --- */
+.agreement-x-axis {
+    width: 75%;
+    margin-left: 25%; /* Align with the bubble-area */
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+    position: relative;
+}
+
+.agreement-x-axis::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: #ccc;
+    transform: translateY(-10px); 
+    z-index: 0;
+}
+
+.agreement-x-axis .axis-label {
+    font-size: 10pt;
+    color: #949292ff;
+    width: 20%; 
+    text-align: center;
+}
+.agreement-x-axis .axis-label:first-child {
+    margin-left: -5px; 
+}
+.agreement-x-axis .axis-label:last-child {
+    margin-right: -10px; 
+}
+
+
+/* --- Legend (How others rated you) --- */
+.agreement-chart-legend {
+    margin-top: 25px;
+    padding: 10px 0;
+}
+
+.agreement-chart-legend .legend-heading {
+    font-size: 10pt;
+    font-weight: 600;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.legend-scale {
+    display: flex;
+    gap: 25px;
+    flex-wrap: wrap;
+    font-size: 9pt;
+    color: #918f8fff;
+}
+
+.agreement-chart-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Legend Bubble Styling (Uses the same size classes as the chart bubbles) */
+.legend-bubble {
+    border-radius: 50%;
+    background-color: #3b82f6; 
+}
+.legend-bubble.size-1 {
+    width: 8px; /* Slightly larger in legend for visibility */
+    height: 8px;
+    opacity: 0.8;
+}
+.legend-bubble.size-2 {
+    width: 10px;
+    height: 10px;
+    opacity: 0.9;
+}
+.legend-bubble.size-3 {
+    width: 12px;
+    height: 12px;
+}
+.legend-bubble.size-4 {
+    width: 14px;
+    height: 14px;
+}
+.legend-bubble.size-5 {
+    width: 16px;
+    height: 16px;
+}
+
+
+.banner-content {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.banner-content h1 {
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--primary-color);  
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+/* --- RATER GROUP SUMMARY TABLE STYLING --- */
+
+.rater-group-summary-table-container {
+    width: 100%;
+    margin-top: 20px;
+    border: 1px solid #ccc; /* Outer border */
+    border-collapse: collapse;
+}
+
+.rater-group-table {
+    width: 100%;
+    border-collapse: collapse; /* Ensure borders are clean */
+    font-size: 10pt;
+    color: #333;
+}
+
+/* --- Table Headers --- */
+.rater-group-table thead {
+    background-color: #f7f7f7; /* Light gray background for header */
+}
+
+.rater-group-table th {
+    padding: 8px 6px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid #ccc;
+    border-right: 1px solid #ddd;
+}
+
+/* Fix for the last header column border */
+.rater-group-table th:last-child {
+    border-right: none;
+}
+
+.dimension-header {
+    width: 30%; /* Allocate more space for the Dimension name */
+    padding-left: 10px;
+}
+
+.score-header {
+    width: 11.6%; /* Distribute remaining 70% among 6 columns */
+    text-align: center;
+}
+
+/* --- Table Body Rows --- */
+.rater-group-table td {
+    padding: 8px 6px;
+    text-align: center;
+    border-bottom: 1px solid #eee; /* Lighter border between rows */
+    border-right: 1px solid #ddd;
+}
+
+/* Style for the Dimension Name column */
+.dimension-name {
+    width: 30%;
+    text-align: left;
+    font-weight: 500;
+    padding-left: 10px;
+    /* Optional: Ensure text wraps if needed */
+    word-break: break-word; 
+}
+
+/* Fix for the last score column border */
+.rater-group-table td:last-child {
+    border-right: none;
+}
+
+/* Alternating row colors for readability (Optional, but professional) */
+.rater-group-table tbody tr:nth-child(even) {
+    background-color: #fafafa;
+}
+
+/* Remove bottom border from the very last row */
+.rater-group-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+
+
+/* --- PAGE 16 LAYOUT STYLING (Two vertical, then top-half horizontal) --- */
+/* --- PAGE 16 PROFESSIONAL LAYOUT --- */
+
+/* Split Top Half */
+.top-layout-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 40px;
+    height: 400px; /* Fixed height for consistency */
+}
+
+/* Left Quadrant: Bar Chart */
+.quadrant-left {
+    width: 45%;
+    padding-right: 20px;
+}
+
+/* Right Quadrant: Radial Chart */
+.quadrant-right {
+    width: 50%;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* --- PROFESSIONAL BAR CHART --- */
+.professional-bar-chart {
+    margin-top: 20px;
+    font-family: 'Arial', sans-serif;
+}
+
+.bar-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.bar-label {
+    width: 30%;
+    text-align: right;
+    font-size: 10pt;
+    color: #333;
+    padding-right: 15px;
+}
+
+.bar-track {
+    width: 70%;
+    height: 18px; /* Thicker bars like the original */
+    position: relative;
+    border-left: 1px solid #ccc; /* Y-axis line */
+}
+
+.bar-fill {
+    height: 100%;
+    border-top-right-radius: 2px;
+    border-bottom-right-radius: 2px;
+}
+
+.self-bar {
+    background-color: #333333; /* Dark Grey for Self */
+}
+
+.others-bar {
+    background-color: #2b78c5; /* Professional Blue */
+}
+
+.bar-axis {
+    display: flex;
+    justify-content: space-between;
+    width: 70%;
+    margin-left: 30%; /* Align with track */
+    padding-top: 5px;
+    border-top: 1px solid #999;
+    font-size: 9pt;
+    color: #555;
+}
+
+/* --- SVG RADIAL CHART --- */
+.radial-svg {
+    width: 100%;
+    max-width: 350px;
+    height: auto;
+    filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.1)); /* Subtle depth */
+}
+
+/* Arrow styling */
+.arrow-container {
+    position: absolute;
+    top: 20%;
+    left: -10px;
+    z-index: 10;
+    transform: rotate(15deg);
+}
+
+.arrow-body {
+    width: 40px;
+    height: 8px;
+    background-color: #333;
+}
+
+.arrow-head {
+    width: 0; 
+    height: 0; 
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    border-left: 15px solid #333;
+    margin-left: 38px;
+    margin-top: -14px;
+}
+
+/* --- PROFESSIONAL TABLE --- */
+.bottom-layout-container {
+    width: 100%;
+}
+
+.professional-table-container {
+    width: 100%;
+    border: 1px solid #ddd;
+}
+
+.pro-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    font-family: 'Arial', sans-serif;
+}
+
+.pro-table thead {
+    background-color: #ffffff;
+    border-bottom: 2px solid #ddd;
+}
+
+.pro-table th {
+    padding: 10px 5px;
+    text-align: center;
+    color: #555;
+    font-weight: 700;
+    vertical-align: bottom;
+}
+
+.pro-table th.col-dim {
+    text-align: left;
+    padding-left: 15px;
+    width: 25%;
+}
+
+.pro-table td {
+    padding: 10px 5px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+    color: #333;
+}
+
+.pro-table td.td-dim {
+    text-align: left;
+    padding-left: 15px;
+    font-weight: 500;
+}
+
+/* Remove border from last row */
+.pro-table tr:last-child td {
+    border-bottom: none;
+}
+
+
+
     </style>
 </head>
 <body>
-    <!-- Page 1: Cover Page -->
-    <div class="page cover-page">
+
+
+    <!-- --------------------------------------------------------------------------------------------------------------------------e -->
+
+
+
+<!-- Page 1: Cover Page -->
+<div class="page cover-page">
         <!-- Header with Client Logo -->
         <div class="page-header">
             {{COMPANY_LOGO}}
@@ -868,10 +1320,10 @@
             <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
             <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span></div>
         </div>
-    </div>
+</div>
 
-    <!-- Page 2: Introduction -->
-    <div class="page">
+<!-- Page 2: Introduction -->
+<div class="page">
 
     <div class="page-header">
         {{COMPANY_LOGO}}
@@ -930,13 +1382,13 @@
                 <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
                 <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
                 <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span></div>
-        </div>
-
     </div>
 
+</div>
 
-    <!-- Page 3: Charts -->
-    <div class="page">
+
+<!-- Page 3: Charts -->
+<div class="page">
         <!-- Header -->
         <div class="page-header">
             {{COMPANY_LOGO}}
@@ -1035,9 +1487,11 @@
             <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span></div>
         </div>
     </div>
+</div>    
 
-    <!-- Page 4: Detailed Breakdown -->
- <div class="page">
+
+<!-- Page 4: Detailed Breakdown -->
+<div class="page">
         <!-- Header -->
         <div class="page-header">
             {{COMPANY_LOGO}}
@@ -1065,8 +1519,7 @@
     <div class="framework-image-placeholder">
         <span>IMAGE PLACEHOLDER</span>
     </div>
-
-</div>
+    </div>
 
         <!-- Footer -->
         <div class="page-footer">
@@ -1074,11 +1527,10 @@
             <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
             <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span></div>
         </div>
-    </div>
+</div>
 
 
-
-        <!-- page 5 -->
+    <!-- page 5 -->
 <div class="page">
 
     <!-- Header -->
@@ -1105,22 +1557,22 @@
         <!-- Subheading -->
       <h3 class="section-subheading-black" style="margin-top: 40px;">
     Report Summary
-</h3>
+    </h3>
 
-<table class="report-summary-table">
-    <thead>
-        <tr>
-            <th>Group</th>
-            <th>Completed<br>responses</th>
-            <th>% complete</th>
-        </tr>
-    </thead>
+        <table class="report-summary-table">
+            <thead>
+                <tr>
+                    <th>Group</th>
+                    <th>Completed<br>responses</th>
+                    <th>% complete</th>
+                </tr>
+            </thead>
 
-    <tbody>
-        {{RELATIONSHIP_COMPLETION_ROWS}}
-    </tbody>
-</table>
-    </div>
+            <tbody>
+                {{RELATIONSHIP_COMPLETION_ROWS}}
+            </tbody>
+        </table>
+            </div>
     <!-- FOOTER -->
     <div class="page-footer">
         <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
@@ -1132,7 +1584,7 @@
 
 </div>
 
-    <!-- Page 6: Detailed Breakdown -->
+<!-- Page 6: Detailed Breakdown -->
  <div class="page">
         <!-- Header -->
         <div class="page-header">
@@ -1199,81 +1651,34 @@
         <div class="section-description">The high/low table displays items based on the dimensions where others rated you highest and lowest.</div>
         
         <div class="section-subheading-black">Highest Scores</div>
-        
+
         <table class="report-summary-table">
             <thead>
                 <tr>
                     <th>Rank</th>
-                    <th>Dimensions</th>
+                    <th>Dimension</th>
                     <th>Item</th>
                     <th>Average</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td>{{HIGHEST_DIMENSION_1}}</td>
-                    <td>{{HIGHEST_ITEM_1}}</td>
-                    <td>{{AVERAGE_1}}</td>
-                </tr>
-                <tr>
-                    <td>2</td>
-                    <td>{{HIGHEST_DIMENSION_2}}</td>
-                    <td>{{HIGHEST_ITEM_2}}</td>
-                    <td>{{HIGHEST_AVERAGE_2}}</td>
-                </tr>
-                <tr>
-                    <td>3</td>
-                    <td>{{HIGHEST_DIMENSION_3}}</td>
-                    <td>{{HIGHEST_ITEM_3}}</td>
-                    <td>{{HIGHEST_AVERAGE_3}}</td>
-                </tr>
-                <tr>
-                    <td>4</td>
-                    <td>{{HIGHEST_DIMENSION_4}}</td>
-                    <td>{{HIGHEST_ITEM_4}}</td>
-                    <td>{{HIGHEST_AVERAGE_4}}</td>
-                </tr>
+                {{HIGHEST_SCORES_ROWS}}
             </tbody>
         </table>
 
         <div class="section-subheading-black">Lowest Scores</div>
-        
+
         <table class="report-summary-table">
             <thead>
                 <tr>
                     <th>Rank</th>
-                    <th>Dimensions</th>
+                    <th>Dimension</th>
                     <th>Item</th>
                     <th>Average</th>
-
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td>{{LOWEST_DIMENSION_1}}</td>
-                    <td>{{LOWEST_ITEM_1}}</td>
-                    <td>{{LOWEST_AVERAGE_1}}</td>
-                </tr>
-                <tr>
-                    <td>2</td>
-                    <td>{{LOWEST_DIMENSION_2}}</td>
-                    <td>{{LOWEST_ITEM_2}}</td>
-                    <td>{{LOWEST_AVERAGE_2}}</td>
-                </tr>
-                <tr>
-                    <td>3</td>
-                    <td>{{LOWEST_DIMENSION_3}}</td>
-                    <td>{{LOWEST_ITEM_3}}</td>
-                    <td>{{LOWEST_AVERAGE_3}}</td>
-                </tr>
-                <tr>
-                    <td>4</td>
-                    <td>{{LOWEST_DIMENSION_4}}</td>
-                    <td>{{LOWEST_ITEM_4}}</td>
-                    <td>{{LOWEST_AVERAGE_4}}</td>
-                </tr>
+                {{LOWEST_SCORES_ROWS}}
             </tbody>
         </table>
 
@@ -1312,8 +1717,6 @@
 
 
 
-
-
 <!-- Page 8 -->
 <div class="page">
 
@@ -1328,114 +1731,49 @@
         <h2 class="respondent-heading" style="margin-top: 80px; color: var(--primary-color);">
             Latent Strengths & Blindspots
         </h2>
-        <div class="section-description-small">The rst column of scores indicates how you scored yourself. The second column indicates the average
-score of others. The third column indicates the difference between how you scored yourself and how
-others scored you.
-</div>
-  <div class="section-description-small">Latent strengths show where others rated you signicantly higher than you rated yourself. Blindspots
-show where others rated you signicantly lower than you rated yourself. Both sections are ranked f rom
-largest to the smallest gap.
-</div>
-        
+        <div class="section-description-small">The first column of scores indicates how you scored yourself. The second column indicates the average
+                score of others. The third column indicates the difference between how you scored yourself and how
+                others scored you.
+                </div>
+                <div class="section-description-small">Latent strengths show where others rated you signicantly higher than you rated yourself. Blindspots
+                show where others rated you signicantly lower than you rated yourself. Both sections are ranked f rom
+                largest to the smallest gap.
+                </div>
         <div class="section-subheading-black">Latent Strengths</div>
-        
+
         <table class="report-summary-table">
             <thead>
                 <tr>
                     <th>Rank</th>
-                    <th>Dimensions</th>
+                    <th>Scoring Category</th>
                     <th>Item</th>
-                    <th>Average</th>
+                    <th>Self</th>
+                    <th>Others</th>
+                    <th>Gap</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td>{{HIGHEST_DIMENSION_1}}</td>
-                    <td>{{HIGHEST_ITEM_1}}</td>
-                    <td>{{AVERAGE_1}}</td>
-                </tr>
-                <tr>
-                    <td>2</td>
-                    <td>{{HIGHEST_DIMENSION_2}}</td>
-                    <td>{{HIGHEST_ITEM_2}}</td>
-                    <td>{{HIGHEST_AVERAGE_2}}</td>
-                </tr>
-                <tr>
-                    <td>3</td>
-                    <td>{{HIGHEST_DIMENSION_3}}</td>
-                    <td>{{HIGHEST_ITEM_3}}</td>
-                    <td>{{HIGHEST_AVERAGE_3}}</td>
-                </tr>
-                <tr>
-                    <td>4</td>
-                    <td>{{HIGHEST_DIMENSION_4}}</td>
-                    <td>{{HIGHEST_ITEM_4}}</td>
-                    <td>{{HIGHEST_AVERAGE_4}}</td>
-                </tr>
+                {{LATENT_STRENGTHS_ROWS}}
             </tbody>
         </table>
 
         <div class="section-subheading-black">Blindspots</div>
-        
+
         <table class="report-summary-table">
             <thead>
                 <tr>
                     <th>Rank</th>
-                    <th>Dimensions</th>
+                    <th>Scoring Category</th>
                     <th>Item</th>
-                    <th>Average</th>
-
+                    <th>Self</th>
+                    <th>Others</th>
+                    <th>Gap</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>1</td>
-                    <td>{{LOWEST_DIMENSION_1}}</td>
-                    <td>{{LOWEST_ITEM_1}}</td>
-                    <td>{{LOWEST_AVERAGE_1}}</td>
-                </tr>
-                <tr>
-                    <td>2</td>
-                    <td>{{LOWEST_DIMENSION_2}}</td>
-                    <td>{{LOWEST_ITEM_2}}</td>
-                    <td>{{LOWEST_AVERAGE_2}}</td>
-                </tr>
-                <tr>
-                    <td>3</td>
-                    <td>{{LOWEST_DIMENSION_3}}</td>
-                    <td>{{LOWEST_ITEM_3}}</td>
-                    <td>{{LOWEST_AVERAGE_3}}</td>
-                </tr>
-                <tr>
-                    <td>4</td>
-                    <td>{{LOWEST_DIMENSION_4}}</td>
-                    <td>{{LOWEST_ITEM_4}}</td>
-                    <td>{{LOWEST_AVERAGE_4}}</td>
-                </tr>
+                {{BLINDSPOTS_ROWS}}
             </tbody>
         </table>
-
-
-
-        <div class="blue-divider"></div>
-        <div>
-        <h2 class="section-Subheading-small">Guide for Interpretation:
-        </h2>
-        <p class="section-description-small">
-            <li>
-                The highest and lowest scores are provided by item or question within each dimension.
-            </li>
-            <li>  
-                It is important to look for any dimension(s) repeatedly occurring in the tables in this section.  
-            </li>
-            <li>   
-                Items appearing against dimensions in both highest and lowest scores give an insight on
-                behavioral level.
-            </li>
-        </p>
-        </div>
-
     </div>
 
     <!-- FOOTER -->
@@ -1507,7 +1845,6 @@ largest to the smallest gap.
 
     <div class="page-content respondent-summary-page">
         <div class="page-gap"></div>
-        <div class="blue-divider"></div>
         <div>
             <h2 class="section-heading">Gap Chart
             </h2>
@@ -1679,6 +2016,1113 @@ largest to the smallest gap.
 
 
 
+<!-- Page 11 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <!-- CONTENT -->
+    <div class="page-content respondent-summary-page">
+        <!-- Main Heading -->
+  <div class="page-gap"></div>
+  <div class="blue-divider"></div>
+        <div>
+        <h2 class="section-Subheading-small">Guide for Interpretation:
+        </h2>
+        <p class="section-description-small">
+            <li>
+                The length of the solid line on the chart signies the magnitude of difference in perception of Self
+                and Others.
+            </li>
+            <li>  
+                Observe the trends where rating provided by Others is lower than the rating provided by Self, and is
+                denoted by a negative (-) gap.
+            </li>
+            <li>  
+                 Observe the trends where the rating provided by Self is lower than ratings provided by Others, and
+                is denoted by a positive (+) gap.
+            </li>
+        </p>
+        </div>
+
+    </div>
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- Page 12 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <div class="page-content respondent-summary-page">
+        <div class="page-gap"></div>
+        <div>
+            <h2 class="section-heading">Agreement Chart
+            </h2>
+            <div class="section-description-small">
+                The agreement chart indicates the similarity of scores. Each dot represents how individuals rated you for
+                each dimension. The size of the dot shows how many raters gave you a specic rating.
+            </div>
+        </div>
+
+        <div class="agreement-chart-container">
+                <div class="agreement-chart-body">
+                
+                <div class="agreement-chart-item">
+                    <div class="item-label">Inventive Execution</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-1" style="--x-pos: 20%;"></div>
+                        <div class="bubble size-2" style="--x-pos: 60%;"></div>
+                        <div class="bubble size-5" style="--x-pos: 80%;"></div>
+                        <div class="bubble size-3" style="--x-pos: 90%;"></div>
+                    </div>
+                </div>
+
+                <div class="agreement-chart-item">
+                    <div class="item-label">Expansive Thinking</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-1" style="--x-pos: 40%;"></div>
+                        <div class="bubble size-2" style="--x-pos: 70%;"></div>
+                        <div class="bubble size-4" style="--x-pos: 85%;"></div>
+                        <div class="bubble size-1" style="--x-pos: 95%;"></div>
+                    </div>
+                </div>
+                
+                <div class="agreement-chart-item">
+                    <div class="item-label">Decision Making</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-5" style="--x-pos: 65%;"></div>
+                        <div class="bubble size-2" style="--x-pos: 80%;"></div>
+                        <div class="bubble size-1" style="--x-pos: 90%;"></div>
+                    </div>
+                </div>
+
+                <div class="agreement-chart-item">
+                    <div class="item-label">Dynamic Sensing</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-1" style="--x-pos: 50%;"></div>
+                        <div class="bubble size-2" style="--x-pos: 60%;"></div>
+                        <div class="bubble size-1" style="--x-pos: 75%;"></div>
+                        <div class="bubble size-3" style="--x-pos: 95%;"></div>
+                    </div>
+                </div>
+
+                <div class="agreement-chart-item">
+                    <div class="item-label">Nurture Growth</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-1" style="--x-pos: 30%;"></div>
+                        <div class="bubble size-3" style="--x-pos: 55%;"></div>
+                        <div class="bubble size-5" style="--x-pos: 80%;"></div>
+                    </div>
+                </div>
+                
+                <div class="agreement-chart-item">
+                    <div class="item-label">Purposeful Conversations</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-1" style="--x-pos: 40%;"></div>
+                        <div class="bubble size-5" style="--x-pos: 65%;"></div>
+                        <div class="bubble size-2" style="--x-pos: 98%;"></div>
+                    </div>
+                </div>
+                
+                <div class="agreement-chart-item">
+                    <div class="item-label">Network and Influence</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-1" style="--x-pos: 50%;"></div>
+                        <div class="bubble size-4" style="--x-pos: 85%;"></div>
+                        <div class="bubble size-3" style="--x-pos: 95%;"></div>
+                    </div>
+                </div>
+                
+                <div class="agreement-chart-item">
+                    <div class="item-label">People Agility</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-1" style="--x-pos: 20%;"></div>
+                        <div class="bubble size-2" style="--x-pos: 60%;"></div>
+                        <div class="bubble size-5" style="--x-pos: 80%;"></div>
+                        <div class="bubble size-1" style="--x-pos: 90%;"></div>
+                    </div>
+                </div>
+                
+                <div class="agreement-chart-item">
+                    <div class="item-label">Unprecedented Excellence</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-3" style="--x-pos: 55%;"></div>
+                        <div class="bubble size-2" style="--x-pos: 75%;"></div>
+                        <div class="bubble size-1" style="--x-pos: 98%;"></div>
+                    </div>
+                </div>
+                
+                <div class="agreement-chart-item">
+                    <div class="item-label">Catalytic Learning</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-1" style="--x-pos: 10%;"></div>
+                        <div class="bubble size-2" style="--x-pos: 40%;"></div>
+                        <div class="bubble size-5" style="--x-pos: 65%;"></div>
+                        <div class="bubble size-1" style="--x-pos: 90%;"></div>
+                    </div>
+                </div>
+                
+                <div class="agreement-chart-item">
+                    <div class="item-label">Enterprising Drive</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-1" style="--x-pos: 30%;"></div>
+                        <div class="bubble size-3" style="--x-pos: 50%;"></div>
+                        <div class="bubble size-5" style="--x-pos: 70%;"></div>
+                        <div class="bubble size-1" style="--x-pos: 90%;"></div>
+                    </div>
+                </div>
+                
+                <div class="agreement-chart-item">
+                    <div class="item-label">Organizational Relatability</div>
+                    <div class="bubble-area">
+                        <div class="bubble size-1" style="--x-pos: 50%;"></div>
+                        <div class="bubble size-5" style="--x-pos: 75%;"></div>
+                        <div class="bubble size-2" style="--x-pos: 95%;"></div>
+                    </div>
+                </div>
+
+                <div class="x-axis agreement-x-axis">
+                    <div class="axis-label">1</div>
+                    <div class="axis-label">2</div>
+                    <div class="axis-label">3</div>
+                    <div class="axis-label">4</div>
+                    <div class="axis-label">5</div>
+                </div>
+                </div>
+            </div>
+            
+        <div class="agreement-chart-legend">
+            <span class="legend-heading">How others rated you</span>
+            <div class="legend-scale">
+                <div class="legend-item">
+                    <div class="legend-bubble size-1"></div>
+                    <span>1 response</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-bubble size-2"></div>
+                    <span>2 responses</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-bubble size-3"></div>
+                    <span>3 responses</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-bubble size-4"></div>
+                    <span>4 responses</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-bubble size-5"></div>
+                    <span>5+ responses</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 13 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <!-- CONTENT -->
+    <div class="page-content respondent-summary-page">
+        <!-- Main Heading -->
+        <div class="page-gap"></div>
+        <div class="blue-divider"></div>
+        <h2 class="section-Subheading-small">Guide for Interpretation:
+        </h2>
+        <p class="section-description-small">
+            <li>
+                 The larger the size of a dot on the chart is, the more consistent the feedback is for a given dimension.
+            </li>
+            <li>  
+                Observe the largest dots, and determine the ratings and dimensions they are corresponding to          
+              </li>
+            <li>   
+                Pay particular attention to areas which have larger dots towards the left of the chart.
+            </li>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 14 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <!-- CONTENT -->
+    <div class="page-content respondent-summary-page">
+        <div class= "page-gap"></div>
+        <div class= "page-gap"></div>
+        <div class= "page-gap"></div>
+        <div class= "page-gap"></div>
+        <div class= "page-gap"></div>
+
+        <div class="banner-content">
+        <h1> Comprehensive<br>
+            Insights</h1>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+<!-- Page 15 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <!-- CONTENT -->
+    <div class="page-content respondent-summary-page">
+        <div class= "page-gap"></div>
+            <h1 class="section-heading">
+                Rater Group Summary - Overall
+            </h1>  
+            <div class="section-description">
+                The Rater Group Summary provides a comparative snapshot of how each dimension has been rated by your
+                rater groups, i.e. Line Manager, Direct Reports, Peers and Stakeholders. It is important to see the trends of
+                consistencies and differences and how they compare with how you had rated yourself.
+           </div>
+
+           <div class="rater-group-summary-table-container">
+            <table class="rater-group-table">
+                <thead>
+                    <tr>
+                        <th class="dimension-header">Dimensions</th>
+                        <th class="score-header self-header">Self</th>
+                        <th class="score-header others-header">Others</th>
+                        <th class="score-header">Line Manager</th>
+                        <th class="score-header">Peers</th>
+                        <th class="score-header">Direct Reports</th>
+                        <th class="score-header stakeholders-header">Stake-holders</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="dimension-name">Inventive Execution</td>
+                        <td class="score self-score">4.00</td>
+                        <td class="score others-score">3.22</td>
+                        <td class="score">2.60</td>
+                        <td class="score">1.58</td>
+                        <td class="score">2.00</td>
+                        <td class="score">3.52</td>
+                    </tr>
+                    <tr>
+                        <td class="dimension-name">Expansive Thinking</td>
+                        <td class="score self-score">3.40</td>
+                        <td class="score others-score">3.05</td>
+                        <td class="score">2.20</td>
+                        <td class="score">3.25</td>
+                        <td class="score">2.20</td>
+                        <td class="score">3.42</td>
+                    </tr>
+                    <tr>
+                        <td class="dimension-name">Decision Making</td>
+                        <td class="score self-score">3.60</td>
+                        <td class="score others-score">3.27</td>
+                        <td class="score">3.00</td>
+                        <td class="score">3.33</td>
+                        <td class="score">3.00</td>
+                        <td class="score">3.38</td>
+                    </tr>
+                    <tr>
+                        <td class="dimension-name">Dynamic Sensing</td>
+                        <td class="score self-score">4.00</td>
+                        <td class="score others-score">3.27</td>
+                        <td class="score">3.50</td>
+                        <td class="score">3.36</td>
+                        <td class="score">2.88</td>
+                        <td class="score">3.48</td>
+                    </tr>
+                    <tr>
+                        <td class="dimension-name">Nurture Growth</td>
+                        <td class="score self-score">3.29</td>
+                        <td class="score others-score">2.96</td>
+                        <td class="score">2.57</td>
+                        <td class="score">3.47</td>
+                        <td class="score">1.02</td>
+                        <td class="score">3.15</td>
+                    </tr>
+                    <tr>
+                        <td class="dimension-name">Purposeful Conversations</td>
+                        <td class="score self-score">3.76</td>
+                        <td class="score others-score">3.23</td>
+                        <td class="score">3.00</td>
+                        <td class="score">3.57</td>
+                        <td class="score">2.63</td>
+                        <td class="score">3.26</td>
+                    </tr>
+                    <tr>
+                        <td class="dimension-name">Network and Influence</td>
+                        <td class="score self-score">3.67</td>
+                        <td class="score others-score">3.28</td>
+                        <td class="score">2.67</td>
+                        <td class="score">3.61</td>
+                        <td class="score">2.00</td>
+                        <td class="score">3.56</td>
+                    </tr>
+                    <tr>
+                        <td class="dimension-name">People Agility</td>
+                        <td class="score self-score">3.40</td>
+                        <td class="score others-score">2.92</td>
+                        <td class="score">2.60</td>
+                        <td class="score">3.20</td>
+                        <td class="score">1.80</td>
+                        <td class="score">3.21</td>
+                    </tr>
+                    <tr>
+                        <td class="dimension-name">Unprecedented Excellence</td>
+                        <td class="score self-score">3.67</td>
+                        <td class="score others-score">3.23</td>
+                        <td class="score">3.00</td>
+                        <td class="score">3.50</td>
+                        <td class="score">2.50</td>
+                        <td class="score">3.38</td>
+                    </tr>
+                    <tr>
+                        <td class="dimension-name">Catalytic Learning</td>
+                        <td class="score self-score">3.26</td>
+                        <td class="score others-score">2.77</td>
+                        <td class="score">2.00</td>
+                        <td class="score">3.00</td>
+                        <td class="score">1.50</td>
+                        <td class="score">3.23</td>
+                    </tr>
+                    <tr>
+                        <td class="dimension-name">Enterprising Drive</td>
+                        <td class="score self-score">3.76</td>
+                        <td class="score others-score">3.23</td>
+                        <td class="score">3.26</td>
+                        <td class="score">3.42</td>
+                        <td class="score">3.00</td>
+                        <td class="score">3.20</td>
+                    </tr>
+                    <tr>
+                        <td class="dimension-name">Organizational Relatability</td>
+                        <td class="score self-score">3.50</td>
+                        <td class="score others-score">3.02</td>
+                        <td class="score">2.26</td>
+                        <td class="score">3.16</td>
+                        <td class="score">2.38</td>
+                        <td class="score">3.30</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>    
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+
+<!-- Page 16 -->
+<div class="page">
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <div class="page-content respondent-summary-page">
+        <div class="page-gap"></div>
+
+        <div class="top-layout-container">
+            
+            <div class="quadrant-left">
+                <h2 class="section-heading">Leading Solutions</h2>
+                <div class="professional-bar-chart">
+                    <div class="bar-row">
+                        <div class="bar-label">Self</div>
+                        <div class="bar-track">
+                            <div class="bar-fill self-bar" style="width: 100%;"></div> </div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label">Others</div>
+                        <div class="bar-track">
+                            <div class="bar-fill others-bar" style="width: 80.5%;"></div> </div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label">Line-Manager</div>
+                        <div class="bar-track">
+                            <div class="bar-fill others-bar" style="width: 65%;"></div> </div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label">Peers</div>
+                        <div class="bar-track">
+                            <div class="bar-fill others-bar" style="width: 89.5%;"></div> </div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label">Direct Reports</div>
+                        <div class="bar-track">
+                            <div class="bar-fill others-bar" style="width: 50%;"></div> </div>
+                    </div>
+                    <div class="bar-row">
+                        <div class="bar-label">Stakeholders</div>
+                        <div class="bar-track">
+                            <div class="bar-fill others-bar" style="width: 88%;"></div> </div>
+                    </div>
+                    
+                    <div class="bar-axis">
+                        <span>0.00</span>
+                        <span>2.00</span>
+                        <span>4.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quadrant-right">
+                <div class="arrow-container">
+                    <div class="arrow-body"></div>
+                    <div class="arrow-head"></div>
+                </div>
+
+                <svg viewBox="0 0 500 500" class="radial-svg">
+                    <defs>
+                        <path id="curveLeading" d="M 250, 250 m -200, 0 a 200,200 0 0,1 200,-200" /> 
+                        <path id="curveImpacting" d="M 250, 250 m 0, -200 a 200,200 0 0,1 200,200" />
+                        <path id="curveDriving" d="M 250, 250 m 200, 0 a 200,200 0 1,1 -400,0" />
+
+                        <path id="curveComp1" d="M 100, 250 a 150,150 0 0,1 150,-150" />
+                    </defs>
+
+                    <path d="M 250, 250 L 50, 250 A 200,200 0 0,1 250,50 Z" fill="#FFC000" stroke="white" stroke-width="2" />
+                    <path d="M 250, 250 L 250, 50 A 200,200 0 0,1 450,250 Z" fill="#00B0F0" stroke="white" stroke-width="2" />
+                    <path d="M 250, 250 L 450, 250 A 200,200 0 0,1 50,250 Z" fill="#364152" stroke="white" stroke-width="2" />
+
+                    <circle cx="250" cy="250" r="150" fill="white" />
+
+                    <path d="M 250, 250 L 80, 250 A 170,170 0 0,1 250,80 Z" fill="none" stroke="#D9D9D9" stroke-width="40" opacity="0.5" />
+                    <text font-size="24" font-weight="bold" fill="white" letter-spacing="2">
+                        <textPath href="#curveLeading" startOffset="10%" text-anchor="middle">LEADING SOLUTIONS</textPath>
+                    </text>
+                    <text font-size="24" font-weight="bold" fill="white" letter-spacing="2">
+                        <textPath href="#curveImpacting" startOffset="25%" text-anchor="middle">IMPACTING PEOPLE</textPath>
+                    </text>
+                    <text font-size="24" font-weight="bold" fill="white" letter-spacing="2">
+                        <textPath href="#curveDriving" startOffset="50%" text-anchor="middle">DRIVING BUSINESS</textPath>
+                    </text>
+
+                    <text x="140" y="160" font-size="12" fill="#333" transform="rotate(-45, 140, 160)">Inventive Execution</text>
+                    <text x="180" y="120" font-size="12" fill="#333" transform="rotate(-20, 180, 120)">Expansive Thinking</text>
+                    <text x="320" y="120" font-size="12" fill="#333" transform="rotate(20, 320, 120)">Network & Influence</text>
+                </svg>
+            </div>
+        </div>
+        
+        <div class="bottom-layout-container">
+            <h2 class="section-heading dimensions-summary-heading">Dimensions Summary</h2>
+            
+            <div class="professional-table-container">
+                <table class="pro-table">
+                    <thead>
+                        <tr>
+                            <th class="col-dim">Dimensions</th>
+                            <th class="col-score">Self</th>
+                            <th class="col-score">Others</th>
+                            <th class="col-score">Line-<br>Manager</th>
+                            <th class="col-score">Peers</th>
+                            <th class="col-score">Direct<br>Reports</th>
+                            <th class="col-score">Stake-<br>holders</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="td-dim">Inventive Execution</td>
+                            <td>4.00</td><td>3.22</td><td>2.60</td><td>3.58</td><td>2.00</td><td>3.52</td>
+                        </tr>
+                        <tr>
+                            <td class="td-dim">Expansive Thinking</td>
+                            <td>3.40</td><td>3.05</td><td>2.20</td><td>3.25</td><td>2.20</td><td>3.42</td>
+                        </tr>
+                        <tr>
+                            <td class="td-dim">Decision Making</td>
+                            <td>3.60</td><td>3.27</td><td>3.00</td><td>3.33</td><td>3.00</td><td>3.38</td>
+                        </tr>
+                        <tr>
+                            <td class="td-dim">Dynamic Sensing</td>
+                            <td>4.00</td><td>3.27</td><td>2.60</td><td>3.36</td><td>2.88</td><td>3.48</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+    </div>
+
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 17 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+<!-- Page 18 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 19 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 20 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 21 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 22 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 23 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 24 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 25 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 26 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 27 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 28 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 29 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 30 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+<!-- Page 31 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+        <!-- CONTENT -->
+    <div class="page-content respondent-summary-page">
+        <div class= "page-gap"></div>
+        <div class= "page-gap"></div>
+        <div class= "page-gap"></div>
+        <div class= "page-gap"></div>
+        <div class= "page-gap"></div>
+
+        <div class="banner-content">
+        <h1>Open Ended<br>
+            Feedback</h1>
+        </div>
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 32 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 33 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 34 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 35 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 36 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+        <div class="page-content respondent-summary-page">
+        <div class= "page-gap"></div>
+        <h1 class="section-heading">Feedback
+            </h1>
+            <div class="section-description">
+                Placeholder text
+            </div>
+    </div>
+
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 37 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<!-- Page 38 -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+    <div class="page-content respondent-summary-page">
+        <div class= "page-gap"></div>
+        <h1 class="section-heading">My Reection Summary
+            </h1>
+            <div class="section-description">
+                Placeholder text
+            </div>
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
 <script>
         // Populate page numbers for each .page footer and add a floating 'View as PDF' button
         (function() {
@@ -1707,6 +3151,5 @@ largest to the smallest gap.
             }
         })();
     </script>
-    </div>
 </body>
 </html>

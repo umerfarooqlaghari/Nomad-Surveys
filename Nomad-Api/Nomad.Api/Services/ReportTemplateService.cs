@@ -125,6 +125,8 @@ public class ReportTemplateService : IReportTemplateService
             // Get self-assessment status and relationship completion stats if subjectId, surveyId, and tenantId are provided
             string selfAssessmentStatus = "Completed"; // Default for preview
             List<RelationshipCompletionStats>? relationshipStats = null;
+            HighLowScoresResult? highLowScores = null;
+            LatentStrengthsBlindspotsResult? latentStrengthsBlindspots = null;
             var effectiveTenantId = tenantId ?? subjectTenantId;
             if (subjectId.HasValue && surveyId.HasValue && effectiveTenantId.HasValue && _reportAnalyticsRepository != null)
             {
@@ -148,10 +150,30 @@ public class ReportTemplateService : IReportTemplateService
                 {
                     _logger.LogWarning(ex, "Failed to get relationship completion stats for preview. Using mock data.");
                 }
+
+                try
+                {
+                    highLowScores = await _reportAnalyticsRepository.GetHighLowScoresAsync(
+                        subjectId.Value, surveyId.Value, effectiveTenantId.Value);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get high/low scores for preview. Using mock data.");
+                }
+
+                try
+                {
+                    latentStrengthsBlindspots = await _reportAnalyticsRepository.GetLatentStrengthsAndBlindspotsAsync(
+                        subjectId.Value, surveyId.Value, effectiveTenantId.Value);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get latent strengths/blindspots for preview. Using mock data.");
+                }
             }
 
             // Use mock data for preview, but use real subject name if available
-            var html = ReplacePlaceholdersForPreview(htmlTemplate, companyName, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor, subjectName, selfAssessmentStatus, relationshipStats);
+            var html = ReplacePlaceholdersForPreview(htmlTemplate, companyName, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor, subjectName, selfAssessmentStatus, relationshipStats, highLowScores, latentStrengthsBlindspots);
 
             return html;
         }
@@ -191,9 +213,11 @@ public class ReportTemplateService : IReportTemplateService
                 throw new InvalidOperationException($"No report data found for subject {subjectId}");
             }
 
-            // Get self-assessment status and relationship completion stats
+            // Get self-assessment status, relationship completion stats, high/low scores, and latent strengths/blindspots
             string selfAssessmentStatus = "Not Available";
             List<RelationshipCompletionStats>? relationshipStats = null;
+            HighLowScoresResult? highLowScores = null;
+            LatentStrengthsBlindspotsResult? latentStrengthsBlindspots = null;
             if (surveyId.HasValue && _reportAnalyticsRepository != null)
             {
                 try
@@ -216,10 +240,30 @@ public class ReportTemplateService : IReportTemplateService
                 {
                     _logger.LogWarning(ex, "Failed to get relationship completion stats for subject {SubjectId}", subjectId);
                 }
+
+                try
+                {
+                    highLowScores = await _reportAnalyticsRepository.GetHighLowScoresAsync(
+                        subjectId, surveyId.Value, tenantId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get high/low scores for subject {SubjectId}", subjectId);
+                }
+
+                try
+                {
+                    latentStrengthsBlindspots = await _reportAnalyticsRepository.GetLatentStrengthsAndBlindspotsAsync(
+                        subjectId, surveyId.Value, tenantId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get latent strengths/blindspots for subject {SubjectId}", subjectId);
+                }
             }
 
             // Replace placeholders with actual data
-            var html = ReplacePlaceholders(htmlTemplate, reportData, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor, selfAssessmentStatus, relationshipStats);
+            var html = ReplacePlaceholders(htmlTemplate, reportData, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor, selfAssessmentStatus, relationshipStats, highLowScores, latentStrengthsBlindspots);
 
             // Save template settings if provided
             await SaveTemplateSettingsIfProvided(
@@ -324,7 +368,9 @@ public class ReportTemplateService : IReportTemplateService
         string? tertiaryColor,
         string? subjectName = null,
         string? selfAssessmentStatus = null,
-        List<RelationshipCompletionStats>? relationshipStats = null)
+        List<RelationshipCompletionStats>? relationshipStats = null,
+        HighLowScoresResult? highLowScores = null,
+        LatentStrengthsBlindspotsResult? latentStrengthsBlindspots = null)
     {
         var html = template;
 
@@ -360,6 +406,25 @@ public class ReportTemplateService : IReportTemplateService
 
         // Replace relationship completion rows
         html = html.Replace("{{RELATIONSHIP_COMPLETION_ROWS}}", GenerateRelationshipCompletionRows(relationshipStats));
+
+        // Replace high/low scores rows
+        html = html.Replace("{{HIGHEST_SCORES_ROWS}}", GenerateHighLowScoresRows(highLowScores?.HighestScores, isHighest: true));
+        html = html.Replace("{{LOWEST_SCORES_ROWS}}", GenerateHighLowScoresRows(highLowScores?.LowestScores, isHighest: false));
+
+        // Replace latent strengths and blindspots - use real data if available, otherwise mock data
+        var hasLatentStrengthsData = latentStrengthsBlindspots != null &&
+            ((latentStrengthsBlindspots.LatentStrengths?.Count > 0) || (latentStrengthsBlindspots.Blindspots?.Count > 0));
+
+        if (hasLatentStrengthsData)
+        {
+            html = html.Replace("{{LATENT_STRENGTHS_ROWS}}", GenerateGapScoreRows(latentStrengthsBlindspots?.LatentStrengths, isLatentStrength: true));
+            html = html.Replace("{{BLINDSPOTS_ROWS}}", GenerateGapScoreRows(latentStrengthsBlindspots?.Blindspots, isLatentStrength: false));
+        }
+        else
+        {
+            html = html.Replace("{{LATENT_STRENGTHS_ROWS}}", GenerateMockGapScoreRows(isLatentStrength: true));
+            html = html.Replace("{{BLINDSPOTS_ROWS}}", GenerateMockGapScoreRows(isLatentStrength: false));
+        }
 
         // Cover image
         if (!string.IsNullOrEmpty(coverImageUrl))
@@ -456,6 +521,132 @@ public class ReportTemplateService : IReportTemplateService
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Generates HTML table rows for highest or lowest scores
+    /// </summary>
+    private string GenerateHighLowScoresRows(List<HighLowScoreItem>? items, bool isHighest)
+    {
+        if (items == null || items.Count == 0)
+        {
+            // Return placeholder row if no data available
+            var message = isHighest ? "No high scores available" : "No low scores available";
+            return $@"
+        <tr>
+            <td colspan=""4"" style=""text-align: center; font-style: italic; color: #666;"">{message}</td>
+        </tr>";
+        }
+
+        var sb = new StringBuilder();
+        foreach (var item in items)
+        {
+            sb.AppendLine($@"
+        <tr>
+            <td>{item.Rank}</td>
+            <td>{System.Web.HttpUtility.HtmlEncode(item.Dimension)}</td>
+            <td>{System.Web.HttpUtility.HtmlEncode(item.Item)}</td>
+            <td>{item.Average:0.00}</td>
+        </tr>");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Generates HTML table rows for latent strengths or blindspots (gap analysis)
+    /// </summary>
+    private string GenerateGapScoreRows(List<GapScoreItem>? items, bool isLatentStrength)
+    {
+        if (items == null || items.Count == 0)
+        {
+            // Return placeholder row if no data available
+            var message = isLatentStrength ? "No latent strengths available" : "No blindspots available";
+            return $@"
+        <tr>
+            <td colspan=""6"" style=""text-align: center; font-style: italic; color: #666;"">{message}</td>
+        </tr>";
+        }
+
+        var sb = new StringBuilder();
+        foreach (var item in items)
+        {
+            // Format gap with sign (+ for positive, - for negative)
+            var gapDisplay = item.Gap >= 0 ? $"+{item.Gap:0.00}" : $"{item.Gap:0.00}";
+            // Color code: green for positive gap, red for negative gap
+            var gapColor = item.Gap >= 0 ? "#1D8F6C" : "#DC3545";
+
+            sb.AppendLine($@"
+        <tr>
+            <td>{item.Rank}</td>
+            <td>{System.Web.HttpUtility.HtmlEncode(item.ScoringCategory)}</td>
+            <td>{System.Web.HttpUtility.HtmlEncode(item.Item)}</td>
+            <td>{item.Self:0.00}</td>
+            <td>{item.Others:0.00}</td>
+            <td style=""color: {gapColor}; font-weight: bold;"">{gapDisplay}</td>
+        </tr>");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Generates mock gap score rows for preview
+    /// </summary>
+    private string GenerateMockGapScoreRows(bool isLatentStrength)
+    {
+        var sb = new StringBuilder();
+
+        if (isLatentStrength)
+        {
+            // Mock latent strengths (positive gaps)
+            var mockItems = new[]
+            {
+                new { Rank = 1, Category = "Purposeful Conversations", Item = "Demonstrates compassion and respect for others through actions, stays connected about their work and life", Self = 3.00, Others = 3.58, Gap = 0.58 },
+                new { Rank = 2, Category = "Decision Making", Item = "Takes a relative view of all factors when making decisions, and sticks through them", Self = 3.00, Others = 3.36, Gap = 0.36 },
+                new { Rank = 3, Category = "Network and Influence", Item = "Actively seeks opportunities to build professional and influential contacts, both inside and outside", Self = 3.00, Others = 3.33, Gap = 0.33 },
+                new { Rank = 4, Category = "Enterprising Drive", Item = "Sets stretch goals for the organization, linked with the overall vision of the organization", Self = 3.00, Others = 3.30, Gap = 0.30 },
+            };
+
+            foreach (var item in mockItems)
+            {
+                sb.AppendLine($@"
+        <tr>
+            <td>{item.Rank}</td>
+            <td>{item.Category}</td>
+            <td>{item.Item}</td>
+            <td>{item.Self:0.00}</td>
+            <td>{item.Others:0.00}</td>
+            <td style=""color: #1D8F6C; font-weight: bold;"">+{item.Gap:0.00}</td>
+        </tr>");
+            }
+        }
+        else
+        {
+            // Mock blindspots (negative gaps)
+            var mockItems = new[]
+            {
+                new { Rank = 1, Category = "Expansive Thinking", Item = "Analyzes a complex situation carefully and reduces it to simple terms", Self = 4.00, Others = 2.73, Gap = -1.27 },
+                new { Rank = 2, Category = "Catalytic Learning", Item = "Is open to new ideas that may change own goals for the benefit of the team", Self = 4.00, Others = 2.73, Gap = -1.27 },
+                new { Rank = 3, Category = "Inventive Execution", Item = "Quickly masters new functional knowledge necessary to do the job", Self = 4.00, Others = 2.82, Gap = -1.18 },
+                new { Rank = 4, Category = "Nurture Growth", Item = "Encourages others to learn from successes and analyze their failures", Self = 4.00, Others = 2.91, Gap = -1.09 },
+            };
+
+            foreach (var item in mockItems)
+            {
+                sb.AppendLine($@"
+        <tr>
+            <td>{item.Rank}</td>
+            <td>{item.Category}</td>
+            <td>{item.Item}</td>
+            <td>{item.Self:0.00}</td>
+            <td>{item.Others:0.00}</td>
+            <td style=""color: #DC3545; font-weight: bold;"">{item.Gap:0.00}</td>
+        </tr>");
+            }
+        }
+
+        return sb.ToString();
+    }
+
     private string ReplacePlaceholders(
         string template,
         ComprehensiveReportResponse reportData,
@@ -465,7 +656,9 @@ public class ReportTemplateService : IReportTemplateService
         string? secondaryColor,
         string? tertiaryColor,
         string? selfAssessmentStatus = null,
-        List<RelationshipCompletionStats>? relationshipStats = null)
+        List<RelationshipCompletionStats>? relationshipStats = null,
+        HighLowScoresResult? highLowScores = null,
+        LatentStrengthsBlindspotsResult? latentStrengthsBlindspots = null)
     {
         var html = template;
 
@@ -514,6 +707,14 @@ public class ReportTemplateService : IReportTemplateService
 
         // Replace relationship completion rows
         html = html.Replace("{{RELATIONSHIP_COMPLETION_ROWS}}", GenerateRelationshipCompletionRows(relationshipStats));
+
+        // Replace high/low scores rows
+        html = html.Replace("{{HIGHEST_SCORES_ROWS}}", GenerateHighLowScoresRows(highLowScores?.HighestScores, isHighest: true));
+        html = html.Replace("{{LOWEST_SCORES_ROWS}}", GenerateHighLowScoresRows(highLowScores?.LowestScores, isHighest: false));
+
+        // Replace latent strengths and blindspots rows
+        html = html.Replace("{{LATENT_STRENGTHS_ROWS}}", GenerateGapScoreRows(latentStrengthsBlindspots?.LatentStrengths, isLatentStrength: true));
+        html = html.Replace("{{BLINDSPOTS_ROWS}}", GenerateGapScoreRows(latentStrengthsBlindspots?.Blindspots, isLatentStrength: false));
 
         // Replace dates
         var now = DateTime.Now;

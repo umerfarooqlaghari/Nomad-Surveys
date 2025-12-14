@@ -132,7 +132,7 @@ export default function PageEditor({
       showTo: 'everyone',
       importedFrom: {
         questionId: importedQuestion.Id,
-        clusterId: '', // Will be set by ImportQuestionModal
+        clusterId: importedQuestion.ClusterId || '',
         competencyId: importedQuestion.CompetencyId,
       },
     };
