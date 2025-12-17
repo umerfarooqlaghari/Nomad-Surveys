@@ -1,0 +1,90 @@
+<!-- Part 4: Last Page - My Reflection Summary -->
+<!-- This template is appended at the end of the report -->
+
+<!-- Page Break before last page -->
+<div style="page-break-before: always;"></div>
+
+<!-- Last Page -->
+<div class="page">
+
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+    <div class="page-content respondent-summary-page">
+            <div class= "page-gap"></div>
+            <h1 class="section-heading">My Reflection Summary</h1>
+            <div class="section-subheading-black">
+                <strong>
+                    What are my strengths, that are consistently mentioned by myself and my raters?
+                </strong>
+            </div>
+            <div class= "page-gap"></div>
+
+            <div class="section-subheading-black">
+                <strong>    
+                What are my areas of growth that I should work on, as appearing consistently in feedback provided by
+                my raters and is also mentioned in open ended feedback?
+                </strong>            
+            </div>
+            <div class= "page-gap"></div>
+
+            <div class="section-subheading-black">
+                <strong>What have been my blindspots that I am now aware of? Look for dimensions and x-factors where
+                rating of Self is higher than Others.
+                </strong>            
+            </div>
+            <div class= "page-gap"></div>
+
+            <div class="section-subheading-black">
+                <strong>
+                    What are my strengths, that are consistently mentioned by myself and my raters?
+                </strong>         
+            </div>
+            <div class= "page-gap"></div>
+    </div>
+
+
+    <!-- FOOTER -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+        // Populate page numbers for each .page footer and add a floating 'View as PDF' button
+        (function() {
+            try {
+                var pages = Array.from(document.querySelectorAll('.page'));
+                var total = pages.length;
+                pages.forEach(function(p, idx) {
+                    var idxEls = p.querySelectorAll('.page-number-index');
+                    var totalEls = p.querySelectorAll('.page-number-total');
+                    idxEls.forEach(function(e) { e.textContent = String(idx + 1); });
+                    totalEls.forEach(function(e) { e.textContent = String(total); });
+                });
+
+                // Add floating View as PDF button for on-screen preview (hidden when printing)
+                var btn = document.createElement('button');
+                btn.className = 'pdf-viewer-button';
+                btn.textContent = 'View as PDF';
+                btn.addEventListener('click', function() {
+                    // trigger print dialog (user can save as PDF)
+                    window.print();
+                });
+                document.body.appendChild(btn);
+            } catch (e) {
+                // ignore errors in templated environment
+                console.error(e);
+            }
+        })();
+    </script>
+</body>
+</html>
+

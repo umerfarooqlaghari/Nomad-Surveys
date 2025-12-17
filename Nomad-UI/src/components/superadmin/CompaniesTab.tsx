@@ -261,6 +261,13 @@ export default function CompaniesTab() {
       }
 
       // Convert TenantResponse to CreateTenantData format for editing
+      // Populate admin details from TenantAdmin (retrieved via Roles → UserTenantRoles → Users)
+      // TenantAdmin is populated by querying Users table through UserTenantRoles relationship
+      const adminFirstName = data.TenantAdmin?.FirstName || '';
+      const adminLastName = data.TenantAdmin?.LastName || '';
+      const adminEmail = data.TenantAdmin?.Email || '';
+      const adminPhone = data.TenantAdmin?.PhoneNumber || '';
+
       setFormData({
         name: data.Name,
         slug: data.Slug,
@@ -277,10 +284,10 @@ export default function CompaniesTab() {
           logoUrl: data.Company?.LogoUrl || '',
         },
         tenantAdmin: {
-          firstName: data.TenantAdmin?.FirstName || '',
-          lastName: data.TenantAdmin?.LastName || '',
-          email: data.TenantAdmin?.Email || '',
-          phoneNumber: data.TenantAdmin?.PhoneNumber || '',
+          firstName: adminFirstName,
+          lastName: adminLastName,
+          email: adminEmail,
+          phoneNumber: adminPhone,
           password: '', // Password is never returned from API for security
         },
       });

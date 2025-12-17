@@ -56,6 +56,21 @@ export interface TenantResponse {
     ContactPersonRole: string;
     ContactPersonPhone: string;
     LogoUrl?: string;
+    ContactPerson?: {
+      Id: string;
+      UserName: string;
+      Email: string;
+      FirstName: string;
+      LastName: string;
+      FullName: string;
+      IsActive: boolean;
+      EmailConfirmed: boolean;
+      PhoneNumber?: string;
+      CreatedAt: string;
+      UpdatedAt?: string;
+      LastLoginAt?: string;
+      TenantId?: string;
+    };
   };
   TenantAdmin?: {
     Id: string;

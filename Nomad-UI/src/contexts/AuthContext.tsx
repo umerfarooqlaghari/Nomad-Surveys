@@ -24,12 +24,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTenant(null);
     setToken(null);
 
-    setActivityTimer(null);
     // Clear timers
     if (logoutTimer) clearTimeout(logoutTimer);
     if (activityTimer) clearTimeout(activityTimer);
 
-    router.replace('/login');
+    router.push('/login');
   }, [router]); // Remove timer dependencies
 
   const resetActivityTimer = useCallback(() => {
@@ -266,9 +265,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
   };
 
-  return <AuthContext.Provider value={value}>   
-   {isLoading ? null : children}
-</AuthContext.Provider>;
+//   return <AuthContext.Provider value={value}>   
+//    {isLoading ? null : children}
+// </AuthContext.Provider>;
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+
 }
 
 export function useAuth() {

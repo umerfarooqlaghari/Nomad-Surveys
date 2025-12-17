@@ -1,7 +1,10 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
+using Nomad.Api.Data;
 using Nomad.Api.DTOs.Request;
 using Nomad.Api.DTOs.Response;
+using Nomad.Api.Entities;
 using Nomad.Api.Repository;
 using Nomad.Api.Services.Interfaces;
 using QuestPDF.Fluent;
@@ -21,6 +24,7 @@ public class ReportTemplateService : IReportTemplateService
     private readonly IReportTemplateSettingsService? _templateSettingsService;
     private readonly ISubjectService? _subjectService;
     private readonly ReportAnalyticsRepository? _reportAnalyticsRepository;
+    private readonly NomadSurveysDbContext? _dbContext;
     private readonly ILogger<ReportTemplateService> _logger;
     private readonly string _templatePath;
 
@@ -62,6 +66,16 @@ public class ReportTemplateService : IReportTemplateService
         catch
         {
             _reportAnalyticsRepository = null;
+        }
+
+        // Get DbContext for chart images (optional dependency)
+        try
+        {
+            _dbContext = serviceProvider.GetService<NomadSurveysDbContext>();
+        }
+        catch
+        {
+            _dbContext = null;
         }
     }
 
@@ -107,8 +121,6 @@ public class ReportTemplateService : IReportTemplateService
     {
         try
         {
-            var htmlTemplate = await LoadTemplateAsync();
-
             // Fetch subject name if subjectId is provided
             string? subjectName = null;
             Guid? subjectTenantId = null;
@@ -127,7 +139,14 @@ public class ReportTemplateService : IReportTemplateService
             List<RelationshipCompletionStats>? relationshipStats = null;
             HighLowScoresResult? highLowScores = null;
             LatentStrengthsBlindspotsResult? latentStrengthsBlindspots = null;
+            AgreementChartResult? agreementChartData = null;
+            RaterGroupSummaryResult? raterGroupSummary = null;
+            ClusterCompetencyHierarchyResult? clusterHierarchy = null;
+            OpenEndedFeedbackResult? openEndedFeedback = null;
             var effectiveTenantId = tenantId ?? subjectTenantId;
+
+            bool useDynamicGeneration = false;
+
             if (subjectId.HasValue && surveyId.HasValue && effectiveTenantId.HasValue && _reportAnalyticsRepository != null)
             {
                 try
@@ -170,12 +189,111 @@ public class ReportTemplateService : IReportTemplateService
                 {
                     _logger.LogWarning(ex, "Failed to get latent strengths/blindspots for preview. Using mock data.");
                 }
+
+                try
+                {
+                    agreementChartData = await _reportAnalyticsRepository.GetAgreementChartDataAsync(
+                        subjectId.Value, surveyId.Value, effectiveTenantId.Value);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get agreement chart data for preview. Using mock data.");
+                }
+
+                try
+                {
+                    raterGroupSummary = await _reportAnalyticsRepository.GetRaterGroupSummaryAsync(
+                        subjectId.Value, surveyId.Value, effectiveTenantId.Value);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get rater group summary for preview. Using mock data.");
+                }
+
+                // Get cluster-competency hierarchy for Part 2 dynamic pages
+                try
+                {
+                    clusterHierarchy = await _reportAnalyticsRepository.GetClusterCompetencyHierarchyAsync(
+                        subjectId.Value, surveyId.Value, effectiveTenantId.Value);
+
+                    // Use dynamic generation if we have cluster data
+                    useDynamicGeneration = clusterHierarchy?.Clusters?.Count > 0;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get cluster hierarchy for preview. Using mock data.");
+                }
+
+                // Get open-ended feedback for dynamic generation
+                if (useDynamicGeneration)
+                {
+                    try
+                    {
+                        openEndedFeedback = await _reportAnalyticsRepository.GetOpenEndedFeedbackAsync(
+                            subjectId.Value, surveyId.Value, effectiveTenantId.Value);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to get open-ended feedback for preview.");
+                    }
+                }
             }
 
-            // Use mock data for preview, but use real subject name if available
-            var html = ReplacePlaceholdersForPreview(htmlTemplate, companyName, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor, subjectName, selfAssessmentStatus, relationshipStats, highLowScores, latentStrengthsBlindspots);
+            // Fetch chart images for this survey
+            List<ReportChartImage>? chartImages = null;
+            if (surveyId.HasValue && effectiveTenantId.HasValue && _dbContext != null)
+            {
+                try
+                {
+                    chartImages = await _dbContext.ReportChartImages
+                        .Where(i => i.SurveyId == surveyId.Value && i.TenantId == effectiveTenantId.Value)
+                        .ToListAsync();
+                    _logger.LogInformation("Loaded {Count} chart images for survey {SurveyId}", chartImages.Count, surveyId.Value);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load chart images for preview.");
+                }
+            }
 
-            return html;
+            // Use dynamic report generation when we have cluster hierarchy data
+            if (useDynamicGeneration && clusterHierarchy != null)
+            {
+                var totalCompetencies = clusterHierarchy.Clusters.Sum(c => c.Competencies.Count);
+                _logger.LogInformation("Using dynamic report generation with {ClusterCount} clusters and {CompetencyCount} competencies",
+                    clusterHierarchy.Clusters.Count, totalCompetencies);
+
+                var html = await BuildDynamicReportHtmlAsync(
+                    companyName,
+                    companyLogoUrl,
+                    coverImageUrl,
+                    primaryColor,
+                    secondaryColor,
+                    tertiaryColor,
+                    clusterHierarchy,
+                    openEndedFeedback?.Items,
+                    chartImages);
+
+                // Still need to replace subject name and other placeholders in Part 1
+                html = html.Replace("{{SUBJECT_NAME}}", EscapeHtml(subjectName ?? "Subject Name"));
+                html = html.Replace("{{SELF_ASSESSMENT_STATUS}}", EscapeHtml(selfAssessmentStatus));
+
+                // Replace other Part 1 placeholders
+                html = ReplaceAdditionalPlaceholdersInDynamicReport(html, companyName, subjectName,
+                    selfAssessmentStatus, relationshipStats, highLowScores, latentStrengthsBlindspots,
+                    agreementChartData, raterGroupSummary, chartImages);
+
+                return html;
+            }
+
+            // Fallback to static template with mock data
+            _logger.LogInformation("Using static template (no subject data or insufficient competency data)");
+            var htmlTemplate = await LoadTemplateAsync();
+            var staticHtml = ReplacePlaceholdersForPreview(htmlTemplate, companyName, companyLogoUrl, coverImageUrl,
+                primaryColor, secondaryColor, tertiaryColor, subjectName, selfAssessmentStatus,
+                relationshipStats, highLowScores, latentStrengthsBlindspots, agreementChartData, raterGroupSummary);
+
+            return staticHtml;
         }
         catch (FileNotFoundException ex)
         {
@@ -187,6 +305,83 @@ public class ReportTemplateService : IReportTemplateService
             _logger.LogError(ex, "Error generating preview HTML. Template path: {TemplatePath}", _templatePath);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Replaces additional placeholders in the dynamic report (those not handled by BuildDynamicReportHtmlAsync)
+    /// </summary>
+    private string ReplaceAdditionalPlaceholdersInDynamicReport(
+        string html,
+        string companyName,
+        string? subjectName,
+        string selfAssessmentStatus,
+        List<RelationshipCompletionStats>? relationshipStats,
+        HighLowScoresResult? highLowScores,
+        LatentStrengthsBlindspotsResult? latentStrengthsBlindspots,
+        AgreementChartResult? agreementChartData,
+        RaterGroupSummaryResult? raterGroupSummary,
+        List<ReportChartImage>? chartImages = null)
+    {
+        // Page 4 and Page 6 images
+        var page4Image = chartImages?.FirstOrDefault(i => i.ImageType == "Page4");
+        var page6Image = chartImages?.FirstOrDefault(i => i.ImageType == "Page6");
+        html = html.Replace("{{PAGE_4_IMAGE}}", GetPageImageHtml(page4Image?.ImageUrl, "Framework Image"));
+        html = html.Replace("{{PAGE_6_IMAGE}}", GetPageImageHtml(page6Image?.ImageUrl, "Radar Chart"));
+
+        // Relationship completion stats (Page 5)
+        html = html.Replace("{{RELATIONSHIP_COMPLETION_ROWS}}", GenerateRelationshipCompletionRows(relationshipStats));
+
+        // High/Low Scores (Page 7)
+        var hasHighLowData = (highLowScores?.HighestScores?.Count > 0) || (highLowScores?.LowestScores?.Count > 0);
+        if (hasHighLowData)
+        {
+            html = html.Replace("{{HIGHEST_SCORES_ROWS}}", GenerateHighLowScoresRows(highLowScores!.HighestScores, true));
+            html = html.Replace("{{LOWEST_SCORES_ROWS}}", GenerateHighLowScoresRows(highLowScores!.LowestScores, false));
+        }
+        else
+        {
+            html = html.Replace("{{HIGHEST_SCORES_ROWS}}", GenerateHighLowScoresRows(null, true));
+            html = html.Replace("{{LOWEST_SCORES_ROWS}}", GenerateHighLowScoresRows(null, false));
+        }
+
+        // Latent Strengths & Blindspots (Page 8)
+        var hasLatentData = (latentStrengthsBlindspots?.LatentStrengths?.Count > 0) || (latentStrengthsBlindspots?.Blindspots?.Count > 0);
+        if (hasLatentData)
+        {
+            html = html.Replace("{{LATENT_STRENGTHS_ROWS}}", GenerateGapScoreRows(latentStrengthsBlindspots!.LatentStrengths, true));
+            html = html.Replace("{{BLINDSPOTS_ROWS}}", GenerateGapScoreRows(latentStrengthsBlindspots!.Blindspots, false));
+        }
+        else
+        {
+            html = html.Replace("{{LATENT_STRENGTHS_ROWS}}", GenerateMockGapScoreRows(true));
+            html = html.Replace("{{BLINDSPOTS_ROWS}}", GenerateMockGapScoreRows(false));
+        }
+
+        // Agreement Chart (Page 12)
+        var hasAgreementData = agreementChartData?.CompetencyItems?.Count > 0;
+        if (hasAgreementData)
+        {
+            html = html.Replace("{{AGREEMENT_CHART_ITEMS}}", GenerateAgreementChartItems(agreementChartData!.CompetencyItems));
+        }
+        else
+        {
+            html = html.Replace("{{AGREEMENT_CHART_ITEMS}}", GenerateMockAgreementChartItems());
+        }
+
+        // Gap Chart (Page 10)
+        var hasRaterGroupSummaryData = raterGroupSummary?.CompetencyItems?.Count > 0;
+        if (hasRaterGroupSummaryData)
+        {
+            html = html.Replace("{{GAP_CHART_ITEMS}}", GenerateGapChartItems(raterGroupSummary!.CompetencyItems));
+            html = html.Replace("{{RATER_GROUP_SUMMARY_TABLE}}", GenerateRaterGroupSummaryTable(raterGroupSummary));
+        }
+        else
+        {
+            html = html.Replace("{{GAP_CHART_ITEMS}}", GenerateMockGapChartItems());
+            html = html.Replace("{{RATER_GROUP_SUMMARY_TABLE}}", GenerateMockRaterGroupSummaryTable());
+        }
+
+        return html;
     }
 
     public async Task<string> GenerateReportHtmlAsync(
@@ -370,7 +565,9 @@ public class ReportTemplateService : IReportTemplateService
         string? selfAssessmentStatus = null,
         List<RelationshipCompletionStats>? relationshipStats = null,
         HighLowScoresResult? highLowScores = null,
-        LatentStrengthsBlindspotsResult? latentStrengthsBlindspots = null)
+        LatentStrengthsBlindspotsResult? latentStrengthsBlindspots = null,
+        AgreementChartResult? agreementChartData = null,
+        RaterGroupSummaryResult? raterGroupSummary = null)
     {
         var html = template;
 
@@ -426,6 +623,38 @@ public class ReportTemplateService : IReportTemplateService
             html = html.Replace("{{BLINDSPOTS_ROWS}}", GenerateMockGapScoreRows(isLatentStrength: false));
         }
 
+        // Replace agreement chart - use real data if available, otherwise mock data
+        var hasAgreementChartData = agreementChartData?.CompetencyItems?.Count > 0;
+        if (hasAgreementChartData)
+        {
+            html = html.Replace("{{AGREEMENT_CHART_ITEMS}}", GenerateAgreementChartItems(agreementChartData!.CompetencyItems));
+        }
+        else
+        {
+            html = html.Replace("{{AGREEMENT_CHART_ITEMS}}", GenerateMockAgreementChartItems());
+        }
+
+        // Replace rater group summary table - use real data if available, otherwise mock data
+        var hasRaterGroupSummaryData = raterGroupSummary?.CompetencyItems?.Count > 0;
+        if (hasRaterGroupSummaryData)
+        {
+            html = html.Replace("{{RATER_GROUP_SUMMARY_TABLE}}", GenerateRaterGroupSummaryTable(raterGroupSummary!));
+        }
+        else
+        {
+            html = html.Replace("{{RATER_GROUP_SUMMARY_TABLE}}", GenerateMockRaterGroupSummaryTable());
+        }
+
+        // Replace gap chart - reuse rater group summary data (Self vs Others per competency)
+        if (hasRaterGroupSummaryData)
+        {
+            html = html.Replace("{{GAP_CHART_ITEMS}}", GenerateGapChartItems(raterGroupSummary!.CompetencyItems));
+        }
+        else
+        {
+            html = html.Replace("{{GAP_CHART_ITEMS}}", GenerateMockGapChartItems());
+        }
+
         // Cover image
         if (!string.IsNullOrEmpty(coverImageUrl))
         {
@@ -469,6 +698,35 @@ public class ReportTemplateService : IReportTemplateService
             "<div class=\"chart-placeholder\">Question Performance Chart - Chart will be rendered here</div>");
         html = html.Replace("{{CHART_SELF_VS_EVALUATOR}}",
             "<div class=\"chart-placeholder\">Self vs Evaluator Comparison Chart - Chart will be rendered here</div>");
+
+        // Replace radial chart images for pages 16-30
+        for (int page = 16; page <= 30; page++)
+        {
+            var placeholder = $"{{{{RADIAL_CHART_IMAGE_{page}}}}}";
+            // Default SVG radial chart placeholder
+            var defaultRadialChart = @"
+                <svg viewBox=""0 0 500 500"" class=""radial-svg"">
+                    <defs>
+                        <path id=""curveLeading"" d=""M 250, 250 m -200, 0 a 200,200 0 0,1 200,-200"" />
+                        <path id=""curveImpacting"" d=""M 250, 250 m 0, -200 a 200,200 0 0,1 200,200"" />
+                        <path id=""curveDriving"" d=""M 250, 250 m 200, 0 a 200,200 0 1,1 -400,0"" />
+                    </defs>
+                    <path d=""M 250, 250 L 50, 250 A 200,200 0 0,1 250,50 Z"" fill=""#FFC000"" stroke=""white"" stroke-width=""2"" />
+                    <path d=""M 250, 250 L 250, 50 A 200,200 0 0,1 450,250 Z"" fill=""#00B0F0"" stroke=""white"" stroke-width=""2"" />
+                    <path d=""M 250, 250 L 450, 250 A 200,200 0 0,1 50,250 Z"" fill=""#364152"" stroke=""white"" stroke-width=""2"" />
+                    <circle cx=""250"" cy=""250"" r=""150"" fill=""white"" />
+                    <text font-size=""24"" font-weight=""bold"" fill=""white"" letter-spacing=""2"">
+                        <textPath href=""#curveLeading"" startOffset=""10%"" text-anchor=""middle"">LEADING SOLUTIONS</textPath>
+                    </text>
+                    <text font-size=""24"" font-weight=""bold"" fill=""white"" letter-spacing=""2"">
+                        <textPath href=""#curveImpacting"" startOffset=""25%"" text-anchor=""middle"">IMPACTING PEOPLE</textPath>
+                    </text>
+                    <text font-size=""24"" font-weight=""bold"" fill=""white"" letter-spacing=""2"">
+                        <textPath href=""#curveDriving"" startOffset=""50%"" text-anchor=""middle"">DRIVING BUSINESS</textPath>
+                    </text>
+                </svg>";
+            html = html.Replace(placeholder, defaultRadialChart);
+        }
 
         // Replace questions table with mock data
         html = html.Replace("{{QUESTIONS_TABLE}}", GenerateMockQuestionsTable());
@@ -543,7 +801,7 @@ public class ReportTemplateService : IReportTemplateService
         <tr>
             <td>{item.Rank}</td>
             <td>{System.Web.HttpUtility.HtmlEncode(item.Dimension)}</td>
-            <td>{System.Web.HttpUtility.HtmlEncode(item.Item)}</td>
+            <td>{System.Web.HttpUtility.HtmlEncode(CleanQuestionText(item.Item))}</td>
             <td>{item.Average:0.00}</td>
         </tr>");
         }
@@ -578,7 +836,7 @@ public class ReportTemplateService : IReportTemplateService
         <tr>
             <td>{item.Rank}</td>
             <td>{System.Web.HttpUtility.HtmlEncode(item.ScoringCategory)}</td>
-            <td>{System.Web.HttpUtility.HtmlEncode(item.Item)}</td>
+            <td>{System.Web.HttpUtility.HtmlEncode(CleanQuestionText(item.Item))}</td>
             <td>{item.Self:0.00}</td>
             <td>{item.Others:0.00}</td>
             <td style=""color: {gapColor}; font-weight: bold;"">{gapDisplay}</td>
@@ -645,6 +903,221 @@ public class ReportTemplateService : IReportTemplateService
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Generates HTML for agreement chart items from real data
+    /// </summary>
+    private string GenerateAgreementChartItems(List<AgreementChartItem> items)
+    {
+        var sb = new StringBuilder();
+
+        foreach (var item in items)
+        {
+            sb.AppendLine($@"
+                <div class=""agreement-chart-item"">
+                    <div class=""item-label"">{EscapeHtml(item.CompetencyName)}</div>
+                    <div class=""bubble-area"">");
+
+            // Generate bubbles for each score level (1-5) that has responses
+            foreach (var scoreEntry in item.ScoreDistribution.Where(s => s.Value > 0))
+            {
+                var score = scoreEntry.Key;
+                var count = scoreEntry.Value;
+
+                // Calculate X position to align with axis label centers
+                // Labels are 5 x 20% width = 100%, distributed evenly
+                // Label centers: score 1 = 10%, score 2 = 30%, score 3 = 50%, score 4 = 70%, score 5 = 90%
+                var xPos = (score - 1) * 20 + 10; // 10%, 30%, 50%, 70%, 90%
+
+                // Determine bubble size class based on count (1-5+)
+                var sizeClass = count >= 5 ? "size-5" : $"size-{count}";
+
+                sb.AppendLine($@"                        <div class=""bubble {sizeClass}"" style=""--x-pos: {xPos}%;""></div>");
+            }
+
+            sb.AppendLine(@"                    </div>
+                </div>");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Generates mock HTML for agreement chart items for preview
+    /// </summary>
+    private string GenerateMockAgreementChartItems()
+    {
+        var mockData = new List<AgreementChartItem>
+        {
+            new() { CompetencyName = "Inventive Execution", ScoreDistribution = new Dictionary<int, int> { {1, 1}, {3, 2}, {4, 5}, {5, 3} } },
+            new() { CompetencyName = "Expansive Thinking", ScoreDistribution = new Dictionary<int, int> { {2, 1}, {3, 2}, {4, 4}, {5, 1} } },
+            new() { CompetencyName = "Decision Making", ScoreDistribution = new Dictionary<int, int> { {3, 5}, {4, 2}, {5, 1} } },
+            new() { CompetencyName = "Dynamic Sensing", ScoreDistribution = new Dictionary<int, int> { {2, 1}, {3, 2}, {4, 1}, {5, 3} } },
+            new() { CompetencyName = "Nurture Growth", ScoreDistribution = new Dictionary<int, int> { {1, 1}, {3, 3}, {4, 5} } },
+            new() { CompetencyName = "Purposeful Conversations", ScoreDistribution = new Dictionary<int, int> { {2, 1}, {3, 5}, {5, 2} } },
+            new() { CompetencyName = "Network and Influence", ScoreDistribution = new Dictionary<int, int> { {2, 1}, {4, 4}, {5, 3} } },
+            new() { CompetencyName = "People Agility", ScoreDistribution = new Dictionary<int, int> { {1, 1}, {3, 2}, {4, 5}, {5, 1} } },
+            new() { CompetencyName = "Unprecedented Excellence", ScoreDistribution = new Dictionary<int, int> { {2, 3}, {4, 2}, {5, 1} } },
+            new() { CompetencyName = "Catalytic Learning", ScoreDistribution = new Dictionary<int, int> { {1, 1}, {2, 2}, {3, 5}, {5, 1} } },
+            new() { CompetencyName = "Enterprising Drive", ScoreDistribution = new Dictionary<int, int> { {1, 1}, {2, 3}, {3, 5}, {5, 1} } },
+            new() { CompetencyName = "Organizational Relatability", ScoreDistribution = new Dictionary<int, int> { {2, 1}, {4, 5}, {5, 2} } },
+        };
+
+        return GenerateAgreementChartItems(mockData);
+    }
+
+    /// <summary>
+    /// Generates HTML for rater group summary table from real data
+    /// </summary>
+    private string GenerateRaterGroupSummaryTable(RaterGroupSummaryResult data)
+    {
+        var sb = new StringBuilder();
+
+        sb.AppendLine(@"<table class=""rater-group-table"">
+                <thead>
+                    <tr>
+                        <th class=""dimension-header"">Dimensions</th>
+                        <th class=""score-header self-header"">Self</th>
+                        <th class=""score-header others-header"">Others</th>");
+
+        // Add dynamic relationship columns
+        foreach (var relationship in data.RelationshipTypes)
+        {
+            sb.AppendLine($@"                        <th class=""score-header"">{EscapeHtml(relationship)}</th>");
+        }
+
+        sb.AppendLine(@"                    </tr>
+                </thead>
+                <tbody>");
+
+        // Add rows for each competency
+        foreach (var item in data.CompetencyItems)
+        {
+            sb.AppendLine($@"                    <tr>
+                        <td class=""dimension-name"">{EscapeHtml(item.CompetencyName)}</td>
+                        <td class=""score self-score"">{FormatRaterGroupScore(item.SelfScore)}</td>
+                        <td class=""score others-score"">{FormatRaterGroupScore(item.OthersScore)}</td>");
+
+            // Add scores for each relationship type
+            foreach (var relationship in data.RelationshipTypes)
+            {
+                var score = item.RelationshipScores.TryGetValue(relationship, out var s) ? s : null;
+                sb.AppendLine($@"                        <td class=""score"">{FormatRaterGroupScore(score)}</td>");
+            }
+
+            sb.AppendLine(@"                    </tr>");
+        }
+
+        sb.AppendLine(@"                </tbody>
+            </table>");
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Formats a score for display with 2 decimal places, showing "-" for null values
+    /// </summary>
+    private static string FormatRaterGroupScore(double? score)
+    {
+        return score.HasValue ? score.Value.ToString("0.00") : "-";
+    }
+
+    /// <summary>
+    /// Generates mock HTML for rater group summary table for preview
+    /// </summary>
+    private string GenerateMockRaterGroupSummaryTable()
+    {
+        var mockData = new RaterGroupSummaryResult
+        {
+            RelationshipTypes = new List<string> { "Line Manager", "Peers", "Direct Reports", "Stakeholders" },
+            CompetencyItems = new List<RaterGroupSummaryItem>
+            {
+                new() { CompetencyName = "Inventive Execution", SelfScore = 4.00, OthersScore = 3.22, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 2.60}, {"Peers", 1.58}, {"Direct Reports", 2.00}, {"Stakeholders", 3.52} } },
+                new() { CompetencyName = "Expansive Thinking", SelfScore = 3.40, OthersScore = 3.05, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 2.20}, {"Peers", 3.25}, {"Direct Reports", 2.20}, {"Stakeholders", 3.42} } },
+                new() { CompetencyName = "Decision Making", SelfScore = 3.60, OthersScore = 3.27, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 3.00}, {"Peers", 3.33}, {"Direct Reports", 3.00}, {"Stakeholders", 3.38} } },
+                new() { CompetencyName = "Dynamic Sensing", SelfScore = 4.00, OthersScore = 3.27, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 3.50}, {"Peers", 3.36}, {"Direct Reports", 2.88}, {"Stakeholders", 3.48} } },
+                new() { CompetencyName = "Nurture Growth", SelfScore = 3.29, OthersScore = 2.96, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 2.57}, {"Peers", 3.47}, {"Direct Reports", 1.02}, {"Stakeholders", 3.15} } },
+                new() { CompetencyName = "Purposeful Conversations", SelfScore = 3.76, OthersScore = 3.23, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 3.00}, {"Peers", 3.57}, {"Direct Reports", 2.63}, {"Stakeholders", 3.26} } },
+                new() { CompetencyName = "Network and Influence", SelfScore = 3.67, OthersScore = 3.28, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 2.67}, {"Peers", 3.61}, {"Direct Reports", 2.00}, {"Stakeholders", 3.56} } },
+                new() { CompetencyName = "People Agility", SelfScore = 3.40, OthersScore = 2.92, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 2.60}, {"Peers", 3.20}, {"Direct Reports", 1.80}, {"Stakeholders", 3.21} } },
+                new() { CompetencyName = "Unprecedented Excellence", SelfScore = 3.67, OthersScore = 3.23, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 3.00}, {"Peers", 3.50}, {"Direct Reports", 2.50}, {"Stakeholders", 3.38} } },
+                new() { CompetencyName = "Catalytic Learning", SelfScore = 3.26, OthersScore = 2.77, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 2.00}, {"Peers", 3.00}, {"Direct Reports", 1.50}, {"Stakeholders", 3.23} } },
+                new() { CompetencyName = "Enterprising Drive", SelfScore = 3.76, OthersScore = 3.23, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 3.26}, {"Peers", 3.42}, {"Direct Reports", 3.00}, {"Stakeholders", 3.20} } },
+                new() { CompetencyName = "Organizational Relatability", SelfScore = 3.50, OthersScore = 3.02, RelationshipScores = new Dictionary<string, double?> { {"Line Manager", 2.26}, {"Peers", 3.16}, {"Direct Reports", 2.38}, {"Stakeholders", 3.30} } },
+            }
+        };
+
+        return GenerateRaterGroupSummaryTable(mockData);
+    }
+
+    /// <summary>
+    /// Generates HTML for gap chart items from real data
+    /// </summary>
+    private string GenerateGapChartItems(List<RaterGroupSummaryItem> items)
+    {
+        var sb = new StringBuilder();
+
+        // Limit to 15 competencies
+        var limitedItems = items.Take(15).ToList();
+
+        foreach (var item in limitedItems)
+        {
+            // Skip if either score is missing
+            if (!item.SelfScore.HasValue || !item.OthersScore.HasValue)
+                continue;
+
+            var selfScore = item.SelfScore.Value;
+            var othersScore = item.OthersScore.Value;
+            var gap = selfScore - othersScore;
+
+            // Calculate positions on 1-5 scale (0% = score 1, 100% = score 5)
+            var selfPos = (selfScore - 1) / 4 * 100;
+            var othersPos = (othersScore - 1) / 4 * 100;
+
+            // Determine line start and end (always from lower to higher position)
+            var lineStart = Math.Min(selfPos, othersPos);
+            var lineEnd = Math.Max(selfPos, othersPos);
+
+            // Format gap value with sign
+            var gapValue = gap >= 0 ? $"+{gap:F2}" : $"{gap:F2}";
+
+            sb.AppendLine($@"                <div class=""gap-chart-item"">
+                    <div class=""item-label"">{EscapeHtml(item.CompetencyName)}</div>
+                    <div class=""chart-bar-area"">
+                        <span class=""gap-value"">{gapValue}</span>
+                        <div class=""bar-line"" style=""--line-start: {lineStart:F1}%; --line-end: {lineEnd:F1}%;""></div>
+                        <div class=""point self-point"" style=""--point-pos: {selfPos:F1}%;""></div>
+                        <div class=""point others-point"" style=""--point-pos: {othersPos:F1}%;""></div>
+                    </div>
+                </div>");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Generates mock HTML for gap chart items for preview
+    /// </summary>
+    private string GenerateMockGapChartItems()
+    {
+        var mockItems = new List<RaterGroupSummaryItem>
+        {
+            new() { CompetencyName = "Inventive Execution", SelfScore = 4.00, OthersScore = 3.22 },
+            new() { CompetencyName = "Expansive Thinking", SelfScore = 3.40, OthersScore = 3.05 },
+            new() { CompetencyName = "Decision Making", SelfScore = 3.60, OthersScore = 3.27 },
+            new() { CompetencyName = "Dynamic Sensing", SelfScore = 4.00, OthersScore = 3.27 },
+            new() { CompetencyName = "Nurture Growth", SelfScore = 3.29, OthersScore = 2.96 },
+            new() { CompetencyName = "Purposeful Conversations", SelfScore = 3.76, OthersScore = 3.23 },
+            new() { CompetencyName = "Network and Influence", SelfScore = 3.67, OthersScore = 3.28 },
+            new() { CompetencyName = "People Agility", SelfScore = 3.40, OthersScore = 2.92 },
+            new() { CompetencyName = "Unprecedented Excellence", SelfScore = 3.67, OthersScore = 3.23 },
+            new() { CompetencyName = "Catalytic Learning", SelfScore = 3.26, OthersScore = 2.77 },
+            new() { CompetencyName = "Enterprising Drive", SelfScore = 3.76, OthersScore = 3.23 },
+            new() { CompetencyName = "Organizational Relatability", SelfScore = 3.50, OthersScore = 3.02 },
+        };
+
+        return GenerateGapChartItems(mockItems);
     }
 
     private string ReplacePlaceholders(
@@ -757,6 +1230,35 @@ public class ReportTemplateService : IReportTemplateService
         html = html.Replace("{{CHART_SELF_VS_EVALUATOR}}",
             "<div class=\"chart-placeholder\">Self vs Evaluator Comparison Chart - Chart will be rendered here</div>");
 
+        // Replace radial chart images for pages 16-30
+        for (int page = 16; page <= 30; page++)
+        {
+            var placeholder = $"{{{{RADIAL_CHART_IMAGE_{page}}}}}";
+            // Default SVG radial chart placeholder
+            var defaultRadialChart = @"
+                <svg viewBox=""0 0 500 500"" class=""radial-svg"">
+                    <defs>
+                        <path id=""curveLeading"" d=""M 250, 250 m -200, 0 a 200,200 0 0,1 200,-200"" />
+                        <path id=""curveImpacting"" d=""M 250, 250 m 0, -200 a 200,200 0 0,1 200,200"" />
+                        <path id=""curveDriving"" d=""M 250, 250 m 200, 0 a 200,200 0 1,1 -400,0"" />
+                    </defs>
+                    <path d=""M 250, 250 L 50, 250 A 200,200 0 0,1 250,50 Z"" fill=""#FFC000"" stroke=""white"" stroke-width=""2"" />
+                    <path d=""M 250, 250 L 250, 50 A 200,200 0 0,1 450,250 Z"" fill=""#00B0F0"" stroke=""white"" stroke-width=""2"" />
+                    <path d=""M 250, 250 L 450, 250 A 200,200 0 0,1 50,250 Z"" fill=""#364152"" stroke=""white"" stroke-width=""2"" />
+                    <circle cx=""250"" cy=""250"" r=""150"" fill=""white"" />
+                    <text font-size=""24"" font-weight=""bold"" fill=""white"" letter-spacing=""2"">
+                        <textPath href=""#curveLeading"" startOffset=""10%"" text-anchor=""middle"">LEADING SOLUTIONS</textPath>
+                    </text>
+                    <text font-size=""24"" font-weight=""bold"" fill=""white"" letter-spacing=""2"">
+                        <textPath href=""#curveImpacting"" startOffset=""25%"" text-anchor=""middle"">IMPACTING PEOPLE</textPath>
+                    </text>
+                    <text font-size=""24"" font-weight=""bold"" fill=""white"" letter-spacing=""2"">
+                        <textPath href=""#curveDriving"" startOffset=""50%"" text-anchor=""middle"">DRIVING BUSINESS</textPath>
+                    </text>
+                </svg>";
+            html = html.Replace(placeholder, defaultRadialChart);
+        }
+
         // Replace questions table
         html = html.Replace("{{QUESTIONS_TABLE}}", GenerateQuestionsTable(reportData));
 
@@ -827,7 +1329,7 @@ public class ReportTemplateService : IReportTemplateService
         foreach (var question in questions)
         {
             sb.AppendLine("<tr>");
-            sb.AppendLine($"<td>{EscapeHtml(question.QuestionText ?? "N/A")}</td>");
+            sb.AppendLine($"<td>{EscapeHtml(CleanQuestionText(question.QuestionText ?? "N/A"))}</td>");
             sb.AppendLine($"<td class=\"score-cell\">{FormatScore(question.SelfScore)}</td>");
             sb.AppendLine($"<td class=\"score-cell\">{FormatScore(question.EvaluatorAverageScore)}</td>");
             sb.AppendLine($"<td><span class=\"rating-badge\">{GetRating(question.EvaluatorAverageScore)}</span></td>");
@@ -1061,5 +1563,492 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
             throw;
         }
     }
+
+    #region Dynamic Report Assembly (Sandwich Method)
+
+    /// <summary>
+    /// Builds a comprehensive report using the sandwich method:
+    /// Part 1 (Intro Pages 1-15) + Dynamic Cluster/Competency Pages + Dynamic Feedback + Last Page
+    /// </summary>
+    public async Task<string> BuildDynamicReportHtmlAsync(
+        string companyName,
+        string? companyLogoUrl,
+        string? coverImageUrl,
+        string? primaryColor,
+        string? secondaryColor,
+        string? tertiaryColor,
+        ClusterCompetencyHierarchyResult clusterHierarchy,
+        List<OpenEndedFeedbackItem>? openEndedFeedback = null,
+        List<ReportChartImage>? chartImages = null)
+    {
+        var sb = new StringBuilder();
+        var templatesDir = Path.GetDirectoryName(_templatePath) ?? "";
+
+        // Load the main template to extract sections
+        var mainTemplate = await LoadTemplateAsync();
+
+        // STEP 1: Extract Part 1 (DOCTYPE through Page 15)
+        var part1Html = ExtractPart1(mainTemplate);
+        part1Html = ReplaceBrandPlaceholders(part1Html, companyName, companyLogoUrl, coverImageUrl,
+            primaryColor, secondaryColor, tertiaryColor);
+        sb.Append(part1Html);
+
+        // STEP 2: Generate dynamic cluster and competency pages
+        // For each cluster: generate cluster page, then competency pages for that cluster
+        var pageTemplate = await LoadPartTemplateAsync(templatesDir, "Part2_Competency.html");
+        foreach (var cluster in clusterHierarchy.Clusters)
+        {
+            // Find chart image for this cluster
+            var clusterChartImage = chartImages?.FirstOrDefault(i =>
+                i.ImageType == "Cluster" && i.ClusterName == cluster.ClusterName);
+
+            // Generate cluster page (shows competencies in table)
+            var clusterPageHtml = GenerateClusterPage(pageTemplate, cluster,
+                clusterHierarchy.RelationshipTypes, companyLogoUrl, clusterChartImage?.ImageUrl);
+            sb.Append(clusterPageHtml);
+
+            // Generate competency pages for this cluster (shows questions/items in table)
+            foreach (var competency in cluster.Competencies)
+            {
+                // Find chart image for this competency
+                var competencyChartImage = chartImages?.FirstOrDefault(i =>
+                    i.ImageType == "Competency" &&
+                    i.ClusterName == cluster.ClusterName &&
+                    i.CompetencyName == competency.CompetencyName);
+
+                var competencyPageHtml = GenerateCompetencyDetailPage(pageTemplate, competency,
+                    clusterHierarchy.RelationshipTypes, companyLogoUrl, competencyChartImage?.ImageUrl);
+                sb.Append(competencyPageHtml);
+            }
+        }
+
+        // STEP 3: Generate open-ended feedback section
+        if (openEndedFeedback != null && openEndedFeedback.Count > 0)
+        {
+            var feedbackTemplate = await LoadPartTemplateAsync(templatesDir, "Part3_Feedback.html");
+            var headerSnippet = await LoadPartTemplateAsync(templatesDir, "Component_HeaderFooter.html");
+
+            var feedbackHtml = GenerateFeedbackSection(feedbackTemplate, headerSnippet,
+                openEndedFeedback, companyLogoUrl);
+            sb.Append(feedbackHtml);
+        }
+
+        // STEP 4: Append last page
+        var lastPageTemplate = await LoadPartTemplateAsync(templatesDir, "Part4_LastPage.html");
+        var lastPageHtml = lastPageTemplate.Replace("{{COMPANY_LOGO}}", GetLogoHtml(companyLogoUrl));
+        sb.Append(lastPageHtml);
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Extracts Part 1 (Pages 1-15) from the main template - everything up to but not including Page 16
+    /// </summary>
+    private string ExtractPart1(string mainTemplate)
+    {
+        // Find the marker for Page 16
+        var page16Marker = "<!-- Page 16 -->";
+        var page16Index = mainTemplate.IndexOf(page16Marker, StringComparison.OrdinalIgnoreCase);
+
+        if (page16Index == -1)
+        {
+            _logger.LogWarning("Could not find Page 16 marker, returning full template");
+            return mainTemplate;
+        }
+
+        // Extract everything before Page 16, but don't close the body/html
+        return mainTemplate.Substring(0, page16Index);
+    }
+
+    /// <summary>
+    /// Loads a part template file
+    /// </summary>
+    private async Task<string> LoadPartTemplateAsync(string templatesDir, string fileName)
+    {
+        var path = Path.Combine(templatesDir, fileName);
+        if (File.Exists(path))
+        {
+            return await File.ReadAllTextAsync(path);
+        }
+
+        _logger.LogWarning("Part template not found: {Path}", path);
+        return "";
+    }
+
+    /// <summary>
+    /// Replaces common brand placeholders in HTML
+    /// </summary>
+    private string ReplaceBrandPlaceholders(string html, string companyName, string? companyLogoUrl,
+        string? coverImageUrl, string? primaryColor, string? secondaryColor, string? tertiaryColor)
+    {
+        html = html.Replace("{{PRIMARY_COLOR}}", primaryColor ?? "#0455A4");
+        html = html.Replace("{{SECONDARY_COLOR}}", secondaryColor ?? "#1D8F6C");
+        html = html.Replace("{{TERTIARY_COLOR}}", tertiaryColor ?? "#6C757D");
+        html = html.Replace("{{COMPANY_NAME}}", EscapeHtml(companyName));
+        html = html.Replace("{{COMPANY_LOGO}}", GetLogoHtml(companyLogoUrl));
+
+        if (!string.IsNullOrEmpty(coverImageUrl))
+        {
+            html = html.Replace("{{COVER_IMAGE}}",
+                $"<img src=\"{coverImageUrl}\" alt=\"Cover Image\" class=\"cover-image\" />");
+        }
+        else
+        {
+            html = html.Replace("{{COVER_IMAGE}}",
+                "<div class=\"cover-image\" style=\"width: 100%; height: 200mm; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\"></div>");
+        }
+
+        return html;
+    }
+
+    /// <summary>
+    /// Gets the HTML for the company logo
+    /// </summary>
+    private string GetLogoHtml(string? companyLogoUrl)
+    {
+        if (!string.IsNullOrEmpty(companyLogoUrl))
+        {
+            return $"<img src=\"{companyLogoUrl}\" alt=\"Company Logo\" class=\"client-logo\" />";
+        }
+        return "<div class=\"client-logo\" style=\"width: 80mm; height: 30mm; background: #f0f0f0; border: 1px solid #ddd;\"></div>";
+    }
+
+    /// <summary>
+    /// Generates a CLUSTER page from the template (shows competencies in table)
+    /// </summary>
+    private string GenerateClusterPage(string template, ClusterSummaryItem cluster,
+        List<string> relationshipTypes, string? companyLogoUrl, string? chartImageUrl = null)
+    {
+        var html = template;
+
+        html = html.Replace("{{COMPANY_LOGO}}", GetLogoHtml(companyLogoUrl));
+        html = html.Replace("{{PAGE_TITLE}}", EscapeHtml(cluster.ClusterName));
+        html = html.Replace("{{PAGE_SUBTITLE}}", ""); // No subtitle for cluster pages
+        html = html.Replace("{{TABLE_SECTION_TITLE}}", "Dimensions Summary");
+        html = html.Replace("{{TABLE_COLUMN_HEADER}}", "Dimensions");
+
+        // Generate bar chart rows for cluster (aggregated scores)
+        var barChartHtml = GenerateClusterBarChartRows(cluster, relationshipTypes);
+        html = html.Replace("{{BAR_CHART_ROWS}}", barChartHtml);
+
+        // Radial chart - use uploaded image or placeholder
+        html = html.Replace("{{RADIAL_CHART_IMAGE}}", GetRadialChartHtml(chartImageUrl));
+
+        // Generate table headers and rows (competencies within this cluster)
+        var tableHeaders = GenerateDimensionsTableHeaders(relationshipTypes);
+        var tableRows = GenerateClusterTableRows(cluster.Competencies, relationshipTypes);
+        html = html.Replace("{{DIMENSIONS_TABLE_HEADERS}}", tableHeaders);
+        html = html.Replace("{{DIMENSIONS_TABLE_ROWS}}", tableRows);
+
+        return html;
+    }
+
+    /// <summary>
+    /// Generates a COMPETENCY page from the template (shows questions/items in table)
+    /// </summary>
+    private string GenerateCompetencyDetailPage(string template, CompetencySummaryItem competency,
+        List<string> relationshipTypes, string? companyLogoUrl, string? chartImageUrl = null)
+    {
+        var html = template;
+
+        html = html.Replace("{{COMPANY_LOGO}}", GetLogoHtml(companyLogoUrl));
+        html = html.Replace("{{PAGE_TITLE}}", EscapeHtml(competency.CompetencyName));
+        html = html.Replace("{{PAGE_SUBTITLE}}",
+            $"<p class=\"cluster-subtitle\" style=\"color: #666; font-size: 14px; margin-top: -10px;\">Cluster: {EscapeHtml(competency.ClusterName)}</p>");
+        html = html.Replace("{{TABLE_SECTION_TITLE}}", "Item Level Feedback");
+        html = html.Replace("{{TABLE_COLUMN_HEADER}}", "Questions");
+
+        // Generate bar chart rows for competency
+        var barChartHtml = GenerateCompetencyBarChartRows(competency, relationshipTypes);
+        html = html.Replace("{{BAR_CHART_ROWS}}", barChartHtml);
+
+        // Radial chart - use uploaded image or placeholder
+        html = html.Replace("{{RADIAL_CHART_IMAGE}}", GetRadialChartHtml(chartImageUrl));
+
+        // Generate table headers and rows (questions within this competency)
+        var tableHeaders = GenerateDimensionsTableHeaders(relationshipTypes);
+        var tableRows = GenerateCompetencyTableRows(competency.Questions, relationshipTypes);
+        html = html.Replace("{{DIMENSIONS_TABLE_HEADERS}}", tableHeaders);
+        html = html.Replace("{{DIMENSIONS_TABLE_ROWS}}", tableRows);
+
+        return html;
+    }
+
+    /// <summary>
+    /// Gets the HTML for a radial chart - either an uploaded image or a placeholder
+    /// </summary>
+    private string GetRadialChartHtml(string? chartImageUrl)
+    {
+        if (!string.IsNullOrEmpty(chartImageUrl))
+        {
+            return $"<img src=\"{chartImageUrl}\" alt=\"Radial Chart\" style=\"width: 200px; height: 200px; object-fit: contain;\" />";
+        }
+        return "<div style=\"width: 200px; height: 200px; border: 2px dashed #ccc; display: flex; align-items: center; justify-content: center; border-radius: 50%;\">Radial Chart</div>";
+    }
+
+    /// <summary>
+    /// Gets the HTML for a page image (Page 4 or Page 6) - either an uploaded image or a placeholder
+    /// </summary>
+    private string GetPageImageHtml(string? imageUrl, string altText)
+    {
+        if (!string.IsNullOrEmpty(imageUrl))
+        {
+            return $"<div class=\"framework-image\"><img src=\"{imageUrl}\" alt=\"{altText}\" style=\"max-width: 100%; height: auto;\" /></div>";
+        }
+        return $"<div class=\"framework-image-placeholder\"><span>IMAGE PLACEHOLDER</span></div>";
+    }
+
+    private string GenerateClusterBarChartRows(ClusterSummaryItem cluster, List<string> relationshipTypes)
+    {
+        var sb = new StringBuilder();
+        const double maxScore = 4.0;
+
+        var selfWidth = cluster.SelfScore.HasValue ? (cluster.SelfScore.Value / maxScore * 100) : 0;
+        sb.AppendLine($@"<div class=""bar-row"">
+            <div class=""bar-label"">Self</div>
+            <div class=""bar-track"">
+                <div class=""bar-fill self-bar"" style=""width: {selfWidth:F1}%;""></div>
+            </div>
+        </div>");
+
+        var othersWidth = cluster.OthersScore.HasValue ? (cluster.OthersScore.Value / maxScore * 100) : 0;
+        sb.AppendLine($@"<div class=""bar-row"">
+            <div class=""bar-label"">Others</div>
+            <div class=""bar-track"">
+                <div class=""bar-fill others-bar"" style=""width: {othersWidth:F1}%;""></div>
+            </div>
+        </div>");
+
+        foreach (var rel in relationshipTypes)
+        {
+            if (cluster.RelationshipScores.TryGetValue(rel, out var score) && score.HasValue)
+            {
+                var width = score.Value / maxScore * 100;
+                sb.AppendLine($@"<div class=""bar-row"">
+                    <div class=""bar-label"">{EscapeHtml(rel)}</div>
+                    <div class=""bar-track"">
+                        <div class=""bar-fill others-bar"" style=""width: {width:F1}%;""></div>
+                    </div>
+                </div>");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private string GenerateCompetencyBarChartRows(CompetencySummaryItem competency, List<string> relationshipTypes)
+    {
+        var sb = new StringBuilder();
+        const double maxScore = 4.0;
+
+        var selfWidth = competency.SelfScore.HasValue ? (competency.SelfScore.Value / maxScore * 100) : 0;
+        sb.AppendLine($@"<div class=""bar-row"">
+            <div class=""bar-label"">Self</div>
+            <div class=""bar-track"">
+                <div class=""bar-fill self-bar"" style=""width: {selfWidth:F1}%;""></div>
+            </div>
+        </div>");
+
+        var othersWidth = competency.OthersScore.HasValue ? (competency.OthersScore.Value / maxScore * 100) : 0;
+        sb.AppendLine($@"<div class=""bar-row"">
+            <div class=""bar-label"">Others</div>
+            <div class=""bar-track"">
+                <div class=""bar-fill others-bar"" style=""width: {othersWidth:F1}%;""></div>
+            </div>
+        </div>");
+
+        foreach (var rel in relationshipTypes)
+        {
+            if (competency.RelationshipScores.TryGetValue(rel, out var score) && score.HasValue)
+            {
+                var width = score.Value / maxScore * 100;
+                sb.AppendLine($@"<div class=""bar-row"">
+                    <div class=""bar-label"">{EscapeHtml(rel)}</div>
+                    <div class=""bar-track"">
+                        <div class=""bar-fill others-bar"" style=""width: {width:F1}%;""></div>
+                    </div>
+                </div>");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private string GenerateClusterTableRows(List<CompetencySummaryItem> competencies, List<string> relationshipTypes)
+    {
+        var sb = new StringBuilder();
+        foreach (var comp in competencies)
+        {
+            sb.Append("<tr>");
+            sb.Append($"<td class=\"td-dim\">{EscapeHtml(comp.CompetencyName)}</td>");
+            sb.Append($"<td>{FormatRaterGroupScore(comp.SelfScore)}</td>");
+            sb.Append($"<td>{FormatRaterGroupScore(comp.OthersScore)}</td>");
+
+            foreach (var rel in relationshipTypes)
+            {
+                var score = comp.RelationshipScores.TryGetValue(rel, out var s) ? s : null;
+                sb.Append($"<td>{FormatRaterGroupScore(score)}</td>");
+            }
+            sb.Append("</tr>");
+        }
+        return sb.ToString();
+    }
+
+    private string GenerateCompetencyTableRows(List<QuestionSummaryItem> questions, List<string> relationshipTypes)
+    {
+        var sb = new StringBuilder();
+        foreach (var question in questions)
+        {
+            sb.Append("<tr>");
+            sb.Append($"<td class=\"td-dim\">{EscapeHtml(CleanQuestionText(question.QuestionText))}</td>");
+            sb.Append($"<td>{FormatRaterGroupScore(question.SelfScore)}</td>");
+            sb.Append($"<td>{FormatRaterGroupScore(question.OthersScore)}</td>");
+
+            foreach (var rel in relationshipTypes)
+            {
+                var score = question.RelationshipScores.TryGetValue(rel, out var s) ? s : null;
+                sb.Append($"<td>{FormatRaterGroupScore(score)}</td>");
+            }
+            sb.Append("</tr>");
+        }
+        return sb.ToString();
+    }
+
+    private string GenerateBarChartRows(RaterGroupSummaryItem competency, List<string> relationshipTypes)
+    {
+        var sb = new StringBuilder();
+        const double maxScore = 4.0; // Scale for bar width calculation
+
+        // Self bar
+        var selfWidth = competency.SelfScore.HasValue ? (competency.SelfScore.Value / maxScore * 100) : 0;
+        sb.AppendLine($@"<div class=""bar-row"">
+            <div class=""bar-label"">Self</div>
+            <div class=""bar-track"">
+                <div class=""bar-fill self-bar"" style=""width: {selfWidth:F1}%;""></div>
+            </div>
+        </div>");
+
+        // Others bar
+        var othersWidth = competency.OthersScore.HasValue ? (competency.OthersScore.Value / maxScore * 100) : 0;
+        sb.AppendLine($@"<div class=""bar-row"">
+            <div class=""bar-label"">Others</div>
+            <div class=""bar-track"">
+                <div class=""bar-fill others-bar"" style=""width: {othersWidth:F1}%;""></div>
+            </div>
+        </div>");
+
+        // Relationship-specific bars
+        foreach (var rel in relationshipTypes)
+        {
+            if (competency.RelationshipScores.TryGetValue(rel, out var score) && score.HasValue)
+            {
+                var width = score.Value / maxScore * 100;
+                sb.AppendLine($@"<div class=""bar-row"">
+                    <div class=""bar-label"">{EscapeHtml(rel)}</div>
+                    <div class=""bar-track"">
+                        <div class=""bar-fill others-bar"" style=""width: {width:F1}%;""></div>
+                    </div>
+                </div>");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private string GenerateDimensionsTableHeaders(List<string> relationshipTypes)
+    {
+        var sb = new StringBuilder();
+        foreach (var rel in relationshipTypes)
+        {
+            sb.AppendLine($"<th class=\"col-score\">{EscapeHtml(rel)}</th>");
+        }
+        return sb.ToString();
+    }
+
+    private string GenerateDimensionsTableRows(RaterGroupSummaryItem competency, List<string> relationshipTypes)
+    {
+        var sb = new StringBuilder();
+        sb.Append("<tr>");
+        sb.Append($"<td class=\"td-dim\">{EscapeHtml(competency.CompetencyName)}</td>");
+        sb.Append($"<td>{FormatRaterGroupScore(competency.SelfScore)}</td>");
+        sb.Append($"<td>{FormatRaterGroupScore(competency.OthersScore)}</td>");
+
+        foreach (var rel in relationshipTypes)
+        {
+            var score = competency.RelationshipScores.TryGetValue(rel, out var s) ? s : null;
+            sb.Append($"<td>{FormatRaterGroupScore(score)}</td>");
+        }
+        sb.Append("</tr>");
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Generates the feedback section with overflow handling
+    /// </summary>
+    private string GenerateFeedbackSection(string template, string headerSnippet,
+        List<OpenEndedFeedbackItem> feedbackItems, string? companyLogoUrl)
+    {
+        var html = template;
+
+        // Inject header snippet
+        var headerHtml = headerSnippet.Replace("{{COMPANY_LOGO}}", GetLogoHtml(companyLogoUrl));
+        html = html.Replace("{{HEADER_THEAD_ROW}}", headerHtml);
+
+        // Generate feedback items HTML
+        var feedbackHtml = GenerateOpenEndedFeedbackHtml(feedbackItems);
+        html = html.Replace("{{OPEN_ENDED_FEEDBACK_ITEMS}}", feedbackHtml);
+
+        return html;
+    }
+
+    private string GenerateOpenEndedFeedbackHtml(List<OpenEndedFeedbackItem> feedbackItems)
+    {
+        var sb = new StringBuilder();
+
+        // Group by question
+        var groupedByQuestion = feedbackItems
+            .GroupBy(f => f.QuestionText)
+            .ToList();
+
+        foreach (var group in groupedByQuestion)
+        {
+            sb.AppendLine($"<div class=\"feedback-question-group\">");
+            sb.AppendLine($"<div class=\"feedback-question-title\">{EscapeHtml(CleanQuestionText(group.Key))}</div>");
+
+            foreach (var item in group)
+            {
+                sb.AppendLine($@"<div class=""feedback-response"">
+                    {EscapeHtml(item.ResponseText)}
+                    <div class=""feedback-rater-type"">— {EscapeHtml(item.RaterType)}</div>
+                </div>");
+            }
+
+            sb.AppendLine("</div>");
+        }
+
+        return sb.ToString();
+    }
+
+private string CleanQuestionText(string text)
+{
+    if (string.IsNullOrEmpty(text)) return text;
+
+    // 1. Remove the specific placeholder (case-insensitive)
+    // You can add more placeholders to this list if needed
+    string cleaned = text.Replace("{subjectName}", "", StringComparison.OrdinalIgnoreCase)
+                         .Replace("{subject}", "", StringComparison.OrdinalIgnoreCase);
+
+    // 2. Trim whitespace (removes the leading space left by the placeholder)
+    cleaned = cleaned.Trim();
+
+    // 3. Capitalize the first letter if the text isn't empty
+    if (cleaned.Length > 0)
+    {
+        cleaned = char.ToUpper(cleaned[0]) + cleaned.Substring(1);
+    }
+
+    return cleaned;
 }
 
+    #endregion
+}

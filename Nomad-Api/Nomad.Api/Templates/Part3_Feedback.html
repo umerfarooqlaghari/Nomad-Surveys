@@ -1,0 +1,122 @@
+<!-- Part 3: Open Ended Feedback Section -->
+<!-- Uses table trick to repeat header/footer on page breaks -->
+<!-- Placeholders: {{HEADER_THEAD_ROW}}, {{OPEN_ENDED_FEEDBACK_ITEMS}}, {{COMPANY_LOGO}} -->
+
+<div style="page-break-before: always;"></div>
+
+<div class="feedback-section">
+    <table class="feedback-overflow-table">
+        <thead style="display: table-header-group;">
+            {{HEADER_THEAD_ROW}}
+        </thead>
+        <tfoot style="display: table-footer-group;">
+            <tr>
+                <td style="height: 20mm; padding: 5mm 15mm; border-top: 1px solid #d3d3d3;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" style="height: 12mm; width: auto;" />
+                        <span style="font-size: 8pt; color: #666666;">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+                    </div>
+                </td>
+            </tr>
+        </tfoot>
+        <tbody>
+            <tr>
+                <td style="vertical-align: top; padding: 15mm;">
+                    <h1 class="section-heading" style="margin-top: 0;">Open Ended Feedback</h1>
+                    <div class="section-description">
+                        This section contains qualitative feedback provided by your raters in response to open-ended questions.
+                        The comments are presented anonymously to protect the identity of the raters.
+                    </div>
+                    
+                    <div class="open-ended-content">
+                        {{OPEN_ENDED_FEEDBACK_ITEMS}}
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<style>
+    /* Feedback overflow table styling */
+    .feedback-overflow-table {
+        width: 210mm;
+        border-collapse: collapse;
+        page-break-inside: auto;
+    }
+    
+    .feedback-overflow-table thead tr,
+    .feedback-overflow-table tfoot tr {
+        page-break-inside: avoid;
+    }
+    
+    .feedback-overflow-table tbody tr {
+        page-break-inside: auto;
+    }
+    
+    .feedback-section {
+        width: 210mm;
+        background: white;
+    }
+    
+    .open-ended-content {
+        margin-top: 20px;
+    }
+    
+    .feedback-question-group {
+        margin-bottom: 25px;
+        page-break-inside: avoid;
+    }
+    
+    .feedback-question-title {
+        font-size: 12pt;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .feedback-response {
+        padding: 8px 0;
+        padding-left: 15px;
+        border-left: 3px solid var(--primary-color);
+        margin-bottom: 10px;
+        font-size: 10pt;
+        line-height: 1.5;
+        color: #333;
+        background-color: #fafafa;
+        page-break-inside: avoid;
+    }
+    
+    .feedback-rater-type {
+        font-size: 9pt;
+        color: #666;
+        font-style: italic;
+        margin-top: 5px;
+    }
+    
+    /* Ensure proper page breaks */
+    @media print {
+        .feedback-overflow-table {
+            page-break-inside: auto;
+        }
+        
+        .feedback-overflow-table thead {
+            display: table-header-group;
+        }
+        
+        .feedback-overflow-table tfoot {
+            display: table-footer-group;
+        }
+        
+        .feedback-question-group {
+            page-break-inside: avoid;
+        }
+        
+        .feedback-response {
+            page-break-inside: avoid;
+        }
+    }
+</style>
+

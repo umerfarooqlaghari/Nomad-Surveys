@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import LogoutConfirmationModal from '@/components/modals/LogoutConfirmationModal';
 import toast from 'react-hot-toast';
 
 interface Subject {
@@ -59,6 +60,7 @@ export default function SubjectEvaluatorConnections() {
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedEvaluator, setSelectedEvaluator] = useState('');
   const [selectedRelationship, setSelectedRelationship] = useState('');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Search states
   const [subjectSearch, setSubjectSearch] = useState('');
@@ -69,6 +71,19 @@ export default function SubjectEvaluatorConnections() {
       loadData();
     }
   }, [projectSlug, token]);
+
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
+    logout();
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
+  };
 
   const loadData = async () => {
     if (!token) return;
@@ -212,7 +227,7 @@ export default function SubjectEvaluatorConnections() {
                   Close
                 </button>
                 <button
-                  onClick={logout}
+                  onClick={handleLogoutClick}
                   className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Logout
@@ -426,6 +441,13 @@ export default function SubjectEvaluatorConnections() {
           </div>
         </main>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmationModal
+        isOpen={showLogoutModal}
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+      />
     </ProtectedRoute>
   );
 }

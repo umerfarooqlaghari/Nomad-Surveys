@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
+import styles from './ImageLibrary.module.css';
 
 interface ImageLibraryProps {
   projectSlug: string;
@@ -197,8 +198,8 @@ export default function ImageLibrary({ projectSlug, isOpen, onClose, onSelectIma
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+    <div className={styles.overlay}>
+      <div className={styles.modal}>
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
@@ -276,41 +277,46 @@ export default function ImageLibrary({ projectSlug, isOpen, onClose, onSelectIma
               {images.map((image) => (
                 <div
                   key={image.publicId}
-                  className="group relative bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 hover:border-purple-500 transition-all cursor-pointer"
+                  className={styles.imageCard}
                   onClick={() => handleSelect(image.secureUrl)}
                 >
-                  <img
-                    src={image.secureUrl}
-                    alt={image.fileName}
-                    className="w-full h-48 object-cover"
-                    onError={(e) => {
-                      console.error('Failed to load image:', image.secureUrl);
-                      e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EFailed to load%3C/text%3E%3C/svg%3E';
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelect(image.secureUrl);
-                        }}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm font-medium"
-                      >
-                        Select
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(image.publicId);
-                        }}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
-                      >
-                        Delete
-                      </button>
+                  <div className={styles.imageContainer}>
+                    <img
+                      src={image.secureUrl}
+                      alt={image.fileName}
+                      className={styles.image}
+                      onLoad={() => {
+                        console.log('Image loaded successfully:', image.secureUrl);
+                      }}
+                      onError={(e) => {
+                        console.error('Failed to load image:', image.secureUrl);
+                        e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" font-family="sans-serif" font-size="14" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3EFailed to load%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                    <div className={styles.hoverOverlay}>
+                      <div className={styles.buttonGroup}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelect(image.secureUrl);
+                          }}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 text-sm font-medium"
+                        >
+                          Select
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(image.publicId);
+                          }}
+                          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm font-medium"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   </div>
-                  <div className="p-2 bg-white">
+                  <div className={styles.imageInfo}>
                     <p className="text-xs text-gray-600 truncate" title={image.fileName}>
                       {image.fileName}
                     </p>

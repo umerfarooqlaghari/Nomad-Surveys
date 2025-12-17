@@ -1,0 +1,76 @@
+<!-- Part 2: Cluster/Competency Page Template (Repeatable) -->
+<!-- This template is used for both Cluster pages and Competency pages -->
+<!-- Cluster Page: Shows competencies in table, no subtitle -->
+<!-- Competency Page: Shows questions/items in table, has cluster subtitle -->
+<!-- Placeholders:
+     {{PAGE_TITLE}} - Cluster name or Competency name
+     {{PAGE_SUBTITLE}} - Empty for cluster, "Cluster: X" for competency
+     {{BAR_CHART_ROWS}} - Bar chart data rows
+     {{RADIAL_CHART_IMAGE}} - Radial chart image
+     {{TABLE_SECTION_TITLE}} - "Dimensions Summary" or "Item Level Feedback"
+     {{TABLE_COLUMN_HEADER}} - "Dimensions" or "Questions"
+     {{DIMENSIONS_TABLE_HEADERS}} - Dynamic relationship type headers
+     {{DIMENSIONS_TABLE_ROWS}} - Table data rows
+     {{COMPANY_LOGO}} - Company logo
+-->
+
+<div class="page">
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
+
+    <div class="page-content respondent-summary-page">
+        <div class="page-gap"></div>
+
+        <div class="top-layout-container">
+
+            <div class="quadrant-left">
+                <h2 class="section-heading">{{PAGE_TITLE}}</h2>
+                {{PAGE_SUBTITLE}}
+                <div class="professional-bar-chart">
+                    {{BAR_CHART_ROWS}}
+
+                    <div class="bar-axis">
+                        <span>0.00</span>
+                        <span>2.00</span>
+                        <span>4.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="quadrant-right" style="align-items: flex-start; padding-top: 50px;">
+                {{RADIAL_CHART_IMAGE}}
+            </div>
+        </div>
+
+        <div class="bottom-layout-container">
+            <h2 class="section-heading dimensions-summary-heading">{{TABLE_SECTION_TITLE}}</h2>
+
+            <div class="professional-table-container">
+                <table class="pro-table">
+                    <thead>
+                        <tr>
+                            <th class="col-dim">{{TABLE_COLUMN_HEADER}}</th>
+                            <th class="col-score">Self</th>
+                            <th class="col-score">Others</th>
+                            {{DIMENSIONS_TABLE_HEADERS}}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{DIMENSIONS_TABLE_ROWS}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">
+            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
+    </div>
+</div>
+
