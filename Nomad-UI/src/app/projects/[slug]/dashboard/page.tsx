@@ -23,7 +23,6 @@ const tabs = [
   { id: 'participants', name: 'Participants', icon: "/Icons/person-add.svg" },
   { id: 'employees', name: 'Employees', icon: "/Icons/person-add.svg" },
   { id: 'reports', name: 'Reports', icon: "/Icons/archive.svg" },
-  { id: 'analytics', name: 'Analytics', icon: "/Icons/clipboard-data.svg" },
 ];
 
 export default function ProjectDashboard() {

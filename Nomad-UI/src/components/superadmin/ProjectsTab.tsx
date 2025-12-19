@@ -123,12 +123,14 @@ export default function ProjectsTab() {
     // Validate file type
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file');
+      e.target.value = ''; // Reset input
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Image size must be less than 5MB');
+      e.target.value = ''; // Reset input
       return;
     }
 
@@ -141,25 +143,37 @@ export default function ProjectsTab() {
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
       };
+      reader.onerror = () => {
+        console.error('Error reading file');
+        toast.error('Failed to read image file');
+        setIsUploadingLogo(false);
+        e.target.value = '';
+      };
       reader.readAsDataURL(file);
 
       // Upload to Cloudinary
-      const formData = new FormData();
-      formData.append('images', file);
+      const formDataUpload = new FormData();
+      formDataUpload.append('images', file);
 
+      console.log('Uploading logo to Cloudinary...');
       const response = await fetch('/api/admin/cloudinary/upload/bulk?folder=company-logos', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
         },
-        body: formData,
+        body: formDataUpload,
       });
 
+      console.log('Upload response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to upload logo');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Upload failed:', errorData);
+        throw new Error(errorData.error || 'Failed to upload logo');
       }
 
       const result = await response.json();
+      console.log('Upload result:', result);
 
       if (result.results && result.results.length > 0 && result.results[0].Success) {
         const logoUrl = result.results[0].Url;
@@ -171,14 +185,18 @@ export default function ProjectsTab() {
           },
         }));
         toast.success('Logo uploaded successfully');
+        e.target.value = ''; // Reset input to allow re-uploading
       } else {
-        throw new Error('Upload failed');
+        console.error('Upload result invalid:', result);
+        throw new Error('Upload failed - invalid response');
       }
     } catch (error) {
       console.error('Error uploading logo:', error);
-      toast.error('Failed to upload logo');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload logo';
+      toast.error(errorMessage);
       setLogoPreview('');
       setLogoFile(null);
+      e.target.value = ''; // Reset input on error
     } finally {
       setIsUploadingLogo(false);
     }
@@ -221,7 +239,6 @@ export default function ProjectsTab() {
         },
       });
 
-      setLogoPreview(data.Company?.LogoUrl || '');
       setEditingTenantId(tenantId);
       setIsEditMode(true);
       setShowForm(true);
@@ -239,24 +256,13 @@ export default function ProjectsTab() {
     setShowForm(false);
     setFormData(tenantService.getDefaultFormData());
     setLogoPreview('');
+    setLogoFile(null);
   };
 
   const handleUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!token || !editingTenantId) return;
-
-    // Check if logo is still uploading
-    if (isUploadingLogo) {
-      toast.error('Please wait for logo upload to complete');
-      return;
-    }
-
-    // Check if logo file is selected but not uploaded
-    if (logoFile && !formData.company.logoUrl) {
-      toast.error('Please wait for logo upload to complete');
-      return;
-    }
 
     try {
       setIsLoading(true);
@@ -277,12 +283,8 @@ export default function ProjectsTab() {
           ContactPersonPhone: formData.company.contactPersonPhone,
           LogoUrl: formData.company.logoUrl,
         },
-        TenantAdmin: {
-          FirstName: formData.tenantAdmin.firstName,
-          LastName: formData.tenantAdmin.lastName,
-          Email: formData.tenantAdmin.email,
-          // Password and PhoneNumber are NOT sent during updates
-        },
+        // TenantAdmin is not sent during updates since admin details are not editable in the UI
+        TenantAdmin: null,
       };
 
       const { error } = await tenantService.updateTenant(editingTenantId, updateData, token);
@@ -519,39 +521,41 @@ export default function ProjectsTab() {
                 />
               </div>
 
-              {/* Company Logo */}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Company Logo</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  className={styles.input}
-                  disabled={isUploadingLogo}
-                />
-                {isUploadingLogo && (
-                  <p style={{ marginTop: '8px', color: '#7c3aed' }}>Uploading logo...</p>
-                )}
-                {logoPreview && (
-                  <div style={{ marginTop: '12px' }}>
-                    <img
-                      src={logoPreview}
-                      alt="Logo preview"
-                      style={{
-                        maxWidth: '128px',
-                        maxHeight: '128px',
-                        objectFit: 'contain',
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '4px',
-                        padding: '8px'
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
+              {/* Company Logo - Only show in create mode */}
+              {!isEditMode && (
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Company Logo</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className={styles.input}
+                    disabled={isUploadingLogo}
+                  />
+                  {isUploadingLogo && (
+                    <p style={{ marginTop: '8px', color: '#7c3aed' }}>Uploading logo...</p>
+                  )}
+                  {logoPreview && (
+                    <div style={{ marginTop: '12px' }}>
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        style={{
+                          maxWidth: '128px',
+                          maxHeight: '128px',
+                          objectFit: 'contain',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '4px',
+                          padding: '8px'
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Admin Details - Only show in create mode */}
-              { (
+              {!editingTenantId && (
                 <>
                   <div className={styles.formGroup}>
                     <label className={styles.label}>
@@ -598,68 +602,57 @@ export default function ProjectsTab() {
                     />
                   </div>
 
-                  {/* Phone Number and Password - Only show in create mode */}
-                  {!editingTenantId && (
-                    <>
-                      <div className={styles.formGroup}>
-                        <label className={styles.label}>
-                          Admin Phone Number <span className={styles.required}></span>
-                        </label>
-                        <input
-                          type="tel"
-                          name="tenantAdmin.phoneNumber"
-                          value={formData.tenantAdmin.phoneNumber}
-                          onChange={handleInputChange}
-                          className={styles.input}
-                          placeholder="Enter admin phone (e.g., +1234567890)"
-                          required
-                        />
-                      </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      Admin Phone Number <span className={styles.required}></span>
+                    </label>
+                    <input
+                      type="tel"
+                      name="tenantAdmin.phoneNumber"
+                      value={formData.tenantAdmin.phoneNumber}
+                      onChange={handleInputChange}
+                      className={styles.input}
+                      placeholder="Enter admin phone (e.g., +1234567890)"
+                      required
+                    />
+                  </div>
 
-                      <div className={styles.formGroup}>
-                        <label className={styles.label}>
-                          Admin Password <span className={styles.required}></span>
-                        </label>
-                        <div className={styles.passwordContainer}>
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            name="tenantAdmin.password"
-                            value={formData.tenantAdmin.password}
-                            onChange={handleInputChange}
-                            className={styles.input}
-                            placeholder="Enter admin password"
-                            required
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className={styles.passwordToggle}
-                          >
-                            {showPassword ? '👁️' : '👁️‍🗨️'}
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      Admin Password <span className={styles.required}></span>
+                    </label>
+                    <div className={styles.passwordContainer}>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="tenantAdmin.password"
+                        value={formData.tenantAdmin.password}
+                        onChange={handleInputChange}
+                        className={styles.input}
+                        placeholder="Enter admin password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className={styles.passwordToggle}
+                      >
+                        {showPassword ? '👁️' : '👁️‍🗨️'}
+                      </button>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
 
             <div className={styles.formActions}>
-              {/* <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className={styles.cancelButton}
-                disabled={isLoading}
-              >
-                Cancel
-              </button> */}
               <button
                 type="submit"
                 className={styles.submitButton}
-                disabled={isLoading}
+                disabled={isLoading || (!isEditMode && isUploadingLogo)}
               >
-                {isLoading
+                {!isEditMode && isUploadingLogo
+                  ? 'Uploading Logo...'
+                  : isLoading
                   ? (isEditMode ? 'Updating...' : 'Creating...')
                   : (isEditMode ? 'Update Company' : 'Add Company')
                 }

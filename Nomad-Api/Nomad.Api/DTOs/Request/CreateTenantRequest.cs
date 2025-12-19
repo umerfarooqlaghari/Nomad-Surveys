@@ -88,21 +88,19 @@ public class CreateTenantAdminRequest
 
 public class UpdateTenantAdminRequest
 {
-    [Required]
     [StringLength(100, MinimumLength = 2)]
-    public string FirstName { get; set; } = string.Empty;
+    public string? FirstName { get; set; }
 
-    [Required]
     [StringLength(100, MinimumLength = 2)]
-    public string LastName { get; set; } = string.Empty;
+    public string? LastName { get; set; }
 
-    [Required]
     [EmailAddress]
     [StringLength(255)]
-    public string Email { get; set; } = string.Empty;
+    public string? Email { get; set; }
 
     // Phone number and password are NOT included in updates
     // They should be updated through separate endpoints
+    // All fields are nullable since tenant admin details are not editable in the UI
 }
 
 public class UpdateTenantRequest
@@ -122,6 +120,6 @@ public class UpdateTenantRequest
     [Required]
     public CreateCompanyRequest Company { get; set; } = null!;
 
-    [Required]
-    public UpdateTenantAdminRequest TenantAdmin { get; set; } = null!;
+    // TenantAdmin is nullable since admin details are not editable in the UI during updates
+    public UpdateTenantAdminRequest? TenantAdmin { get; set; }
 }

@@ -190,10 +190,12 @@
 
 .formActions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 0.75rem;
   padding-top: 1rem;
   border-top: 1px solid #e5e7eb;
+  position: relative;
+  z-index: 10;
 }
 
 .cancelButton {
@@ -208,6 +210,11 @@
 
 .cancelButton:hover {
   background-color: #f9fafb;
+}
+
+.cancelButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .submitButton {
@@ -397,6 +404,21 @@
 
 .deleteButton:hover {
   background-color: #fee2e2;
+}
+
+.logoPreviewContainer {
+  margin-top: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.logoPreviewImage {
+  max-width: 128px;
+  max-height: 128px;
+  object-fit: contain;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  padding: 8px;
 }
 
 .errorMessage {

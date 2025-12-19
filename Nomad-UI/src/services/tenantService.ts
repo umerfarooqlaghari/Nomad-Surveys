@@ -106,12 +106,13 @@ export interface UpdateTenantData {
     ContactPersonPhone: string;
     LogoUrl: string;
   };
+  // TenantAdmin is nullable since admin details are not editable in the UI during updates
   TenantAdmin: {
     FirstName: string;
     LastName: string;
     Email: string;
     // Password and PhoneNumber are NOT included in updates
-  };
+  } | null;
 }
 
 class TenantService {
