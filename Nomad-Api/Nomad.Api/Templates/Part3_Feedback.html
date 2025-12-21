@@ -1,120 +1,205 @@
 <!-- Part 3: Open Ended Feedback Section -->
-<!-- Uses table trick to repeat header/footer on page breaks -->
-<!-- Placeholders: {{HEADER_THEAD_ROW}}, {{OPEN_ENDED_FEEDBACK_ITEMS}}, {{COMPANY_LOGO}} -->
+<!-- Placeholders: {{OPEN_ENDED_FEEDBACK_ITEMS}}, {{COMPANY_LOGO}} -->
 
-<div style="page-break-before: always;"></div>
+<!-- Feedback Page - uses same structure as ReportTemplate.html -->
+<div class="page">
+    <!-- Header -->
+    <div class="page-header">
+        {{COMPANY_LOGO}}
+    </div>
 
-<div class="feedback-section">
-    <table class="feedback-overflow-table">
-        <thead style="display: table-header-group;">
-            {{HEADER_THEAD_ROW}}
-        </thead>
-        <tfoot style="display: table-footer-group;">
-            <tr>
-                <td style="height: 20mm; padding: 5mm 15mm; border-top: 1px solid #d3d3d3;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" style="height: 12mm; width: auto;" />
-                        <span style="font-size: 8pt; color: #666666;">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
-                    </div>
-                </td>
-            </tr>
-        </tfoot>
-        <tbody>
-            <tr>
-                <td style="vertical-align: top; padding: 15mm;">
-                    <h1 class="section-heading" style="margin-top: 0;">Open Ended Feedback</h1>
-                    <div class="section-description">
-                        This section contains qualitative feedback provided by your raters in response to open-ended questions.
-                        The comments are presented anonymously to protect the identity of the raters.
-                    </div>
-                    
-                    <div class="open-ended-content">
-                        {{OPEN_ENDED_FEEDBACK_ITEMS}}
-                    </div>
-                </td>
-            </tr>
-        </tbody>
-    </table>
+    <!-- Content -->
+    <div class="page-content respondent-summary-page">
+        <div class="page-gap"></div>
+        <h1 class="feedback-main-title">Feedback</h1>
+        <p class="feedback-intro">
+            Responses to the open-ended questions are listed here exactly as they were typed by each respondent.
+            <strong>The first response is of the Line Manager, followed by Self and Other raters.</strong>
+        </p>
+
+        <div class="open-ended-content">
+            {{OPEN_ENDED_FEEDBACK_ITEMS}}
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="page-footer">
+        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span></div>
+    </div>
 </div>
 
 <style>
-    /* Feedback overflow table styling */
-    .feedback-overflow-table {
-        width: 210mm;
-        border-collapse: collapse;
-        page-break-inside: auto;
-    }
+    /* Feedback Section Styles - inherits from main .page styles in ReportTemplate.html */
+
     
-    .feedback-overflow-table thead tr,
-    .feedback-overflow-table tfoot tr {
-        page-break-inside: avoid;
-    }
-    
-    .feedback-overflow-table tbody tr {
-        page-break-inside: auto;
-    }
-    
-    .feedback-section {
-        width: 210mm;
-        background: white;
-    }
-    
-    .open-ended-content {
-        margin-top: 20px;
-    }
-    
-    .feedback-question-group {
-        margin-bottom: 25px;
-        page-break-inside: avoid;
-    }
-    
-    .feedback-question-title {
-        font-size: 12pt;
-        font-weight: 600;
+    .banner-content {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        }
+
+    .banner-content h1 {
+        font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+        font-size: 48px;
+        font-weight: 700;
+        line-height: 1.25;
+        color: var(--primary-color);  
+        margin: 0;
+        letter-spacing: -0.5px;
+        }
+
+ .page-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20mm;
+            padding: 5mm 15mm;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 10px;
+            border-top: 1px solid var(--border-color);
+            z-index: 10;
+        }
+
+        .ascend-logo {
+            height: 12mm;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .footer-text {
+            font-size: 8pt;
+            color: var(--dark-gray);
+            line-height: 1.4;
+        }
+
+        .page-number {
+            margin-left: auto;
+            font-size: 8pt;
+            color: var(--dark-gray);
+            white-space: nowrap;
+        }
+
+    .feedback-main-title {
+        font-size: 22pt;
+        font-weight: 700;
         color: var(--primary-color);
-        margin-bottom: 10px;
-        padding-bottom: 5px;
-        border-bottom: 1px solid #eee;
+        margin: 0 0 10px 0;
+        padding: 0;
     }
-    
-    .feedback-response {
-        padding: 8px 0;
-        padding-left: 15px;
-        border-left: 3px solid var(--primary-color);
-        margin-bottom: 10px;
+
+    .feedback-intro {
         font-size: 10pt;
+        color: #444;
         line-height: 1.5;
+        margin-bottom: 20px;
+    }
+
+    .open-ended-content {
+        margin-top: 15px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Question Group */
+    .feedback-question-group {
+        margin-bottom: 30px;
+        page-break-inside: auto;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .feedback-question-title {
+        font-size: 14pt;
+        font-weight: 400;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+        line-height: 1.4;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
+
+    .feedback-question-title strong {
+        font-weight: 700;
+    }
+
+    /* Response List */
+    .feedback-responses-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .feedback-response-item {
+        font-size: 10pt;
         color: #333;
-        background-color: #fafafa;
+        line-height: 1.6;
+        margin-bottom: 8px;
+        page-break-inside: avoid;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+    }
+
+    /* Divider - matches blue-divider from ReportTemplate.html */
+    .feedback-divider {
+        width: 100%;
+        height: 5px;
+        background-color: var(--primary-color);
+        margin: 25px 0;
+        border: none;
+    }
+
+    /* Guide for Interpretation - matches ReportTemplate.html style */
+    .guide-interpretation {
+        margin-top: 10px;
         page-break-inside: avoid;
     }
-    
-    .feedback-rater-type {
-        font-size: 9pt;
-        color: #666;
-        font-style: italic;
-        margin-top: 5px;
+
+    .guide-interpretation-title {
+        color: black;
+        font-size: 13pt;
+        font-weight: bold;
+        margin-top: 10px;
+        margin-bottom: 3px;
     }
-    
-    /* Ensure proper page breaks */
+
+    .guide-interpretation-content {
+        font-size: 10px;
+        line-height: 1.4;
+        color: #666565;
+        margin-bottom: 12px;
+        text-align: justify;
+    }
+
+    .guide-interpretation-content li {
+        margin-bottom: 4px;
+    }
+
+     .page-content {
+            padding: 45mm 15mm 25mm 15mm; /* Top padding for header, bottom for footer */
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+
+    /* Page Break Handling for Print/PDF */
     @media print {
-        .feedback-overflow-table {
+        .feedback-question-group {
             page-break-inside: auto;
         }
-        
-        .feedback-overflow-table thead {
-            display: table-header-group;
-        }
-        
-        .feedback-overflow-table tfoot {
-            display: table-footer-group;
-        }
-        
-        .feedback-question-group {
+
+        .feedback-response-item {
             page-break-inside: avoid;
         }
-        
-        .feedback-response {
+
+        .guide-interpretation {
             page-break-inside: avoid;
         }
     }

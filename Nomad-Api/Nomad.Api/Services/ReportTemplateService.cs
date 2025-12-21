@@ -263,6 +263,14 @@ public class ReportTemplateService : IReportTemplateService
                 _logger.LogInformation("Using dynamic report generation with {ClusterCount} clusters and {CompetencyCount} competencies",
                     clusterHierarchy.Clusters.Count, totalCompetencies);
 
+                // Use mock feedback data if no actual feedback exists (for preview purposes)
+                var feedbackItems = openEndedFeedback?.Items;
+                if (feedbackItems == null || feedbackItems.Count == 0)
+                {
+                    feedbackItems = GetMockOpenEndedFeedback();
+                    _logger.LogInformation("Using mock open-ended feedback data for preview ({Count} items)", feedbackItems.Count);
+                }
+
                 var html = await BuildDynamicReportHtmlAsync(
                     companyName,
                     companyLogoUrl,
@@ -271,7 +279,7 @@ public class ReportTemplateService : IReportTemplateService
                     secondaryColor,
                     tertiaryColor,
                     clusterHierarchy,
-                    openEndedFeedback?.Items,
+                    feedbackItems,
                     chartImages);
 
                 // Still need to replace subject name and other placeholders in Part 1
@@ -919,22 +927,23 @@ public class ReportTemplateService : IReportTemplateService
                     <div class=""item-label"">{EscapeHtml(item.CompetencyName)}</div>
                     <div class=""bubble-area"">");
 
-            // Generate bubbles for each score level (1-5) that has responses
+            // ====== START: Updated bubble positioning for 0-4 scale ======
+            // Generate bubbles for each score level (0-4) that has responses
             foreach (var scoreEntry in item.ScoreDistribution.Where(s => s.Value > 0))
             {
                 var score = scoreEntry.Key;
                 var count = scoreEntry.Value;
 
-                // Calculate X position to align with axis label centers
-                // Labels are 5 x 20% width = 100%, distributed evenly
-                // Label centers: score 1 = 10%, score 2 = 30%, score 3 = 50%, score 4 = 70%, score 5 = 90%
-                var xPos = (score - 1) * 20 + 10; // 10%, 30%, 50%, 70%, 90%
+                // Calculate X position on 0-4 scale (0% = score 0, 100% = score 4)
+                // Score 0 = 0%, Score 1 = 25%, Score 2 = 50%, Score 3 = 75%, Score 4 = 100%
+                var xPos = score / 4.0 * 100;
 
                 // Determine bubble size class based on count (1-5+)
                 var sizeClass = count >= 5 ? "size-5" : $"size-{count}";
 
-                sb.AppendLine($@"                        <div class=""bubble {sizeClass}"" style=""--x-pos: {xPos}%;""></div>");
+                sb.AppendLine($@"                        <div class=""bubble {sizeClass}"" style=""--x-pos: {xPos:F1}%;""></div>");
             }
+            // ====== END: Updated bubble positioning for 0-4 scale ======
 
             sb.AppendLine(@"                    </div>
                 </div>");
@@ -1052,6 +1061,46 @@ public class ReportTemplateService : IReportTemplateService
     }
 
     /// <summary>
+    /// Generates mock open-ended feedback data for preview
+    /// </summary>
+    private List<OpenEndedFeedbackItem> GetMockOpenEndedFeedback()
+    {
+        return new List<OpenEndedFeedbackItem>
+        {
+            // Stop Doing question
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Managing individual's deliverables", RaterType = "Manager" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Stop spending time alone in my office.", RaterType = "Direct" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Stop saying yes to every requirement that comes to me.", RaterType = "Peer" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Stop being a soft and accepting person all the time.", RaterType = "Peer" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Stop spending too much time at/for work and should create a suitable work-life balance.", RaterType = "Direct" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Should avoid himself in to involve in minor activities and let the team do.", RaterType = "Stakeholder" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Stop doing many tasks by himself.", RaterType = "Peer" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Stopping his team from exploring innovative ideas. Stop micro managing the team. Stop viewing things from internal perspective. Be more flexible.", RaterType = "SkipLine" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Being too much detail oriented which at times leads to losing the focus.", RaterType = "Peer" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Micromanaging and delaying decision making.", RaterType = "Manager" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "He should be to the point, crisp and result oriented during his communication. Too much details also make things complex.", RaterType = "Stakeholder" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "N/A", RaterType = "Direct" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Stop getting worried from team members who take you for granted.", RaterType = "Peer" },
+            new() { QuestionText = "What should this person stop doing in order to become more effective as a leader?", ResponseText = "Be concise and crisp in communication.", RaterType = "Stakeholder" },
+
+            // Start Doing question
+            new() { QuestionText = "What should this person start doing in order to become more effective as a leader?", ResponseText = "He should start delegating tasks to other members and not take all responsibilities on his own.", RaterType = "Manager" },
+            new() { QuestionText = "What should this person start doing in order to become more effective as a leader?", ResponseText = "Start visiting other teams as well. Understand challenges at grass root level.", RaterType = "Direct" },
+            new() { QuestionText = "What should this person start doing in order to become more effective as a leader?", ResponseText = "Start saying no to things that are not priority or not urgent.", RaterType = "Peer" },
+            new() { QuestionText = "What should this person start doing in order to become more effective as a leader?", ResponseText = "Start being more assertive when needed.", RaterType = "Peer" },
+            new() { QuestionText = "What should this person start doing in order to become more effective as a leader?", ResponseText = "Start focusing on strategic initiatives rather than day-to-day operations.", RaterType = "Stakeholder" },
+            new() { QuestionText = "What should this person start doing in order to become more effective as a leader?", ResponseText = "Start having regular one-on-one meetings with team members.", RaterType = "Direct" },
+
+            // Continue Doing question
+            new() { QuestionText = "What should this person continue doing to remain effective as a leader?", ResponseText = "Continue to be approachable and supportive of the team.", RaterType = "Manager" },
+            new() { QuestionText = "What should this person continue doing to remain effective as a leader?", ResponseText = "Continue providing clear direction and guidance to the team.", RaterType = "Direct" },
+            new() { QuestionText = "What should this person continue doing to remain effective as a leader?", ResponseText = "Continue to maintain open communication with all stakeholders.", RaterType = "Peer" },
+            new() { QuestionText = "What should this person continue doing to remain effective as a leader?", ResponseText = "Continue being a good listener and taking feedback constructively.", RaterType = "Stakeholder" },
+            new() { QuestionText = "What should this person continue doing to remain effective as a leader?", ResponseText = "Continue to lead by example and demonstrate high ethical standards.", RaterType = "SkipLine" },
+        };
+    }
+
+    /// <summary>
     /// Generates HTML for gap chart items from real data
     /// </summary>
     private string GenerateGapChartItems(List<RaterGroupSummaryItem> items)
@@ -1061,6 +1110,7 @@ public class ReportTemplateService : IReportTemplateService
         // Limit to 15 competencies
         var limitedItems = items.Take(15).ToList();
 
+        // ====== START: Updated gap chart generation for 0-4 scale with gap value inside chart ======
         foreach (var item in limitedItems)
         {
             // Skip if either score is missing
@@ -1069,29 +1119,39 @@ public class ReportTemplateService : IReportTemplateService
 
             var selfScore = item.SelfScore.Value;
             var othersScore = item.OthersScore.Value;
-            var gap = selfScore - othersScore;
 
-            // Calculate positions on 1-5 scale (0% = score 1, 100% = score 5)
-            var selfPos = (selfScore - 1) / 4 * 100;
-            var othersPos = (othersScore - 1) / 4 * 100;
+            // Gap = Others - Self
+            // Positive(+) = others rated you higher than you rated yourself
+            // Negative(-) = others rated you lower than you rated yourself
+            var gap = othersScore - selfScore;
+
+            // Calculate positions on 0-4 scale (0% = score 0, 100% = score 4)
+            var selfPos = selfScore / 4 * 100;
+            var othersPos = othersScore / 4 * 100;
 
             // Determine line start and end (always from lower to higher position)
             var lineStart = Math.Min(selfPos, othersPos);
             var lineEnd = Math.Max(selfPos, othersPos);
 
-            // Format gap value with sign
-            var gapValue = gap >= 0 ? $"+{gap:F2}" : $"{gap:F2}";
+            // Format gap value with sign (explicit minus sign for negative values)
+            var gapValue = gap >= 0 ? $"+{gap:F2}" : $"−{Math.Abs(gap):F2}";
+
+            // Position gap value:
+            // - Negative gap: place behind "others" bubble (others rated lower)
+            // - Positive gap: place behind "self" bubble (self rated lower)
+            var gapValuePos = gap < 0 ? othersPos : selfPos;
 
             sb.AppendLine($@"                <div class=""gap-chart-item"">
                     <div class=""item-label"">{EscapeHtml(item.CompetencyName)}</div>
                     <div class=""chart-bar-area"">
-                        <span class=""gap-value"">{gapValue}</span>
+                        <span class=""gap-value"" style=""--gap-value-pos: {gapValuePos:F1}%;"">{gapValue}</span>
                         <div class=""bar-line"" style=""--line-start: {lineStart:F1}%; --line-end: {lineEnd:F1}%;""></div>
                         <div class=""point self-point"" style=""--point-pos: {selfPos:F1}%;""></div>
                         <div class=""point others-point"" style=""--point-pos: {othersPos:F1}%;""></div>
                     </div>
                 </div>");
         }
+        // ====== END: Updated gap chart generation for 0-4 scale with gap value inside chart ======
 
         return sb.ToString();
     }
@@ -1626,10 +1686,7 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
         if (openEndedFeedback != null && openEndedFeedback.Count > 0)
         {
             var feedbackTemplate = await LoadPartTemplateAsync(templatesDir, "Part3_Feedback.html");
-            var headerSnippet = await LoadPartTemplateAsync(templatesDir, "Component_HeaderFooter.html");
-
-            var feedbackHtml = GenerateFeedbackSection(feedbackTemplate, headerSnippet,
-                openEndedFeedback, companyLogoUrl);
+            var feedbackHtml = GenerateFeedbackSection(feedbackTemplate, openEndedFeedback, companyLogoUrl);
             sb.Append(feedbackHtml);
         }
 
@@ -1803,35 +1860,47 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
         var sb = new StringBuilder();
         const double maxScore = 4.0;
 
-        var selfWidth = cluster.SelfScore.HasValue ? (cluster.SelfScore.Value / maxScore * 100) : 0;
+        // ====== START: Updated bar chart rows with consistent bar-value alignment ======
+        // Self bar - always show
+        var selfScore = cluster.SelfScore ?? 0;
+        var selfWidth = selfScore / maxScore * 100;
         sb.AppendLine($@"<div class=""bar-row"">
             <div class=""bar-label"">Self</div>
             <div class=""bar-track"">
                 <div class=""bar-fill self-bar"" style=""width: {selfWidth:F1}%;""></div>
             </div>
+            <span class=""bar-value"">{selfScore:F2}</span>
         </div>");
 
-        var othersWidth = cluster.OthersScore.HasValue ? (cluster.OthersScore.Value / maxScore * 100) : 0;
+        // Others bar - always show
+        var othersScore = cluster.OthersScore ?? 0;
+        var othersWidth = othersScore / maxScore * 100;
         sb.AppendLine($@"<div class=""bar-row"">
             <div class=""bar-label"">Others</div>
             <div class=""bar-track"">
                 <div class=""bar-fill others-bar"" style=""width: {othersWidth:F1}%;""></div>
             </div>
+            <span class=""bar-value"">{othersScore:F2}</span>
         </div>");
 
+        // Relationship-specific bars - show all, even with 0 value
         foreach (var rel in relationshipTypes)
         {
-            if (cluster.RelationshipScores.TryGetValue(rel, out var score) && score.HasValue)
-            {
-                var width = score.Value / maxScore * 100;
-                sb.AppendLine($@"<div class=""bar-row"">
-                    <div class=""bar-label"">{EscapeHtml(rel)}</div>
-                    <div class=""bar-track"">
-                        <div class=""bar-fill others-bar"" style=""width: {width:F1}%;""></div>
-                    </div>
-                </div>");
-            }
+            var score = cluster.RelationshipScores.TryGetValue(rel, out var s) && s.HasValue ? s.Value : 0;
+            var width = score / maxScore * 100;
+            sb.AppendLine($@"<div class=""bar-row"">
+            <div class=""bar-label"">{EscapeHtml(rel)}</div>
+            <div class=""bar-track"">
+                <div class=""bar-fill others-bar"" style=""width: {width:F1}%;""></div>
+            </div>
+            <span class=""bar-value"">{score:F2}</span>
+        </div>");
         }
+        // ====== END: Updated bar chart rows with consistent bar-value alignment ======
+
+        _logger.LogDebug("Generated cluster bar chart for {ClusterName}: Self={SelfScore}, Others={OthersScore}, Relationships={RelScores}",
+            cluster.ClusterName, cluster.SelfScore, cluster.OthersScore,
+            string.Join(", ", cluster.RelationshipScores.Select(r => $"{r.Key}:{r.Value}")));
 
         return sb.ToString();
     }
@@ -1841,35 +1910,47 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
         var sb = new StringBuilder();
         const double maxScore = 4.0;
 
-        var selfWidth = competency.SelfScore.HasValue ? (competency.SelfScore.Value / maxScore * 100) : 0;
+        // ====== START: Updated competency bar chart rows with consistent bar-value alignment ======
+        // Self bar - always show
+        var selfScore = competency.SelfScore ?? 0;
+        var selfWidth = selfScore / maxScore * 100;
         sb.AppendLine($@"<div class=""bar-row"">
             <div class=""bar-label"">Self</div>
             <div class=""bar-track"">
                 <div class=""bar-fill self-bar"" style=""width: {selfWidth:F1}%;""></div>
             </div>
+            <span class=""bar-value"">{selfScore:F2}</span>
         </div>");
 
-        var othersWidth = competency.OthersScore.HasValue ? (competency.OthersScore.Value / maxScore * 100) : 0;
+        // Others bar - always show
+        var othersScore = competency.OthersScore ?? 0;
+        var othersWidth = othersScore / maxScore * 100;
         sb.AppendLine($@"<div class=""bar-row"">
             <div class=""bar-label"">Others</div>
             <div class=""bar-track"">
                 <div class=""bar-fill others-bar"" style=""width: {othersWidth:F1}%;""></div>
             </div>
+            <span class=""bar-value"">{othersScore:F2}</span>
         </div>");
 
+        // Relationship-specific bars - show all, even with 0 value
         foreach (var rel in relationshipTypes)
         {
-            if (competency.RelationshipScores.TryGetValue(rel, out var score) && score.HasValue)
-            {
-                var width = score.Value / maxScore * 100;
-                sb.AppendLine($@"<div class=""bar-row"">
-                    <div class=""bar-label"">{EscapeHtml(rel)}</div>
-                    <div class=""bar-track"">
-                        <div class=""bar-fill others-bar"" style=""width: {width:F1}%;""></div>
-                    </div>
-                </div>");
-            }
+            var score = competency.RelationshipScores.TryGetValue(rel, out var s) && s.HasValue ? s.Value : 0;
+            var width = score / maxScore * 100;
+            sb.AppendLine($@"<div class=""bar-row"">
+            <div class=""bar-label"">{EscapeHtml(rel)}</div>
+            <div class=""bar-track"">
+                <div class=""bar-fill others-bar"" style=""width: {width:F1}%;""></div>
+            </div>
+            <span class=""bar-value"">{score:F2}</span>
+        </div>");
         }
+        // ====== END: Updated competency bar chart rows with consistent bar-value alignment ======
+
+        _logger.LogDebug("Generated competency bar chart for {CompetencyName}: Self={SelfScore}, Others={OthersScore}, Relationships={RelScores}",
+            competency.CompetencyName, competency.SelfScore, competency.OthersScore,
+            string.Join(", ", competency.RelationshipScores.Select(r => $"{r.Key}:{r.Value}")));
 
         return sb.ToString();
     }
@@ -1985,23 +2066,25 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
     /// <summary>
     /// Generates the feedback section with overflow handling
     /// </summary>
-    private string GenerateFeedbackSection(string template, string headerSnippet,
+    private string GenerateFeedbackSection(string template,
         List<OpenEndedFeedbackItem> feedbackItems, string? companyLogoUrl)
     {
         var html = template;
 
-        // Inject header snippet
-        var headerHtml = headerSnippet.Replace("{{COMPANY_LOGO}}", GetLogoHtml(companyLogoUrl));
-        html = html.Replace("{{HEADER_THEAD_ROW}}", headerHtml);
+        // Get the logo HTML for replacement
+        var logoHtml = GetLogoHtml(companyLogoUrl);
 
-        // Generate feedback items HTML
-        var feedbackHtml = GenerateOpenEndedFeedbackHtml(feedbackItems);
+        // Generate feedback items HTML (pass logo for new pages)
+        var feedbackHtml = GenerateOpenEndedFeedbackHtml(feedbackItems, logoHtml);
         html = html.Replace("{{OPEN_ENDED_FEEDBACK_ITEMS}}", feedbackHtml);
+
+        // Replace company logo placeholder in the first page
+        html = html.Replace("{{COMPANY_LOGO}}", logoHtml);
 
         return html;
     }
 
-    private string GenerateOpenEndedFeedbackHtml(List<OpenEndedFeedbackItem> feedbackItems)
+    private string GenerateOpenEndedFeedbackHtml(List<OpenEndedFeedbackItem> feedbackItems, string logoHtml)
     {
         var sb = new StringBuilder();
 
@@ -2010,23 +2093,198 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
             .GroupBy(f => f.QuestionText)
             .ToList();
 
-        foreach (var group in groupedByQuestion)
+        // Footer HTML for new pages
+        const string footerHtml = @"
+    <div class=""page-footer"">
+        <img src=""/logos/ascendevelopment_logo.jpeg"" alt=""Ascend Logo"" class=""ascend-logo"" />
+        <span class=""footer-text"">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
+        <div class=""page-number"">Page <span class=""page-number-index""></span> of <span class=""page-number-total""></span></div>
+    </div>";
+
+        // Content height budget in "units" - each unit represents roughly one line of text
+        // A4 page with header/footer leaves approximately 700 units of usable content height
+        const int pageHeightBudget = 700;
+        const int firstPageTitleOverhead = 120; // "Feedback" title + intro text takes extra space
+        const int questionTitleHeight = 60;     // Question title with some margin
+        const int responseBaseHeight = 30;      // Base height for a response item
+        const int charsPerLine = 100;           // Approximate characters that fit per line
+        const int lineHeight = 18;              // Height per line of text
+        const int dividerAndGuideHeight = 100;  // Divider + "Guide for Interpretation" section
+
+        int currentPageBudget = pageHeightBudget - firstPageTitleOverhead;
+
+        for (int i = 0; i < groupedByQuestion.Count; i++)
         {
-            sb.AppendLine($"<div class=\"feedback-question-group\">");
-            sb.AppendLine($"<div class=\"feedback-question-title\">{EscapeHtml(CleanQuestionText(group.Key))}</div>");
+            var group = groupedByQuestion[i];
+            bool isLastQuestion = i == groupedByQuestion.Count - 1;
 
-            foreach (var item in group)
+            // Question title with keyword bolding
+            var questionTitle = FormatQuestionTitleWithBold(CleanQuestionText(group.Key));
+
+            // Responses - sort by relationship priority: Manager first, then others
+            var orderedResponses = group
+                .OrderBy(r => GetRelationshipPriority(r.RaterType))
+                .ToList();
+
+            int responseIndex = 0;
+            bool isFirstPageOfQuestion = true;
+
+            while (responseIndex < orderedResponses.Count)
             {
-                sb.AppendLine($@"<div class=""feedback-response"">
-                    {EscapeHtml(item.ResponseText)}
-                    <div class=""feedback-rater-type"">— {EscapeHtml(item.RaterType)}</div>
-                </div>");
-            }
+                bool isLastPageOfQuestion = false;
 
-            sb.AppendLine("</div>");
+                // Calculate space needed for question title
+                int spaceNeeded = questionTitleHeight;
+
+                // Collect responses that fit on this page
+                var responsesForThisPage = new List<(int index, OpenEndedFeedbackItem item, int height)>();
+
+                for (int r = responseIndex; r < orderedResponses.Count; r++)
+                {
+                    var item = orderedResponses[r];
+                    // Calculate response height based on text length
+                    int textLength = item.ResponseText?.Length ?? 0;
+                    int lines = Math.Max(1, (int)Math.Ceiling((double)textLength / charsPerLine));
+                    int responseHeight = responseBaseHeight + (lines - 1) * lineHeight;
+
+                    // Check if this is potentially the last response (need space for divider+guide)
+                    bool isLastResponse = r == orderedResponses.Count - 1;
+                    int extraSpaceNeeded = isLastResponse ? dividerAndGuideHeight : 0;
+
+                    if (spaceNeeded + responseHeight + extraSpaceNeeded <= currentPageBudget)
+                    {
+                        responsesForThisPage.Add((r + 1, item, responseHeight)); // r+1 for 1-based numbering
+                        spaceNeeded += responseHeight;
+                    }
+                    else
+                    {
+                        // No more responses fit on this page
+                        break;
+                    }
+                }
+
+                // If no responses fit (shouldn't happen with reasonable budget), force at least one
+                if (responsesForThisPage.Count == 0 && responseIndex < orderedResponses.Count)
+                {
+                    var item = orderedResponses[responseIndex];
+                    responsesForThisPage.Add((responseIndex + 1, item, responseBaseHeight));
+                }
+
+                // Check if this is the last page of the question
+                int lastResponseIndex = responseIndex + responsesForThisPage.Count;
+                isLastPageOfQuestion = lastResponseIndex >= orderedResponses.Count;
+
+                // Generate HTML for this page's content
+                sb.AppendLine("<div class=\"feedback-question-group\">");
+
+                // Show question title on first page, or a continuation indicator on subsequent pages
+                if (isFirstPageOfQuestion)
+                {
+                    sb.AppendLine($"<div class=\"feedback-question-title\">{questionTitle}</div>");
+                }
+                else
+                {
+                    sb.AppendLine($"<div class=\"feedback-question-title\">{questionTitle} <span style=\"font-size: 10pt; color: #666;\">(continued)</span></div>");
+                }
+
+                // Responses for this page
+                sb.AppendLine("<div class=\"feedback-responses-list\">");
+                foreach (var (idx, item, _) in responsesForThisPage)
+                {
+                    sb.AppendLine($"<div class=\"feedback-response-item\">{idx}. {EscapeHtml(item.ResponseText)}</div>");
+                }
+                sb.AppendLine("</div>");
+
+                // Only show divider and guide on the last page of the question
+                if (isLastPageOfQuestion)
+                {
+                    sb.AppendLine("<div class=\"feedback-divider\"></div>");
+                    sb.AppendLine(GenerateGuideForInterpretation());
+                }
+
+                sb.AppendLine("</div>"); // Close feedback-question-group
+
+                // Move to next batch of responses
+                responseIndex = lastResponseIndex;
+                isFirstPageOfQuestion = false;
+
+                // Add page break if not the last page of the last question
+                bool needsPageBreak = !(isLastQuestion && isLastPageOfQuestion);
+                if (needsPageBreak)
+                {
+                    sb.AppendLine("    </div>"); // Close page-content
+                    sb.AppendLine(footerHtml);
+                    sb.AppendLine("</div>"); // Close current page
+
+                    // Start new page
+                    sb.AppendLine("<div class=\"page\">");
+                    sb.AppendLine($"    <div class=\"page-header\">{logoHtml}</div>");
+                    sb.AppendLine("    <div class=\"page-content respondent-summary-page\">");
+
+                    // Reset page budget for new page (no first page overhead)
+                    currentPageBudget = pageHeightBudget;
+                }
+            }
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>
+    /// Format question title to bold keywords like "stop doing", "start doing", "continue doing"
+    /// </summary>
+    private string FormatQuestionTitleWithBold(string questionText)
+    {
+        if (string.IsNullOrEmpty(questionText)) return questionText;
+
+        var escaped = EscapeHtml(questionText);
+
+        // Bold common keywords
+        var keywords = new[] { "stop doing", "start doing", "continue doing", "strengths", "weaknesses", "improve", "development" };
+        foreach (var keyword in keywords)
+        {
+            var pattern = $"(?i){System.Text.RegularExpressions.Regex.Escape(keyword)}";
+            escaped = System.Text.RegularExpressions.Regex.Replace(
+                escaped,
+                pattern,
+                match => $"<strong>{match.Value}</strong>");
+        }
+
+        return escaped;
+    }
+
+    /// <summary>
+    /// Get relationship priority for ordering (Manager first)
+    /// </summary>
+    private int GetRelationshipPriority(string relationship)
+    {
+        return relationship?.ToLower() switch
+        {
+            "manager" or "line-manager" or "linemanager" => 1,
+            "self" => 2,
+            "direct" or "directreport" or "direct-report" => 3,
+            "peer" => 4,
+            "stakeholder" => 5,
+            "skipline" or "skip-line" => 6,
+            _ => 10
+        };
+    }
+
+    /// <summary>
+    /// Generate the "Guide for Interpretation" HTML box
+    /// </summary>
+    private string GenerateGuideForInterpretation()
+    {
+        return @"
+<div class=""guide-interpretation"">
+    <h2 class=""guide-interpretation-title"">Guide for Interpretation:</h2>
+    <p class=""guide-interpretation-content"">
+        <li>Open-ended feedback shall explain the reasons of ratings and similarity and differences in the ratings, observed in other sections of the report.</li>
+        <li>Compare the comments to your own notes pertinent to your strengths and development areas.</li>
+        <li>It is important to look for recurring themes in the feedback.</li>
+        <li>You may have already known about some of the feedback provided while some of it may appear as a surprise and an insight for you to delve deeper into.</li>
+    </p>
+</div>";
     }
 
 private string CleanQuestionText(string text)

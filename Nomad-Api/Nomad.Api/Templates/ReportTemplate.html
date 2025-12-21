@@ -8,29 +8,9 @@
     <style>
         /* CSS Variables for Brand Colors - These will be replaced dynamically */
         :root {
-            --primary-color: {
-                    {
-                    PRIMARY_COLOR
-                }
-            }
-
-            ;
-
-            --secondary-color: {
-                    {
-                    SECONDARY_COLOR
-                }
-            }
-
-            ;
-
-            --tertiary-color: {
-                    {
-                    TERTIARY_COLOR
-                }
-            }
-
-            ;
+            --primary-color: {{PRIMARY_COLOR}};
+            --secondary-color: {{SECONDARY_COLOR}};
+            --tertiary-color: {{TERTIARY_COLOR}};
             --text-color: #434141ff;
             --border-color: #d3d3d3;
             --background-color: #ffffff;
@@ -177,7 +157,7 @@
 
         /* Page Content Area - Accounts for header and footer */
         .page-content {
-            padding: 50mm 15mm 25mm 15mm;
+            padding: 45mm 15mm 25mm 15mm;
             /* Top padding for header, bottom for footer */
             flex: 1;
             display: flex;
@@ -251,18 +231,14 @@
             color: var(--primary-color);
             font-size: 18pt;
             font-weight: bold;
-            // margin-bottom: 10px;
-            margin-top: 70px;
-            ;
+            margin-top: 10px;
         }
 
         .section-heading-black {
             color: black;
             font-size: 18pt;
             font-weight: bold;
-            // margin-bottom: 10px;
-            margin-top: 70px;
-            ;
+            margin-top: 10px;
         }
 
         .section-subheading {
@@ -538,7 +514,7 @@
         }
 
         .understanding-report-page {
-            margin-top: 80px;
+            margin-top: 0;
             padding: 20px 40px;
             font-family: 'Arial', sans-serif;
         }
@@ -621,11 +597,12 @@
             border-collapse: collapse;
             margin-top: 15px;
             font-size: 14px;
+            table-layout: fixed;
         }
 
         /* Header */
         .report-summary-table th {
-            padding: 10px 0;
+            padding: 12px 10px;
             font-weight: 600;
             color: #555;
             text-align: left;
@@ -635,32 +612,58 @@
         /* Column widths to match screenshot layout */
         .report-summary-table th:nth-child(1),
         .report-summary-table td:nth-child(1) {
-            width: 50%;
+            width: 15%;
+            text-align: left;
+            
         }
 
         .report-summary-table th:nth-child(2),
         .report-summary-table td:nth-child(2) {
             width: 25%;
-        }
-
-        .report-summary-table td:nth-child(2) {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            /* limits to 2 lines */
-            -webkit-box-orient: vertical;
+            text-align: left;
             white-space: normal;
+            word-break: normal;
         }
-
 
         .report-summary-table th:nth-child(3),
         .report-summary-table td:nth-child(3) {
-            width: 25%;
+            width: 40%;
+            text-align: left;
         }
 
-        /* Body rows */
+        /* .report-summary-table td:nth-child(2) {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            
+            -webkit-box-orient: vertical;
+            white-space: normal;
+        }
+             */
+
+        .report-summary-table th:nth-child(4),
+        .report-summary-table td:nth-child(4) {
+            width: 20%;
+            text-align: right; /* Scores usually align right as seen in screenshots */
+        }
+
+
         .report-summary-table td {
-            padding: 14px 0;
+            padding: 14px 10px;
             border-bottom: 1px solid #eee;
+            vertical-align: top; /* Align text to top if Item text wraps */
+            
+        }
+
+        /* Ensuring the long Item text wraps naturally */
+        .report-summary-table td:nth-child(3) {
+            white-space: normal;
+            line-height: 1.4;
+        }
+
+        /* Dimension column wrapping */
+        .report-summary-table td:nth-child(2) {
+            white-space: normal;
+            padding-right: 15px;
         }
 
         /* Alignments EXACTLY like screenshot */
@@ -669,16 +672,6 @@
             padding-right: 50px;
         }
 
-        .report-summary-table td:nth-child(2) {
-            text-align: right;
-            white-space: normal;
-            max-width: 280px;
-            /* allows wrapping */
-        }
-
-        .report-summary-table td:nth-child(3) {
-            text-align: left;
-        }
 
         .blue-divider {
             width: 100%;
@@ -690,6 +683,10 @@
         }
 
         .page-gap {
+            height: 0px;
+        }
+
+        .top-space {
             height: 100px;
         }
 
@@ -743,6 +740,7 @@
             align-items: center;
         }
 
+        /* ====== START: Updated Gap Value positioning for inside chart ====== */
         /* --- Gap Score Value --- */
         .gap-value {
             position: absolute;
@@ -751,13 +749,15 @@
             font-weight: 500;
             white-space: nowrap;
 
-            /* Position to the left of the chart area, outside the plotting space */
-            left: -45px;
+            /* Position inside the chart area, to the left of the others point */
+            /* Uses dynamic variable --gap-value-pos set inline */
+            left: var(--gap-value-pos, 50%);
             top: 50%;
-            transform: translateY(-50%);
+            transform: translate(-100%, -50%);
             text-align: right;
-            width: 40px;
+            padding-right: 8px;
         }
+        /* ====== END: Updated Gap Value positioning for inside chart ====== */
 
         /* --- The Line/Bar connecting the points --- */
         .bar-line {
@@ -804,6 +804,7 @@
             border: none;
         }
 
+        /* ====== START: Updated X-Axis positioning to align exactly with bubble positions ====== */
         /* --- X-Axis (Score Scale) --- */
         .x-axis {
             width: 70%;
@@ -829,17 +830,23 @@
         .axis-label {
             font-size: 10pt;
             color: #333;
-            width: 20%;
+            /* Remove fixed width - let labels be positioned exactly at scale points */
+            width: auto;
             text-align: center;
+            /* Center the label text on its position */
+            transform: translateX(-50%);
         }
 
         .axis-label:first-child {
-            margin-left: -5px;
+            /* First label (0) - position at exact left edge, shift to center on 0% */
+            transform: translateX(0%);
         }
 
         .axis-label:last-child {
-            margin-right: -10px;
+            /* Last label (4) - position at exact right edge, shift to center on 100% */
+            transform: translateX(-100%);
         }
+        /* ====== END: Updated X-Axis positioning to align exactly with bubble positions ====== */
 
         /* --- Legend --- */
         .gap-chart-legend {
@@ -979,15 +986,15 @@
         }
 
 
+        /* ====== START: Agreement Chart X-Axis with absolute positioning for exact alignment ====== */
         /* --- X-Axis (Score Scale) --- */
         .agreement-x-axis {
             width: 75%;
             margin-left: 25%;
             /* Align with the bubble-area */
-            display: flex;
-            justify-content: space-between;
             margin-top: 5px;
             position: relative;
+            height: 20px;
         }
 
         .agreement-x-axis::before {
@@ -1002,20 +1009,21 @@
             z-index: 0;
         }
 
+        /* Use absolute positioning for exact alignment with bubbles */
         .agreement-x-axis .axis-label {
+            position: absolute;
             font-size: 10pt;
             color: #949292ff;
-            width: 20%;
-            text-align: center;
+            transform: translateX(-50%);
         }
 
-        .agreement-x-axis .axis-label:first-child {
-            margin-left: -5px;
-        }
-
-        .agreement-x-axis .axis-label:last-child {
-            margin-right: -10px;
-        }
+        /* Position each label at exact percentage: 0%, 25%, 50%, 75%, 100% */
+        .agreement-x-axis .axis-label:nth-child(1) { left: 0%; transform: translateX(0%); }
+        .agreement-x-axis .axis-label:nth-child(2) { left: 25%; }
+        .agreement-x-axis .axis-label:nth-child(3) { left: 50%; }
+        .agreement-x-axis .axis-label:nth-child(4) { left: 75%; }
+        .agreement-x-axis .axis-label:nth-child(5) { left: 100%; transform: translateX(-100%); }
+        /* ====== END: Agreement Chart X-Axis with absolute positioning for exact alignment ====== */
 
 
         /* --- Legend (How others rated you) --- */
@@ -1134,6 +1142,16 @@
         .rater-group-table th:last-child {
             border-right: none;
         }
+    
+                /* Specifically target the first column (Dimensions) in the body */
+        .rater-group-table tbody td:first-child {
+            text-align: left;
+            padding-left: 20px; /* Gives it that nice gap from the left border seen in the image */
+        }
+        .rater-group-table td:nth-child(1),
+        .rater-group-table th:nth-child(1) {
+            text-align: left;
+        }
 
         .dimension-header {
             width: 30%;
@@ -1211,6 +1229,7 @@
             align-items: center;
         }
 
+        /* ====== START: Updated Professional Bar Chart with bar-value styling ====== */
         /* --- PROFESSIONAL BAR CHART --- */
         .professional-bar-chart {
             margin-top: 20px;
@@ -1224,20 +1243,24 @@
         }
 
         .bar-label {
-            width: 30%;
+            width: 25%;
+            min-width: 25%;
             text-align: right;
             font-size: 10pt;
             color: #333;
-            padding-right: 15px;
+            padding-right: 10px;
+            box-sizing: border-box;
         }
 
         .bar-track {
-            width: 70%;
+            width: 55%;
+            min-width: 55%;
             height: 18px;
             /* Thicker bars like the original */
             position: relative;
             border-left: 1px solid #ccc;
             /* Y-axis line */
+            box-sizing: border-box;
         }
 
         .bar-fill {
@@ -1256,17 +1279,28 @@
             /* Professional Blue */
         }
 
+        /* Bar value styling - positioned after the bar with consistent gap */
+        .bar-value {
+            width: 20%;
+            min-width: 20%;
+            font-size: 10pt;
+            color: #333;
+            padding-left: 10px;
+            box-sizing: border-box;
+        }
+
         .bar-axis {
             display: flex;
             justify-content: space-between;
-            width: 70%;
-            margin-left: 30%;
+            width: 55%;
+            margin-left: 25%;
             /* Align with track */
             padding-top: 5px;
             border-top: 1px solid #999;
             font-size: 9pt;
             color: #555;
         }
+        /* ====== END: Updated Professional Bar Chart with bar-value styling ====== */
 
         /* --- SVG RADIAL CHART --- */
         .radial-svg {
@@ -1400,6 +1434,155 @@
             width: 150%;
             /*margin-left: -10%; */
         }
+
+        /* ====== START: Custom CSS for High/Low Scores and Respondent Summary Tables ====== */
+        /* Copy of report-summary-table styles for High and Low Scores tables */
+        .high-low-scores-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+            table-layout: fixed;
+        }
+
+        .high-low-scores-table th {
+            padding: 12px 10px;
+            font-weight: 600;
+            color: #555;
+            text-align: left;
+            border-bottom: 2px solid #dcdcdc;
+        }
+
+        .high-low-scores-table th:nth-child(1),
+        .high-low-scores-table td:nth-child(1) {
+            width: 15%;
+            text-align: left;
+        }
+
+        .high-low-scores-table th:nth-child(2),
+        .high-low-scores-table td:nth-child(2) {
+            width: 25%;
+            text-align: left;
+            white-space: normal;
+            word-break: normal;
+        }
+
+        .high-low-scores-table th:nth-child(3),
+        .high-low-scores-table td:nth-child(3) {
+            width: 40%;
+            text-align: left;
+        }
+
+        .high-low-scores-table th:nth-child(4),
+        .high-low-scores-table td:nth-child(4) {
+            width: 20%;
+            text-align: right;
+        }
+
+        .high-low-scores-table td {
+            padding: 14px 10px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+
+        .high-low-scores-table td:nth-child(3) {
+            white-space: normal;
+            line-height: 1.4;
+        }
+
+        .high-low-scores-table td:nth-child(2) {
+            white-space: normal;
+            padding-right: 15px;
+        }
+
+        .high-low-scores-table td:nth-child(1) {
+            text-align: left;
+            padding-right: 50px;
+        }
+        /* ====== END: Custom CSS for High/Low Scores and Respondent Summary Tables ====== */
+
+        /* ====== START: Custom CSS for Latent Strengths and Blindspots Tables ====== */
+        /* Separate table styling for 6-column Latent Strengths and Blindspots tables */
+        .latent-blindspot-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 12px;
+            table-layout: fixed;
+        }
+
+        .latent-blindspot-table th {
+            padding: 10px 6px;
+            font-weight: 600;
+            color: #555;
+            text-align: left;
+            border-bottom: 2px solid #dcdcdc;
+        }
+
+        .latent-blindspot-table td {
+            padding: 10px 6px;
+            border-bottom: 1px solid #eee;
+            vertical-align: top;
+        }
+
+        /* Rank column - narrow */
+        .latent-blindspot-table th:nth-child(1),
+        .latent-blindspot-table td:nth-child(1) {
+            width: 6%;
+            text-align: center;
+        }
+
+        /* Scoring Category column */
+        .latent-blindspot-table th:nth-child(2),
+        .latent-blindspot-table td:nth-child(2) {
+            width: 18%;
+            text-align: left;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+        /* Item column - largest */
+        .latent-blindspot-table th:nth-child(3),
+        .latent-blindspot-table td:nth-child(3) {
+            width: 40%;
+            text-align: left;
+            white-space: normal;
+            line-height: 1.3;
+        }
+
+        /* Self column */
+        .latent-blindspot-table th:nth-child(4),
+        .latent-blindspot-table td:nth-child(4) {
+            width: 10%;
+            text-align: center;
+        }
+
+        /* Others column */
+        .latent-blindspot-table th:nth-child(5),
+        .latent-blindspot-table td:nth-child(5) {
+            width: 10%;
+            text-align: center;
+        }
+
+        /* Gap column */
+        .latent-blindspot-table th:nth-child(6),
+        .latent-blindspot-table td:nth-child(6) {
+            width: 10%;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        /* Positive gap styling (green) */
+        .latent-blindspot-table .gap-positive {
+            color: #16a34a;
+        }
+
+        /* Negative gap styling (red) */
+        .latent-blindspot-table .gap-negative {
+            color: #dc2626;
+        }
+        /* ====== END: Custom CSS for Latent Strengths and Blindspots Tables ====== */
     </style>
 </head>
 
@@ -1688,7 +1871,7 @@
         <div class="page-content respondent-summary-page">
 
             <!-- Main Heading -->
-            <h2 class="respondent-heading" style="margin-top: 80px; color: var(--primary-color);">
+            <h2 class="respondent-heading" style="margin-top: 10px; color: var(--primary-color);">
                 Respondent Summary
             </h2>
 
@@ -1701,7 +1884,7 @@
             </table>
 
             <!-- Subheading -->
-            <h3 class="section-subheading-black" style="margin-top: 40px;">
+            <h3 class="section-subheading-black" style="margin-top: 20px;">
                 Report Summary
             </h3>
 
@@ -1796,7 +1979,7 @@
         <!-- CONTENT -->
         <div class="page-content respondent-summary-page">
             <!-- Main Heading -->
-            <h2 class="respondent-heading" style="margin-top: 80px; color: var(--primary-color);">
+            <h2 class="respondent-heading" style="margin-top: 10px; color: var(--primary-color);">
                 High and Low Scores
             </h2>
             <div class="section-description">The high/low table displays items based on the dimensions where others
@@ -1804,7 +1987,8 @@
 
             <div class="section-subheading-black">Highest Scores</div>
 
-            <table class="report-summary-table">
+            <!-- START: High/Low Scores Table using high-low-scores-table class -->
+            <table class="high-low-scores-table">
                 <thead>
                     <tr>
                         <th>Rank</th>
@@ -1817,10 +2001,12 @@
                     {{HIGHEST_SCORES_ROWS}}
                 </tbody>
             </table>
+            <!-- END: High/Low Scores Table using high-low-scores-table class -->
 
             <div class="section-subheading-black">Lowest Scores</div>
 
-            <table class="report-summary-table">
+            <!-- START: High/Low Scores Table using high-low-scores-table class -->
+            <table class="high-low-scores-table">
                 <thead>
                     <tr>
                         <th>Rank</th>
@@ -1833,6 +2019,7 @@
                     {{LOWEST_SCORES_ROWS}}
                 </tbody>
             </table>
+            <!-- END: High/Low Scores Table using high-low-scores-table class -->
 
 
 
@@ -1881,22 +2068,22 @@
         <!-- CONTENT -->
         <div class="page-content respondent-summary-page">
             <!-- Main Heading -->
-            <h2 class="respondent-heading" style="margin-top: 80px; color: var(--primary-color);">
+            <h2 class="respondent-heading" style="margin-top: 10px; color: var(--primary-color);">
                 Latent Strengths & Blindspots
             </h2>
-            <div class="section-description-small">The first column of scores indicates how you scored yourself. The
+            <div class="section-description">The first column of scores indicates how you scored yourself. The
                 second column indicates the average
                 score of others. The third column indicates the difference between how you scored yourself and how
                 others scored you.
-            </div>
-            <div class="section-description-small">Latent strengths show where others rated you signicantly higher than
+                <br>Latent strengths show where others rated you signicantly higher than
                 you rated yourself. Blindspots
-                show where others rated you signicantly lower than you rated yourself. Both sections are ranked f rom
+                show where others rated you signicantly lower than you rated yourself. Both sections are ranked from
                 largest to the smallest gap.
             </div>
             <div class="section-subheading-black">Latent Strengths</div>
 
-            <table class="report-summary-table">
+            <!-- START: Latent Strengths Table using latent-blindspot-table class -->
+            <table class="latent-blindspot-table">
                 <thead>
                     <tr>
                         <th>Rank</th>
@@ -1911,10 +2098,12 @@
                     {{LATENT_STRENGTHS_ROWS}}
                 </tbody>
             </table>
+            <!-- END: Latent Strengths Table using latent-blindspot-table class -->
 
             <div class="section-subheading-black">Blindspots</div>
 
-            <table class="report-summary-table">
+            <!-- START: Blindspots Table using latent-blindspot-table class -->
+            <table class="latent-blindspot-table">
                 <thead>
                     <tr>
                         <th>Rank</th>
@@ -1929,6 +2118,7 @@
                     {{BLINDSPOTS_ROWS}}
                 </tbody>
             </table>
+            <!-- END: Blindspots Table using latent-blindspot-table class -->
         </div>
 
         <!-- FOOTER -->
@@ -2005,7 +2195,7 @@
             <div>
                 <h2 class="section-heading">Gap Chart
                 </h2>
-                <div class="section-description-small">
+                <div class="section-description">
                     The gap chart displays the difference in scores between self and others. A positive(+)
                     difference means others rated you higher than the rating you provided for yourself. A
                     negative(-) difference means others rated you lower than the rating you provided for
@@ -2018,13 +2208,15 @@
 
                     {{GAP_CHART_ITEMS}}
 
+                    <!-- START: Gap Chart X-axis updated to 0-4 -->
                     <div class="x-axis">
+                        <div class="axis-label">0</div>
                         <div class="axis-label">1</div>
                         <div class="axis-label">2</div>
                         <div class="axis-label">3</div>
                         <div class="axis-label">4</div>
-                        <div class="axis-label">5</div>
                     </div>
+                    <!-- END: Gap Chart X-axis updated to 0-4 -->
                 </div>
 
                 <div class="gap-chart-legend">
@@ -2132,13 +2324,15 @@
 
                     {{AGREEMENT_CHART_ITEMS}}
 
+                    <!-- START: Agreement Chart X-axis updated to 0-4 -->
                     <div class="x-axis agreement-x-axis">
+                        <div class="axis-label">0</div>
                         <div class="axis-label">1</div>
                         <div class="axis-label">2</div>
                         <div class="axis-label">3</div>
                         <div class="axis-label">4</div>
-                        <div class="axis-label">5</div>
                     </div>
+                    <!-- END: Agreement Chart X-axis updated to 0-4 -->
                 </div>
             </div>
 
@@ -2234,11 +2428,10 @@
 
         <!-- CONTENT -->
         <div class="page-content respondent-summary-page">
-            <div class="page-gap"></div>
-            <div class="page-gap"></div>
-            <div class="page-gap"></div>
-            <div class="page-gap"></div>
-            <div class="page-gap"></div>
+            <div class="top-space"></div>
+            <div class="top-space"></div>
+            <div class="top-space"></div>
+            <div class="top-space"></div>
 
             <div class="banner-content">
                 <h1> Comprehensive<br>
@@ -2314,42 +2507,49 @@
 
                 <div class="quadrant-left">
                     <h2 class="section-heading">Leading Solutions</h2>
+                    <!-- START: Updated bar chart with bar-value styling -->
                     <div class="professional-bar-chart">
                         <div class="bar-row">
                             <div class="bar-label">Self</div>
                             <div class="bar-track">
                                 <div class="bar-fill self-bar" style="width: 100%;"></div>
                             </div>
+                            <span class="bar-value">4.00</span>
                         </div>
                         <div class="bar-row">
                             <div class="bar-label">Others</div>
                             <div class="bar-track">
                                 <div class="bar-fill others-bar" style="width: 80.5%;"></div>
                             </div>
+                            <span class="bar-value">3.22</span>
                         </div>
                         <div class="bar-row">
                             <div class="bar-label">Line-Manager</div>
                             <div class="bar-track">
                                 <div class="bar-fill others-bar" style="width: 65%;"></div>
                             </div>
+                            <span class="bar-value">2.60</span>
                         </div>
                         <div class="bar-row">
                             <div class="bar-label">Peers</div>
                             <div class="bar-track">
                                 <div class="bar-fill others-bar" style="width: 89.5%;"></div>
                             </div>
+                            <span class="bar-value">3.58</span>
                         </div>
                         <div class="bar-row">
                             <div class="bar-label">Direct Reports</div>
                             <div class="bar-track">
                                 <div class="bar-fill others-bar" style="width: 50%;"></div>
                             </div>
+                            <span class="bar-value">2.00</span>
                         </div>
                         <div class="bar-row">
                             <div class="bar-label">Stakeholders</div>
                             <div class="bar-track">
                                 <div class="bar-fill others-bar" style="width: 88%;"></div>
                             </div>
+                            <span class="bar-value">3.52</span>
                         </div>
 
                         <div class="bar-axis">
@@ -2358,6 +2558,7 @@
                             <span>4.00</span>
                         </div>
                     </div>
+                    <!-- END: Updated bar chart with bar-value styling -->
                 </div>
 
                 <div class="quadrant-right">
