@@ -78,11 +78,35 @@
             }
         }
 
+        /* ====== START: Updated print/PDF media query for proper layout ====== */
         /* For print/PDF we want the original behavior (no shadows/margins) */
         @media print {
-            body { background: white; padding: 0; }
-            .page { box-shadow: none; border: none; margin: 0; border-radius: 0; }
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+            .page {
+                box-shadow: none;
+                border: none;
+                margin: 0;
+                border-radius: 0;
+                overflow: hidden;
+                width: 100%;
+                min-height: 100vh;
+                height: 297mm;
+            }
+            /* Hide the floating View as PDF button when printing/generating PDF */
+            .pdf-viewer-button { display: none !important; }
+            /* Ensure footer is at the absolute bottom */
+            .page-footer {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+            }
         }
+        /* ====== END: Updated print/PDF media query for proper layout ====== */
 
         /* Header - Fixed on every page */
         .page-header {
@@ -1811,7 +1835,6 @@
                     class="page-number-total"></span></div>
         </div>
     </div>
-    </div>
 
 
     <!-- Page 4: Detailed Breakdown -->
@@ -2402,18 +2425,18 @@
                 <li>
                     Pay particular attention to areas which have larger dots towards the left of the chart.
                 </li>
+            </p>
         </div>
-    </div>
 
-    <!-- FOOTER -->
-    <div class="page-footer">
-        <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
-        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights
-            reserved.</span>
-        <div class="page-number">
-            Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        <!-- FOOTER -->
+        <div class="page-footer">
+            <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+            <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights
+                reserved.</span>
+            <div class="page-number">
+                Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+            </div>
         </div>
-    </div>
     </div>
 
 
@@ -2428,7 +2451,6 @@
 
         <!-- CONTENT -->
         <div class="page-content respondent-summary-page">
-            <div class="top-space"></div>
             <div class="top-space"></div>
             <div class="top-space"></div>
             <div class="top-space"></div>

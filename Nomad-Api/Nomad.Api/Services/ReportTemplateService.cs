@@ -1417,8 +1417,23 @@ public class ReportTemplateService : IReportTemplateService
             });
 
 await using var page = await browser.NewPageAsync();
+
+// ====== START: Set viewport to A4 dimensions (210mm x 297mm at 96dpi) ======
+// A4 at 96dpi: 210mm = 794px, 297mm = 1123px
+await page.SetViewportAsync(new ViewPortOptions
+{
+    Width = 794,
+    Height = 1123
+});
+// ====== END: Set viewport to A4 dimensions ======
+
 // Set page content (removed unsupported WaitUntilNavigation member)
 await page.SetContentAsync(html);
+
+// ====== START: Emulate print media type to hide View as PDF button and apply print styles ======
+await page.EmulateMediaTypeAsync(MediaType.Print);
+// ====== END: Emulate print media type to hide View as PDF button and apply print styles ======
+
 var pdfBytes = await page.PdfDataAsync(new PdfOptions
 {
     Format = PaperFormat.A4,
