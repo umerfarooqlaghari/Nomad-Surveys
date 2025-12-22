@@ -289,7 +289,7 @@ public class ReportTemplateService : IReportTemplateService
                 // Replace other Part 1 placeholders
                 html = ReplaceAdditionalPlaceholdersInDynamicReport(html, companyName, subjectName,
                     selfAssessmentStatus, relationshipStats, highLowScores, latentStrengthsBlindspots,
-                    agreementChartData, raterGroupSummary, chartImages);
+                    agreementChartData, raterGroupSummary, clusterHierarchy, chartImages);
 
                 return html;
             }
@@ -328,8 +328,12 @@ public class ReportTemplateService : IReportTemplateService
         LatentStrengthsBlindspotsResult? latentStrengthsBlindspots,
         AgreementChartResult? agreementChartData,
         RaterGroupSummaryResult? raterGroupSummary,
+        ClusterCompetencyHierarchyResult? clusterHierarchy = null,
         List<ReportChartImage>? chartImages = null)
     {
+        // Cluster and competency placeholders (Page 3 & 4)
+        html = ReplaceClusterCompetencyPlaceholders(html, clusterHierarchy);
+
         // Page 4 and Page 6 images
         var page4Image = chartImages?.FirstOrDefault(i => i.ImageType == "Page4");
         var page6Image = chartImages?.FirstOrDefault(i => i.ImageType == "Page6");
@@ -390,6 +394,90 @@ public class ReportTemplateService : IReportTemplateService
         }
 
         return html;
+    }
+
+    /// <summary>
+    /// Replaces cluster and competency placeholders with real or mock data
+    /// </summary>
+    private string ReplaceClusterCompetencyPlaceholders(string html, ClusterCompetencyHierarchyResult? clusterHierarchy)
+    {
+        if (clusterHierarchy?.Clusters?.Count > 0)
+        {
+            var clusters = clusterHierarchy.Clusters;
+            var clusterCount = clusters.Count;
+            var totalDimensions = clusters.Sum(c => c.Competencies.Count);
+            var dimensionsPerCluster = clusterCount > 0 ? totalDimensions / clusterCount : 0;
+
+            // Format cluster names list (e.g., "Leading Solutions, Impacting People and Driving Business")
+            var clusterNames = clusters.Select(c => c.ClusterName).ToList();
+            var clusterNamesList = FormatListWithAnd(clusterNames);
+
+            // Get example dimension names (first 2 competencies from first cluster)
+            var exampleDimensions = clusters
+                .SelectMany(c => c.Competencies)
+                .Take(2)
+                .Select(c => c.CompetencyName)
+                .ToList();
+            var exampleDimensionsList = exampleDimensions.Count > 0 
+                ? string.Join(", ", exampleDimensions) + " etc"
+                : "various dimensions";
+
+            // Convert number to word for cluster count
+            var clusterCountWord = NumberToWord(clusterCount);
+
+            html = html.Replace("{{CLUSTER_NAMES_LIST}}", EscapeHtml(clusterNamesList));
+            html = html.Replace("{{CLUSTER_COUNT}}", clusterCount.ToString());
+            html = html.Replace("{{CLUSTER_COUNT_WORD}}", clusterCountWord);
+            html = html.Replace("{{TOTAL_DIMENSIONS_COUNT}}", totalDimensions.ToString());
+            html = html.Replace("{{DIMENSIONS_PER_CLUSTER}}", dimensionsPerCluster.ToString());
+            html = html.Replace("{{EXAMPLE_DIMENSIONS}}", EscapeHtml(exampleDimensionsList));
+        }
+        else
+        {
+            // Mock data for preview when no cluster hierarchy is available
+            html = html.Replace("{{CLUSTER_NAMES_LIST}}", "Leading Solutions, Impacting People and Driving Business");
+            html = html.Replace("{{CLUSTER_COUNT}}", "3");
+            html = html.Replace("{{CLUSTER_COUNT_WORD}}", "three");
+            html = html.Replace("{{TOTAL_DIMENSIONS_COUNT}}", "12");
+            html = html.Replace("{{DIMENSIONS_PER_CLUSTER}}", "4");
+            html = html.Replace("{{EXAMPLE_DIMENSIONS}}", "Inventive Execution, Purposeful Conversations etc");
+        }
+
+        return html;
+    }
+
+    /// <summary>
+    /// Formats a list with "and" before the last item (e.g., "A, B and C")
+    /// </summary>
+    private string FormatListWithAnd(List<string> items)
+    {
+        if (items == null || items.Count == 0) return "";
+        if (items.Count == 1) return items[0];
+        if (items.Count == 2) return $"{items[0]} and {items[1]}";
+        
+        var allButLast = string.Join(", ", items.Take(items.Count - 1));
+        return $"{allButLast} and {items.Last()}";
+    }
+
+    /// <summary>
+    /// Converts a number to its word representation (for small numbers)
+    /// </summary>
+    private string NumberToWord(int number)
+    {
+        return number switch
+        {
+            1 => "one",
+            2 => "two",
+            3 => "three",
+            4 => "four",
+            5 => "five",
+            6 => "six",
+            7 => "seven",
+            8 => "eight",
+            9 => "nine",
+            10 => "ten",
+            _ => number.ToString()
+        };
     }
 
     public async Task<string> GenerateReportHtmlAsync(
@@ -626,6 +714,9 @@ public class ReportTemplateService : IReportTemplateService
 
         // Replace company information
         html = html.Replace("{{COMPANY_NAME}}", companyName ?? "Company Name");
+
+        // Replace cluster and competency placeholders (with mock data for preview fallback)
+        html = ReplaceClusterCompetencyPlaceholders(html, null);
 
         // Replace logo in header
         if (!string.IsNullOrEmpty(companyLogoUrl))

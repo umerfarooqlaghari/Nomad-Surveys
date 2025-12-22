@@ -1781,20 +1781,18 @@
                             </div>
                         </li>
                         <li><strong class="section-subheading-black">Cluster Summary by Rater Group</strong>
-                            <div class="intro-text"> This is the rst level of summary and the scores
+                            <div class="intro-text"> This is the first level of summary and the scores
                                 column shows your actual, or raw cluster score by
                                 each rater group. The clusters, for the purpose of this
-                                report are: <strong>Leading Solutions, Impacting People</strong> and
-                                <strong>Driving Business</strong>.
+                                report are: <strong>{{CLUSTER_NAMES_LIST}}</strong>.
                             </div>
                         </li>
                         <li><strong class="section-subheading-black">Dimension Summary by Rater Group</strong>
                             <div class="intro-text">This is the second level of summary. Within each
                                 cluster, the scores column shows your actual score for
-                                each dimension by each rater group. There are 12
+                                each dimension by each rater group. There are {{TOTAL_DIMENSIONS_COUNT}}
                                 dimensions, for the purpose of this report. A few
-                                examples of dimensions are Inventive Execution,
-                                Purposeful Conversations etc.
+                                examples of dimensions are {{EXAMPLE_DIMENSIONS}}.
                             </div>
                         </li>
                         <li><strong class="section-subheading-black">Item-level Feedback</strong>
@@ -1836,15 +1834,14 @@
             <p class="section-description">
                 This 360° Feedback Survey is based on the Top Talent Framework as part of Elevate – Unlock
                 Possibilities.
-                The survey provides you insight across three clusters: <strong>Leading Solutions, Impacting People and
-                    Driving Business</strong>.
+                The survey provides you insight across {{CLUSTER_COUNT_WORD}} clusters: <strong>{{CLUSTER_NAMES_LIST}}</strong>.
                 <br><br>
-                Each cluster has 9 dimensions that have been measured using several items, or questions, in the survey.
+                Each cluster has {{DIMENSIONS_PER_CLUSTER}} dimensions that have been measured using several items, or questions, in the survey.
                 Each cluster also has an X-Factor that gives you an edge to master each leadership cluster.
                 <br><br>
-                The 9 Dimensions and 3 X-factors, collectively, will help you guide insights to introspect, direct and
+                The {{TOTAL_DIMENSIONS_COUNT}} Dimensions and {{CLUSTER_COUNT}} X-factors, collectively, will help you guide insights to introspect, direct and
                 influence the
-                performance and experience of your team, and to drive organization’s growth and success.
+                performance and experience of your team, and to drive organization's growth and success.
                 <br><br>
                 The figure below illustrates the Interloop 360 Feedback Survey Framework.
             </p>
