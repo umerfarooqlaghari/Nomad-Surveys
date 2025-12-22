@@ -54,6 +54,9 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
     public DbSet<ReportTemplate> ReportTemplates { get; set; }
     public DbSet<ReportTemplateSettings> ReportTemplateSettings { get; set; }
 
+    // Report chart images entity
+    public DbSet<ReportChartImage> ReportChartImages { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -561,6 +564,36 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
             entity.HasIndex(e => new { e.TenantId, e.IsDefault });
             entity.HasIndex(e => e.CreatedAt);
         });
+
+        // ReportChartImage configurations
+        modelBuilder.Entity<ReportChartImage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ImageType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ClusterName).HasMaxLength(255);
+            entity.Property(e => e.CompetencyName).HasMaxLength(255);
+            entity.Property(e => e.ImageUrl).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Foreign key to Survey
+            entity.HasOne(e => e.Survey)
+                .WithMany()
+                .HasForeignKey(e => e.SurveyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Foreign key to Tenant
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Unique constraint: one image per type/cluster/competency combination per survey
+            entity.HasIndex(e => new { e.SurveyId, e.ImageType, e.ClusterName, e.CompetencyName }).IsUnique();
+
+            // Index for better query performance
+            entity.HasIndex(e => new { e.SurveyId, e.TenantId });
+            entity.HasIndex(e => e.ImageType);
+        });
     }
 
     private void ConfigureGlobalQueryFilters(ModelBuilder modelBuilder)
@@ -602,6 +635,9 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         // Report template query filter for tenant isolation
         modelBuilder.Entity<ReportTemplate>().HasQueryFilter(rt => CurrentTenantId == null || rt.TenantId == CurrentTenantId);
         modelBuilder.Entity<ReportTemplateSettings>().HasQueryFilter(rts => CurrentTenantId == null || rts.TenantId == CurrentTenantId);
+
+        // Report chart images query filter for tenant isolation
+        modelBuilder.Entity<ReportChartImage>().HasQueryFilter(rci => CurrentTenantId == null || rci.TenantId == CurrentTenantId);
     }
 
     public override int SaveChanges()

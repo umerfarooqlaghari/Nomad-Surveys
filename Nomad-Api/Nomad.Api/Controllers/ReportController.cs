@@ -110,7 +110,7 @@ public class ReportController : ControllerBase
                 return Unauthorized("Tenant ID not found");
             }
 
-            var pdfBytes = await _reportTemplateService.GenerateReportPdfAsync(
+            var result = await _reportTemplateService.GenerateReportPdfAsync(
                 request.SubjectId,
                 request.SurveyId,
                 tenantId.Value,
@@ -120,8 +120,7 @@ public class ReportController : ControllerBase
                 request.SecondaryColor,
                 request.TertiaryColor);
 
-            return File(pdfBytes, "application/pdf", 
-                $"report_{request.SubjectId}_{DateTime.Now:yyyyMMddHHmmss}.pdf");
+            return File(result.PdfBytes, "application/pdf", result.FileName);
         }
         catch (Exception ex)
         {

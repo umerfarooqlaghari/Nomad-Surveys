@@ -396,14 +396,14 @@ export default function AssignSurveyModal({
                 {surveyTitle} {isSelfEvaluation && <span className="text-purple-600">(Self-Evaluation)</span>}
               </p>
             </div>
-            <button
+            {/* <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </button>
+            </button> */}
           </div>
         </div>
 
@@ -652,9 +652,9 @@ export default function AssignSurveyModal({
               disabled={isLoading}
               className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
             >
-              Cancel
+              Close
             </button>
-            <button
+            {/* <button
               onClick={handleSaveChanges}
               disabled={isLoading}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
@@ -663,7 +663,7 @@ export default function AssignSurveyModal({
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               )}
               Save Changes
-            </button>
+            </button> */}
           </div>
         </div>
       </div>

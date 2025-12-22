@@ -268,14 +268,15 @@ public class ReportAnalyticsRepository
                 questionScores.Count);
 
             // Separate into highest (>= 3) and lowest (< 3) scores
+            // Use Competency as the dimension (not Cluster)
             result.HighestScores = questionScores
                 .Where(qs => qs.AverageScore >= 3.0)
                 .OrderByDescending(qs => qs.AverageScore)
-                .Take(10) // Limit to top 10
+                .Take(4) // Limit to top 4
                 .Select((qs, index) => new HighLowScoreItem
                 {
                     Rank = index + 1,
-                    Dimension = qs.ClusterName,
+                    Dimension = qs.CompetencyName,
                     Item = qs.QuestionText,
                     Average = Math.Round(qs.AverageScore, 2)
                 })
@@ -284,11 +285,11 @@ public class ReportAnalyticsRepository
             result.LowestScores = questionScores
                 .Where(qs => qs.AverageScore < 3.0)
                 .OrderBy(qs => qs.AverageScore)
-                .Take(10) // Limit to top 10
+                .Take(4) // Limit to top 4
                 .Select((qs, index) => new HighLowScoreItem
                 {
                     Rank = index + 1,
-                    Dimension = qs.ClusterName,
+                    Dimension = qs.CompetencyName,
                     Item = qs.QuestionText,
                     Average = Math.Round(qs.AverageScore, 2)
                 })
@@ -417,6 +418,7 @@ public class ReportAnalyticsRepository
                 selfScores.Count, othersScores.Count);
 
             // Calculate gaps and categorize
+            // Use Competency as the scoring category (not Cluster)
             var gapItems = new List<GapScoreItem>();
 
             foreach (var questionId in questionMappings.Keys)
@@ -431,7 +433,7 @@ public class ReportAnalyticsRepository
 
                 gapItems.Add(new GapScoreItem
                 {
-                    ScoringCategory = mapping.ClusterName,
+                    ScoringCategory = mapping.CompetencyName,
                     Item = mapping.QuestionText,
                     Self = Math.Round(selfScore, 2),
                     Others = Math.Round(othersScore, 2),
@@ -443,7 +445,7 @@ public class ReportAnalyticsRepository
             result.LatentStrengths = gapItems
                 .Where(g => g.Gap > 0)
                 .OrderByDescending(g => g.Gap)
-                .Take(10)
+                .Take(4) // Limit to top 4
                 .Select((g, index) => new GapScoreItem
                 {
                     Rank = index + 1,
@@ -459,7 +461,7 @@ public class ReportAnalyticsRepository
             result.Blindspots = gapItems
                 .Where(g => g.Gap < 0)
                 .OrderBy(g => g.Gap)
-                .Take(10)
+                .Take(4) // Limit to top 4
                 .Select((g, index) => new GapScoreItem
                 {
                     Rank = index + 1,
@@ -483,6 +485,757 @@ public class ReportAnalyticsRepository
                 "Error getting latent strengths/blindspots for Subject: {SubjectId}, Survey: {SurveyId}",
                 subjectId, surveyId);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets agreement chart data showing response distribution per competency
+    /// Y-axis: Competencies (limited to 15)
+    /// X-axis: Score (1-5)
+    /// Bubble size: Number of responses at that score level
+    /// </summary>
+    public async Task<AgreementChartResult> GetAgreementChartDataAsync(Guid subjectId, Guid surveyId, Guid tenantId)
+    {
+        var result = new AgreementChartResult();
+
+        try
+        {
+            // Get subject to verify existence
+            var subject = await _context.Subjects
+                .FirstOrDefaultAsync(s => s.Id == subjectId && s.TenantId == tenantId);
+
+            if (subject == null)
+            {
+                _logger.LogWarning("Subject not found: {SubjectId}", subjectId);
+                return result;
+            }
+
+            // Get survey
+            var survey = await _context.Surveys
+                .FirstOrDefaultAsync(s => s.Id == surveyId && s.TenantId == tenantId);
+
+            if (survey?.Schema == null)
+            {
+                _logger.LogWarning("Survey not found or has no schema: {SurveyId}", surveyId);
+                return result;
+            }
+
+            // Get all completed submissions for this subject (EXCLUDING self-assessment)
+            var submissions = await _context.SurveySubmissions
+                .Include(ss => ss.SubjectEvaluatorSurvey)
+                    .ThenInclude(ses => ses.SubjectEvaluator)
+                        .ThenInclude(se => se.Evaluator)
+                .Where(ss => ss.SubjectId == subjectId
+                    && ss.SurveyId == surveyId
+                    && ss.TenantId == tenantId
+                    && ss.Status == SurveySubmissionStatus.Completed
+                    && ss.ResponseData != null
+                    && ss.SubjectEvaluatorSurvey != null
+                    && !(
+                        (ss.SubjectEvaluatorSurvey.SubjectEvaluator.Relationship != null
+                         && ss.SubjectEvaluatorSurvey.SubjectEvaluator.Relationship.ToLower() == "self") ||
+                        ss.SubjectEvaluatorSurvey.SubjectEvaluator.Evaluator.EmployeeId == subject.EmployeeId
+                    ))
+                .ToListAsync();
+
+            _logger.LogInformation(
+                "Found {TotalSubmissions} evaluator submissions for agreement chart, Subject: {SubjectId}",
+                submissions.Count, subjectId);
+
+            if (!submissions.Any())
+            {
+                return result;
+            }
+
+            // Extract question mappings
+            var questionMappings = await ExtractQuestionMappings(survey.Schema, tenantId);
+
+            // Collect all individual scores per competency (not averaged)
+            // Key: CompetencyName, Value: List of individual scores (1-5)
+            var competencyScores = new Dictionary<string, List<int>>();
+
+            foreach (var submission in submissions)
+            {
+                if (submission.ResponseData == null) continue;
+
+                try
+                {
+                    var responseRoot = submission.ResponseData.RootElement;
+
+                    foreach (var mapping in questionMappings)
+                    {
+                        var questionId = mapping.Key;
+                        var questionInfo = mapping.Value;
+                        var competencyName = questionInfo.CompetencyName;
+
+                        if (string.IsNullOrEmpty(competencyName)) continue;
+
+                        if (!responseRoot.TryGetProperty(questionId, out var answerElement))
+                            continue;
+
+                        int? scoreValue = null;
+
+                        if (answerElement.ValueKind == JsonValueKind.Number)
+                        {
+                            scoreValue = (int)Math.Round(answerElement.GetDouble());
+                        }
+                        else if (answerElement.ValueKind == JsonValueKind.String)
+                        {
+                            var answerText = answerElement.GetString();
+                            if (int.TryParse(answerText, out var parsed))
+                            {
+                                scoreValue = parsed;
+                            }
+                            else if (!string.IsNullOrEmpty(answerText) &&
+                                     questionInfo.RatingOptionsMap.TryGetValue(answerText, out var mappedValue))
+                            {
+                                scoreValue = mappedValue;
+                            }
+                        }
+
+                        if (scoreValue.HasValue && scoreValue.Value >= 1 && scoreValue.Value <= 5)
+                        {
+                            if (!competencyScores.ContainsKey(competencyName))
+                                competencyScores[competencyName] = new List<int>();
+
+                            competencyScores[competencyName].Add(scoreValue.Value);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error processing submission {Id} for agreement chart", submission.Id);
+                }
+            }
+
+            // Convert to agreement chart items (limit to 15 competencies)
+            result.CompetencyItems = competencyScores
+                .OrderBy(c => c.Key)
+                .Take(15)
+                .Select(c => new AgreementChartItem
+                {
+                    CompetencyName = c.Key,
+                    ScoreDistribution = Enumerable.Range(1, 5)
+                        .ToDictionary(
+                            score => score,
+                            score => c.Value.Count(s => s == score)
+                        )
+                })
+                .ToList();
+
+            _logger.LogInformation(
+                "Generated agreement chart data for {Count} competencies",
+                result.CompetencyItems.Count);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error getting agreement chart data for Subject: {SubjectId}, Survey: {SurveyId}",
+                subjectId, surveyId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets rater group summary data for Page 15 - competency-level averages by self, others, and relationship type
+    /// </summary>
+    public async Task<RaterGroupSummaryResult> GetRaterGroupSummaryAsync(Guid subjectId, Guid surveyId, Guid tenantId)
+    {
+        var result = new RaterGroupSummaryResult();
+
+        try
+        {
+            // Get subject to verify existence and get EmployeeId for self-identification
+            var subject = await _context.Subjects
+                .FirstOrDefaultAsync(s => s.Id == subjectId && s.TenantId == tenantId);
+
+            if (subject == null)
+            {
+                _logger.LogWarning("Subject not found for rater group summary: {SubjectId}", subjectId);
+                return result;
+            }
+
+            // Get survey
+            var survey = await _context.Surveys
+                .FirstOrDefaultAsync(s => s.Id == surveyId && s.TenantId == tenantId);
+
+            if (survey?.Schema == null)
+            {
+                _logger.LogWarning("Survey not found or has no schema: {SurveyId}", surveyId);
+                return result;
+            }
+
+            // Extract question mappings
+            var questionMappings = await ExtractQuestionMappings(survey.Schema, tenantId);
+
+            // Get ALL completed submissions for this subject
+            var allSubmissions = await _context.SurveySubmissions
+                .Include(ss => ss.SubjectEvaluatorSurvey)
+                    .ThenInclude(ses => ses.SubjectEvaluator)
+                        .ThenInclude(se => se.Evaluator)
+                .Where(ss => ss.SubjectId == subjectId
+                    && ss.SurveyId == surveyId
+                    && ss.TenantId == tenantId
+                    && ss.Status == SurveySubmissionStatus.Completed
+                    && ss.ResponseData != null
+                    && ss.SubjectEvaluatorSurvey != null)
+                .ToListAsync();
+
+            // Separate self-assessment from others
+            var selfSubmission = allSubmissions.FirstOrDefault(ss =>
+                (ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Relationship?.ToLower() == "self") ||
+                (ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Evaluator?.EmployeeId == subject.EmployeeId));
+
+            var otherSubmissions = allSubmissions.Where(ss =>
+                !((ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Relationship?.ToLower() == "self") ||
+                  (ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Evaluator?.EmployeeId == subject.EmployeeId)))
+                .ToList();
+
+            _logger.LogInformation(
+                "Rater Group Summary - Self: {HasSelf}, Others: {OthersCount}",
+                selfSubmission != null, otherSubmissions.Count);
+
+            // Get all unique competencies
+            var competencies = questionMappings.Values
+                .Where(q => !string.IsNullOrEmpty(q.CompetencyName))
+                .Select(q => q.CompetencyName)
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
+
+            // Calculate self scores per competency
+            var selfScoresByCompetency = new Dictionary<string, List<double>>();
+            if (selfSubmission != null)
+            {
+                CalculateCompetencyScores(selfSubmission, questionMappings, selfScoresByCompetency);
+            }
+
+            // Calculate others scores per competency (for "Others" column)
+            var othersScoresByCompetency = new Dictionary<string, List<double>>();
+            foreach (var submission in otherSubmissions)
+            {
+                CalculateCompetencyScores(submission, questionMappings, othersScoresByCompetency);
+            }
+
+            // Calculate scores by relationship type
+            var relationshipGroups = otherSubmissions
+                .GroupBy(ss => ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Relationship ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Collect unique relationship types for column headers
+            result.RelationshipTypes = relationshipGroups.Keys.OrderBy(r => r).ToList();
+
+            // Calculate scores per relationship per competency
+            var scoresByRelationshipAndCompetency = new Dictionary<string, Dictionary<string, List<double>>>();
+            foreach (var relationship in relationshipGroups)
+            {
+                scoresByRelationshipAndCompetency[relationship.Key] = new Dictionary<string, List<double>>();
+                foreach (var submission in relationship.Value)
+                {
+                    CalculateCompetencyScores(submission, questionMappings, scoresByRelationshipAndCompetency[relationship.Key]);
+                }
+            }
+
+            // Build result items
+            foreach (var competency in competencies)
+            {
+                var item = new RaterGroupSummaryItem
+                {
+                    CompetencyName = competency,
+                    SelfScore = selfScoresByCompetency.TryGetValue(competency, out var selfScores) && selfScores.Count > 0
+                        ? Math.Round(selfScores.Average(), 2)
+                        : null,
+                    OthersScore = othersScoresByCompetency.TryGetValue(competency, out var othersScores) && othersScores.Count > 0
+                        ? Math.Round(othersScores.Average(), 2)
+                        : null,
+                    RelationshipScores = new Dictionary<string, double?>()
+                };
+
+                // Add scores for each relationship type
+                foreach (var relationship in result.RelationshipTypes)
+                {
+                    if (scoresByRelationshipAndCompetency.TryGetValue(relationship, out var relScores) &&
+                        relScores.TryGetValue(competency, out var compScores) && compScores.Count > 0)
+                    {
+                        item.RelationshipScores[relationship] = Math.Round(compScores.Average(), 2);
+                    }
+                    else
+                    {
+                        item.RelationshipScores[relationship] = null;
+                    }
+                }
+
+                result.CompetencyItems.Add(item);
+            }
+
+            _logger.LogInformation(
+                "Generated rater group summary for {Count} competencies with {RelCount} relationship types",
+                result.CompetencyItems.Count, result.RelationshipTypes.Count);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error getting rater group summary for Subject: {SubjectId}, Survey: {SurveyId}",
+                subjectId, surveyId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Gets hierarchical cluster-competency-question data for Part 2 dynamic pages
+    /// Returns data structured as: Cluster → Competencies → Questions
+    /// </summary>
+    public async Task<ClusterCompetencyHierarchyResult> GetClusterCompetencyHierarchyAsync(Guid subjectId, Guid surveyId, Guid tenantId)
+    {
+        var result = new ClusterCompetencyHierarchyResult();
+
+        try
+        {
+            var subject = await _context.Subjects
+                .FirstOrDefaultAsync(s => s.Id == subjectId && s.TenantId == tenantId);
+
+            if (subject == null)
+            {
+                _logger.LogWarning("Subject not found for cluster hierarchy: {SubjectId}", subjectId);
+                return result;
+            }
+
+            var survey = await _context.Surveys
+                .FirstOrDefaultAsync(s => s.Id == surveyId && s.TenantId == tenantId);
+
+            if (survey?.Schema == null)
+            {
+                _logger.LogWarning("Survey not found or has no schema: {SurveyId}", surveyId);
+                return result;
+            }
+
+            var questionMappings = await ExtractQuestionMappings(survey.Schema, tenantId);
+
+            var allSubmissions = await _context.SurveySubmissions
+                .Include(ss => ss.SubjectEvaluatorSurvey)
+                    .ThenInclude(ses => ses.SubjectEvaluator)
+                        .ThenInclude(se => se.Evaluator)
+                .Where(ss => ss.SubjectId == subjectId
+                    && ss.SurveyId == surveyId
+                    && ss.TenantId == tenantId
+                    && ss.Status == SurveySubmissionStatus.Completed
+                    && ss.ResponseData != null
+                    && ss.SubjectEvaluatorSurvey != null)
+                .ToListAsync();
+
+            var selfSubmission = allSubmissions.FirstOrDefault(ss =>
+                (ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Relationship?.ToLower() == "self") ||
+                (ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Evaluator?.EmployeeId == subject.EmployeeId));
+
+            var otherSubmissions = allSubmissions.Where(ss =>
+                !((ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Relationship?.ToLower() == "self") ||
+                  (ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Evaluator?.EmployeeId == subject.EmployeeId)))
+                .ToList();
+
+            var relationshipGroups = otherSubmissions
+                .GroupBy(ss => ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Relationship ?? "Unknown")
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            result.RelationshipTypes = relationshipGroups.Keys.OrderBy(r => r).ToList();
+
+            // Group questions by Cluster → Competency
+            var clusterCompetencyQuestions = questionMappings.Values
+                .Where(q => !string.IsNullOrEmpty(q.ClusterName) && !string.IsNullOrEmpty(q.CompetencyName))
+                .GroupBy(q => q.ClusterName)
+                .OrderBy(g => g.Key)
+                .ToList();
+
+            foreach (var clusterGroup in clusterCompetencyQuestions)
+            {
+                var clusterItem = new ClusterSummaryItem
+                {
+                    ClusterName = clusterGroup.Key,
+                    RelationshipScores = new Dictionary<string, double?>()
+                };
+
+                var clusterSelfScores = new List<double>();
+                var clusterOthersScores = new List<double>();
+                var clusterRelScores = result.RelationshipTypes.ToDictionary(r => r, r => new List<double>());
+
+                var competencyGroups = clusterGroup
+                    .GroupBy(q => q.CompetencyName)
+                    .OrderBy(g => g.Key)
+                    .ToList();
+
+                foreach (var compGroup in competencyGroups)
+                {
+                    var compItem = new CompetencySummaryItem
+                    {
+                        CompetencyName = compGroup.Key,
+                        ClusterName = clusterGroup.Key,
+                        RelationshipScores = new Dictionary<string, double?>()
+                    };
+
+                    var compSelfScores = new List<double>();
+                    var compOthersScores = new List<double>();
+                    var compRelScores = result.RelationshipTypes.ToDictionary(r => r, r => new List<double>());
+
+                    foreach (var question in compGroup)
+                    {
+                        var questionItem = new QuestionSummaryItem
+                        {
+                            QuestionText = question.QuestionText,
+                            RelationshipScores = new Dictionary<string, double?>()
+                        };
+
+                        // Self score for question
+                        if (selfSubmission != null)
+                        {
+                            var selfScore = GetQuestionScore(selfSubmission, question.QuestionName, question);
+                            if (selfScore.HasValue)
+                            {
+                                questionItem.SelfScore = Math.Round(selfScore.Value, 2);
+                                compSelfScores.Add(selfScore.Value);
+                                clusterSelfScores.Add(selfScore.Value);
+                            }
+                        }
+
+                        // Others scores for question
+                        var othersQuestionScores = new List<double>();
+                        foreach (var sub in otherSubmissions)
+                        {
+                            var score = GetQuestionScore(sub, question.QuestionName, question);
+                            if (score.HasValue) othersQuestionScores.Add(score.Value);
+                        }
+                        if (othersQuestionScores.Count > 0)
+                        {
+                            questionItem.OthersScore = Math.Round(othersQuestionScores.Average(), 2);
+                            compOthersScores.AddRange(othersQuestionScores);
+                            clusterOthersScores.AddRange(othersQuestionScores);
+                        }
+
+                        // Relationship scores for question
+                        foreach (var rel in result.RelationshipTypes)
+                        {
+                            if (relationshipGroups.TryGetValue(rel, out var relSubs))
+                            {
+                                var relScores = new List<double>();
+                                foreach (var sub in relSubs)
+                                {
+                                    var score = GetQuestionScore(sub, question.QuestionName, question);
+                                    if (score.HasValue) relScores.Add(score.Value);
+                                }
+                                if (relScores.Count > 0)
+                                {
+                                    questionItem.RelationshipScores[rel] = Math.Round(relScores.Average(), 2);
+                                    compRelScores[rel].AddRange(relScores);
+                                    clusterRelScores[rel].AddRange(relScores);
+                                }
+                            }
+                        }
+
+                        compItem.Questions.Add(questionItem);
+                    }
+
+                    // Aggregate competency scores
+                    compItem.SelfScore = compSelfScores.Count > 0 ? Math.Round(compSelfScores.Average(), 2) : null;
+                    compItem.OthersScore = compOthersScores.Count > 0 ? Math.Round(compOthersScores.Average(), 2) : null;
+                    foreach (var rel in result.RelationshipTypes)
+                    {
+                        compItem.RelationshipScores[rel] = compRelScores[rel].Count > 0
+                            ? Math.Round(compRelScores[rel].Average(), 2) : null;
+                    }
+
+                    clusterItem.Competencies.Add(compItem);
+                }
+
+                // Aggregate cluster scores
+                clusterItem.SelfScore = clusterSelfScores.Count > 0 ? Math.Round(clusterSelfScores.Average(), 2) : null;
+                clusterItem.OthersScore = clusterOthersScores.Count > 0 ? Math.Round(clusterOthersScores.Average(), 2) : null;
+                foreach (var rel in result.RelationshipTypes)
+                {
+                    clusterItem.RelationshipScores[rel] = clusterRelScores[rel].Count > 0
+                        ? Math.Round(clusterRelScores[rel].Average(), 2) : null;
+                }
+
+                result.Clusters.Add(clusterItem);
+            }
+
+            _logger.LogInformation(
+                "Generated cluster hierarchy: {ClusterCount} clusters with {RelCount} relationship types",
+                result.Clusters.Count, result.RelationshipTypes.Count);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error getting cluster hierarchy for Subject: {SubjectId}, Survey: {SurveyId}",
+                subjectId, surveyId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Helper to get a single question's score from a submission
+    /// </summary>
+    private double? GetQuestionScore(SurveySubmission submission, string questionName, QuestionMapping mapping)
+    {
+        try
+        {
+            if (submission.ResponseData == null) return null;
+
+            var responseRoot = submission.ResponseData.RootElement;
+            if (responseRoot.TryGetProperty(questionName, out var answer))
+            {
+                if (answer.ValueKind == JsonValueKind.Number)
+                {
+                    return answer.GetDouble();
+                }
+                if (answer.ValueKind == JsonValueKind.String)
+                {
+                    var answerText = answer.GetString();
+                    if (!string.IsNullOrEmpty(answerText) && mapping.RatingOptionsMap.TryGetValue(answerText, out var numericValue))
+                    {
+                        return numericValue;
+                    }
+                    if (double.TryParse(answerText, out var parsed))
+                    {
+                        return parsed;
+                    }
+                }
+            }
+        }
+        catch { }
+        return null;
+    }
+
+    /// <summary>
+    /// Gets open-ended feedback responses for a subject from all evaluators (excluding self)
+    /// </summary>
+    public async Task<OpenEndedFeedbackResult> GetOpenEndedFeedbackAsync(Guid subjectId, Guid surveyId, Guid tenantId)
+    {
+        var result = new OpenEndedFeedbackResult();
+
+        try
+        {
+            // Get subject to verify existence and get EmployeeId for self-identification
+            var subject = await _context.Subjects
+                .FirstOrDefaultAsync(s => s.Id == subjectId && s.TenantId == tenantId);
+
+            if (subject == null)
+            {
+                _logger.LogWarning("Subject not found for open-ended feedback: {SubjectId}", subjectId);
+                return result;
+            }
+
+            // Get survey schema
+            var survey = await _context.Surveys
+                .FirstOrDefaultAsync(s => s.Id == surveyId && s.TenantId == tenantId);
+
+            if (survey?.Schema == null)
+            {
+                _logger.LogWarning("Survey not found or has no schema: {SurveyId}", surveyId);
+                return result;
+            }
+
+            // Extract text/textarea question mappings from schema
+            var textQuestionMappings = ExtractTextQuestionMappings(survey.Schema);
+
+            if (textQuestionMappings.Count == 0)
+            {
+                _logger.LogInformation("No open-ended questions found in survey schema");
+                return result;
+            }
+
+            // Get all completed submissions (excluding self-assessment)
+            var submissions = await _context.SurveySubmissions
+                .Include(ss => ss.SubjectEvaluatorSurvey)
+                    .ThenInclude(ses => ses.SubjectEvaluator)
+                        .ThenInclude(se => se.Evaluator)
+                .Where(ss => ss.SubjectId == subjectId
+                    && ss.SurveyId == surveyId
+                    && ss.TenantId == tenantId
+                    && ss.Status == SurveySubmissionStatus.Completed
+                    && ss.ResponseData != null
+                    && ss.SubjectEvaluatorSurvey != null)
+                .Where(ss =>
+                    // Exclude self-assessment
+                    !((ss.SubjectEvaluatorSurvey.SubjectEvaluator.Relationship != null &&
+                       ss.SubjectEvaluatorSurvey.SubjectEvaluator.Relationship.ToLower() == "self") ||
+                      ss.SubjectEvaluatorSurvey.SubjectEvaluator.Evaluator.EmployeeId == subject.EmployeeId))
+                .ToListAsync();
+
+            _logger.LogInformation("Found {Count} submissions for open-ended feedback", submissions.Count);
+
+            // Extract text responses from each submission
+            foreach (var submission in submissions)
+            {
+                if (submission.ResponseData == null) continue;
+
+                var relationship = submission.SubjectEvaluatorSurvey?.SubjectEvaluator?.Relationship ?? "Anonymous";
+
+                try
+                {
+                    var responseRoot = submission.ResponseData.RootElement;
+
+                    foreach (var mapping in textQuestionMappings)
+                    {
+                        var questionId = mapping.Key;
+                        var questionText = mapping.Value;
+
+                        if (!responseRoot.TryGetProperty(questionId, out var answerElement))
+                            continue;
+
+                        var responseText = answerElement.ValueKind == JsonValueKind.String
+                            ? answerElement.GetString()
+                            : answerElement.ToString();
+
+                        if (!string.IsNullOrWhiteSpace(responseText))
+                        {
+                            result.Items.Add(new OpenEndedFeedbackItem
+                            {
+                                QuestionText = questionText,
+                                ResponseText = responseText,
+                                RaterType = relationship
+                            });
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Error extracting text responses from submission {Id}", submission.Id);
+                }
+            }
+
+            _logger.LogInformation("Extracted {Count} open-ended feedback items", result.Items.Count);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error getting open-ended feedback for Subject: {SubjectId}, Survey: {SurveyId}",
+                subjectId, surveyId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Extracts text/textarea question IDs and texts from survey schema
+    /// </summary>
+    private Dictionary<string, string> ExtractTextQuestionMappings(JsonDocument schema)
+    {
+        var mappings = new Dictionary<string, string>();
+
+        try
+        {
+            var root = schema.RootElement;
+
+            if (!root.TryGetProperty("pages", out var pages) || pages.ValueKind != JsonValueKind.Array)
+                return mappings;
+
+            foreach (var page in pages.EnumerateArray())
+            {
+                JsonElement questions;
+                if (!page.TryGetProperty("questions", out questions))
+                    if (!page.TryGetProperty("elements", out questions))
+                        continue;
+
+                if (questions.ValueKind != JsonValueKind.Array)
+                    continue;
+
+                foreach (var question in questions.EnumerateArray())
+                {
+                    var questionType = question.TryGetProperty("type", out var typeEl) ? typeEl.GetString() : null;
+
+                    // Only process text-based questions
+                    if (questionType != "text" && questionType != "textarea" && questionType != "comment")
+                        continue;
+
+                    var questionId = question.TryGetProperty("id", out var idEl) ? idEl.GetString() : null;
+                    if (string.IsNullOrEmpty(questionId))
+                        continue;
+
+                    // Get question text (prefer othersText, fallback to selfText or title)
+                    var questionText = question.TryGetProperty("othersText", out var othersTextEl) ? othersTextEl.GetString() : null;
+                    if (string.IsNullOrEmpty(questionText))
+                        questionText = question.TryGetProperty("selfText", out var selfTextEl) ? selfTextEl.GetString() : null;
+                    if (string.IsNullOrEmpty(questionText))
+                        questionText = question.TryGetProperty("title", out var titleEl) ? titleEl.GetString() : null;
+
+                    if (!string.IsNullOrEmpty(questionText))
+                    {
+                        mappings[questionId] = questionText;
+                    }
+                }
+            }
+
+            _logger.LogDebug("Extracted {Count} text question mappings", mappings.Count);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error extracting text question mappings from schema");
+        }
+
+        return mappings;
+    }
+
+    /// <summary>
+    /// Helper to calculate competency-level scores from a submission
+    /// </summary>
+    private void CalculateCompetencyScores(
+        SurveySubmission submission,
+        Dictionary<string, QuestionMapping> questionMappings,
+        Dictionary<string, List<double>> competencyScores)
+    {
+        if (submission.ResponseData == null) return;
+
+        try
+        {
+            var responseRoot = submission.ResponseData.RootElement;
+
+            foreach (var mapping in questionMappings)
+            {
+                var questionId = mapping.Key;
+                var questionInfo = mapping.Value;
+                var competencyName = questionInfo.CompetencyName;
+
+                if (string.IsNullOrEmpty(competencyName)) continue;
+
+                if (!responseRoot.TryGetProperty(questionId, out var answerElement))
+                    continue;
+
+                double? scoreValue = null;
+
+                if (answerElement.ValueKind == JsonValueKind.Number)
+                {
+                    scoreValue = answerElement.GetDouble();
+                }
+                else if (answerElement.ValueKind == JsonValueKind.String)
+                {
+                    var answerText = answerElement.GetString();
+                    if (double.TryParse(answerText, out var parsed))
+                    {
+                        scoreValue = parsed;
+                    }
+                    else if (!string.IsNullOrEmpty(answerText) &&
+                             questionInfo.RatingOptionsMap.TryGetValue(answerText, out var mappedValue))
+                    {
+                        scoreValue = mappedValue;
+                    }
+                }
+
+                if (scoreValue.HasValue && scoreValue.Value >= 1 && scoreValue.Value <= 5)
+                {
+                    if (!competencyScores.ContainsKey(competencyName))
+                        competencyScores[competencyName] = new List<double>();
+
+                    competencyScores[competencyName].Add(scoreValue.Value);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error calculating competency scores for submission {Id}", submission.Id);
         }
     }
 
@@ -934,4 +1687,120 @@ public class GapScoreItem
     public double Self { get; set; }
     public double Others { get; set; }
     public double Gap { get; set; }
+}
+
+/// <summary>
+/// Result DTO for agreement chart data
+/// </summary>
+public class AgreementChartResult
+{
+    public List<AgreementChartItem> CompetencyItems { get; set; } = new();
+}
+
+/// <summary>
+/// Individual competency item for agreement chart
+/// </summary>
+public class AgreementChartItem
+{
+    /// <summary>
+    /// Name of the competency (Y-axis label)
+    /// </summary>
+    public string CompetencyName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Distribution of scores: Key = score (1-5), Value = count of responses
+    /// </summary>
+    public Dictionary<int, int> ScoreDistribution { get; set; } = new();
+}
+
+/// <summary>
+/// Result for Rater Group Summary (Page 15)
+/// </summary>
+public class RaterGroupSummaryResult
+{
+    public List<RaterGroupSummaryItem> CompetencyItems { get; set; } = new();
+    public List<string> RelationshipTypes { get; set; } = new(); // Dynamic relationship columns
+}
+
+/// <summary>
+/// Individual competency row for rater group summary
+/// </summary>
+public class RaterGroupSummaryItem
+{
+    public string CompetencyName { get; set; } = string.Empty;
+    public double? SelfScore { get; set; }
+    public double? OthersScore { get; set; }
+    /// <summary>
+    /// Scores by relationship type: Key = relationship name, Value = average score
+    /// </summary>
+    public Dictionary<string, double?> RelationshipScores { get; set; } = new();
+}
+
+/// <summary>
+/// Result for open-ended feedback
+/// </summary>
+public class OpenEndedFeedbackResult
+{
+    public List<OpenEndedFeedbackItem> Items { get; set; } = new();
+}
+
+/// <summary>
+/// Individual open-ended feedback item
+/// </summary>
+public class OpenEndedFeedbackItem
+{
+    public string QuestionText { get; set; } = string.Empty;
+    public string ResponseText { get; set; } = string.Empty;
+    public string RaterType { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Result for hierarchical cluster-competency summary (Part 2 dynamic pages)
+/// </summary>
+public class ClusterCompetencyHierarchyResult
+{
+    public List<ClusterSummaryItem> Clusters { get; set; } = new();
+    public List<string> RelationshipTypes { get; set; } = new();
+}
+
+/// <summary>
+/// Cluster-level summary with its competencies
+/// </summary>
+public class ClusterSummaryItem
+{
+    public string ClusterName { get; set; } = string.Empty;
+    public double? SelfScore { get; set; }
+    public double? OthersScore { get; set; }
+    public Dictionary<string, double?> RelationshipScores { get; set; } = new();
+    /// <summary>
+    /// Competencies within this cluster (for Dimensions Summary table on cluster page)
+    /// </summary>
+    public List<CompetencySummaryItem> Competencies { get; set; } = new();
+}
+
+/// <summary>
+/// Competency-level summary with its questions/items
+/// </summary>
+public class CompetencySummaryItem
+{
+    public string CompetencyName { get; set; } = string.Empty;
+    public string ClusterName { get; set; } = string.Empty;
+    public double? SelfScore { get; set; }
+    public double? OthersScore { get; set; }
+    public Dictionary<string, double?> RelationshipScores { get; set; } = new();
+    /// <summary>
+    /// Questions/items within this competency (for Item Level Feedback table on competency page)
+    /// </summary>
+    public List<QuestionSummaryItem> Questions { get; set; } = new();
+}
+
+/// <summary>
+/// Question/item-level summary
+/// </summary>
+public class QuestionSummaryItem
+{
+    public string QuestionText { get; set; } = string.Empty;
+    public double? SelfScore { get; set; }
+    public double? OthersScore { get; set; }
+    public Dictionary<string, double?> RelationshipScores { get; set; } = new();
 }

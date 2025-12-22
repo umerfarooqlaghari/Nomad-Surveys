@@ -270,25 +270,31 @@ public class TenantService : ITenantService
                 tenant.Company.UpdatedAt = DateTime.UtcNow;
             }
 
-            // Update tenant admin user if it exists
-            var tenantAdminUser = await _context.Users
-                .IgnoreQueryFilters()
-                .Include(u => u.UserTenantRoles)
-                .ThenInclude(utr => utr.Role)
-                .Where(u => u.TenantId == tenantId &&
-                           u.UserTenantRoles.Any(utr => utr.Role.Name == "TenantAdmin" && utr.IsActive))
-                .FirstOrDefaultAsync();
-
-            if (tenantAdminUser != null)
+            // Update tenant admin user only if TenantAdmin data is provided in the request
+            if (request.TenantAdmin != null &&
+                !string.IsNullOrWhiteSpace(request.TenantAdmin.FirstName) &&
+                !string.IsNullOrWhiteSpace(request.TenantAdmin.LastName) &&
+                !string.IsNullOrWhiteSpace(request.TenantAdmin.Email))
             {
-                tenantAdminUser.FirstName = request.TenantAdmin.FirstName;
-                tenantAdminUser.LastName = request.TenantAdmin.LastName;
-                tenantAdminUser.Email = request.TenantAdmin.Email;
-                tenantAdminUser.UserName = request.TenantAdmin.Email; // Keep username in sync with email
-                tenantAdminUser.UpdatedAt = DateTime.UtcNow;
+                var tenantAdminUser = await _context.Users
+                    .IgnoreQueryFilters()
+                    .Include(u => u.UserTenantRoles)
+                    .ThenInclude(utr => utr.Role)
+                    .Where(u => u.TenantId == tenantId &&
+                               u.UserTenantRoles.Any(utr => utr.Role.Name == "TenantAdmin" && utr.IsActive))
+                    .FirstOrDefaultAsync();
 
-                // Password and phone number are NOT updated here
-                // They should be updated through separate user management endpoints
+                if (tenantAdminUser != null)
+                {
+                    tenantAdminUser.FirstName = request.TenantAdmin.FirstName;
+                    tenantAdminUser.LastName = request.TenantAdmin.LastName;
+                    tenantAdminUser.Email = request.TenantAdmin.Email;
+                    tenantAdminUser.UserName = request.TenantAdmin.Email; // Keep username in sync with email
+                    tenantAdminUser.UpdatedAt = DateTime.UtcNow;
+
+                    // Password and phone number are NOT updated here
+                    // They should be updated through separate user management endpoints
+                }
             }
 
             await _context.SaveChangesAsync();

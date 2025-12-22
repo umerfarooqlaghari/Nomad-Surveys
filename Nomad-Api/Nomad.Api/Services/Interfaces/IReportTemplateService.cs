@@ -2,6 +2,16 @@ using Nomad.Api.DTOs.Response;
 
 namespace Nomad.Api.Services.Interfaces;
 
+/// <summary>
+/// Result object containing PDF bytes and suggested filename
+/// </summary>
+public class PdfGenerationResult
+{
+    public byte[] PdfBytes { get; set; } = Array.Empty<byte>();
+    public string FileName { get; set; } = "report.pdf";
+    public string SubjectName { get; set; } = string.Empty;
+}
+
 public interface IReportTemplateService
 {
     Task<string> GeneratePreviewHtmlAsync(
@@ -25,7 +35,7 @@ public interface IReportTemplateService
         string? secondaryColor = null,
         string? tertiaryColor = null);
 
-    Task<byte[]> GenerateReportPdfAsync(
+    Task<PdfGenerationResult> GenerateReportPdfAsync(
         Guid subjectId,
         Guid? surveyId,
         Guid tenantId,

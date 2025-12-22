@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import LogoutConfirmationModal from '@/components/modals/LogoutConfirmationModal';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,20 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, tenant, logout } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
+    logout();
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -49,7 +64,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Link>
               )}
               <button
-                onClick={logout}
+                onClick={handleLogoutClick}
                 className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
               >
                 Logout
@@ -65,6 +80,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </div>
       </main>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmationModal
+        isOpen={showLogoutModal}
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+      />
     </div>
   );
 }

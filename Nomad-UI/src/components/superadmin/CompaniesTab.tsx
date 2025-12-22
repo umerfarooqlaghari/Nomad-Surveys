@@ -15,11 +15,8 @@ export default function CompaniesTab() {
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<CreateTenantData>(tenantService.getDefaultFormData());
-  const [logoPreview, setLogoPreview] = useState('');
-  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   // Load tenants on component mount
   useEffect(() => {
@@ -122,23 +119,11 @@ export default function CompaniesTab() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
 
     if (!token) {
       toast.error('Authentication required');
-      return;
-    }
-
-    // Check if logo is still uploading
-    if (isUploadingLogo) {
-      toast.error('Please wait for logo upload to complete');
-      return;
-    }
-
-    // Check if logo file is selected but not uploaded
-    if (logoFile && !formData.company.logoUrl) {
-      toast.error('Please wait for logo upload to complete');
       return;
     }
 
@@ -176,76 +161,6 @@ export default function CompaniesTab() {
 
   const resetForm = () => {
     setFormData(tenantService.getDefaultFormData());
-    setLogoPreview('');
-    setLogoFile(null);
-  };
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size must be less than 5MB');
-      return;
-    }
-
-    try {
-      setIsUploadingLogo(true);
-      setLogoFile(file);
-
-      // Create preview
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-
-      // Upload to Cloudinary
-      const formDataUpload = new FormData();
-      formDataUpload.append('images', file);
-
-      const response = await fetch('/api/admin/cloudinary/upload/bulk?folder=company-logos', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formDataUpload,
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to upload logo');
-      }
-
-      const result = await response.json();
-
-      if (result.results && result.results.length > 0 && result.results[0].Success) {
-        const logoUrl = result.results[0].Url;
-        setFormData(prev => ({
-          ...prev,
-          company: {
-            ...prev.company,
-            logoUrl: logoUrl,
-          },
-        }));
-        toast.success('Logo uploaded successfully');
-      } else {
-        throw new Error('Upload failed');
-      }
-    } catch (error) {
-      console.error('Error uploading logo:', error);
-      toast.error('Failed to upload logo');
-      setLogoPreview('');
-      setLogoFile(null);
-    } finally {
-      setIsUploadingLogo(false);
-    }
   };
 
   const handleEditClick = async (tenantId: string) => {
@@ -261,6 +176,13 @@ export default function CompaniesTab() {
       }
 
       // Convert TenantResponse to CreateTenantData format for editing
+      // Populate admin details from TenantAdmin (retrieved via Roles → UserTenantRoles → Users)
+      // TenantAdmin is populated by querying Users table through UserTenantRoles relationship
+      const adminFirstName = data.TenantAdmin?.FirstName || '';
+      const adminLastName = data.TenantAdmin?.LastName || '';
+      const adminEmail = data.TenantAdmin?.Email || '';
+      const adminPhone = data.TenantAdmin?.PhoneNumber || '';
+
       setFormData({
         name: data.Name,
         slug: data.Slug,
@@ -277,15 +199,14 @@ export default function CompaniesTab() {
           logoUrl: data.Company?.LogoUrl || '',
         },
         tenantAdmin: {
-          firstName: data.TenantAdmin?.FirstName || '',
-          lastName: data.TenantAdmin?.LastName || '',
-          email: data.TenantAdmin?.Email || '',
-          phoneNumber: data.TenantAdmin?.PhoneNumber || '',
+          firstName: adminFirstName,
+          lastName: adminLastName,
+          email: adminEmail,
+          phoneNumber: adminPhone,
           password: '', // Password is never returned from API for security
         },
       });
 
-      setLogoPreview(data.Company?.LogoUrl || '');
       setEditingTenantId(tenantId);
       setIsEditMode(true);
       setShowForm(true);
@@ -304,22 +225,10 @@ export default function CompaniesTab() {
     resetForm();
   };
 
-  const handleUpdateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleUpdateSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
 
     if (!token || !editingTenantId) return;
-
-    // Check if logo is still uploading
-    if (isUploadingLogo) {
-      toast.error('Please wait for logo upload to complete');
-      return;
-    }
-
-    // Check if logo file is selected but not uploaded
-    if (logoFile && !formData.company.logoUrl) {
-      toast.error('Please wait for logo upload to complete');
-      return;
-    }
 
     try {
       setIsLoading(true);
@@ -340,12 +249,8 @@ export default function CompaniesTab() {
           ContactPersonPhone: formData.company.contactPersonPhone,
           LogoUrl: formData.company.logoUrl,
         },
-        TenantAdmin: {
-          FirstName: formData.tenantAdmin.firstName,
-          LastName: formData.tenantAdmin.lastName,
-          Email: formData.tenantAdmin.email,
-          // Password and PhoneNumber are NOT sent during updates
-        },
+        // TenantAdmin is not sent during updates since admin details are not editable in the UI
+        TenantAdmin: null,
       };
 
       const { error } = await tenantService.updateTenant(editingTenantId, updateData, token);
@@ -404,7 +309,7 @@ export default function CompaniesTab() {
           <h3 className={styles.formTitle}>
             {isEditMode ? 'Edit Company' : 'Organization Onboarding'}
           </h3>
-          <form onSubmit={isEditMode ? handleUpdateSubmit : handleSubmit} className={styles.form}>
+          <form className={styles.form}>
             <div className={styles.formGrid}>
               {/* Tenant Information */}
               <div className={styles.formSection}>
@@ -512,62 +417,64 @@ export default function CompaniesTab() {
                   </select>
                 </div>
 
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>
-                    Company Logo
-                  </label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    className={styles.input}
-                    disabled={isUploadingLogo}
-                  />
-                  {isUploadingLogo && (
-                    <p style={{ fontSize: '14px', color: '#7c3aed', marginTop: '8px' }}>
-                      Uploading logo...
-                    </p>
-                  )}
-                  {logoPreview && (
-                    <div style={{ marginTop: '12px' }}>
-                      <img
-                        src={logoPreview}
-                        alt="Logo preview"
-                        style={{
-                          maxWidth: '128px',
-                          maxHeight: '128px',
-                          objectFit: 'contain',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '4px',
-                          padding: '8px'
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
+
               </div>
             </div>
 
-            {/* Contact Person Information - Only unique fields, others auto-synced */}
+            {/* Contact Person Information - Display in edit mode, auto-synced in create mode */}
             <div className={styles.formSection}>
               <h4 className={styles.sectionTitle}>Contact Person Information</h4>
               <div className={styles.formGrid}>
-                {/* Contact Person Name, Email, Phone are auto-synced from Tenant Admin - hidden from UI */}
+                {isEditMode ? (
+                  <>
+                    {/* In edit mode, only show contact person phone and role */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Contact Person Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.company.contactPersonPhone || 'Not provided'}
+                        readOnly
+                        className={`${styles.input} ${styles.readOnly}`}
+                        style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
+                      />
+                    </div>
 
-                <div className={styles.fieldGroup}>
-                  <label className={`${styles.label} ${styles.required}`}>
-                    Contact Person Role
-                  </label>
-                  <input
-                    type="text"
-                    name="company.contactPersonRole"
-                    value={formData.company.contactPersonRole}
-                    onChange={handleInputChange}
-                    required
-                    className={styles.input}
-                    placeholder="e.g., HR Manager, CEO"
-                  />
-                </div>
+                    <div className={styles.fieldGroup}>
+                      <label className={`${styles.label} ${styles.required}`}>
+                        Contact Person Role
+                      </label>
+                      <input
+                        type="text"
+                        name="company.contactPersonRole"
+                        value={formData.company.contactPersonRole}
+                        onChange={handleInputChange}
+                        required
+                        className={styles.input}
+                        placeholder="e.g., HR Manager, CEO"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* In create mode, only show role - name, email, phone are auto-synced from Tenant Admin */}
+                    <div className={styles.fieldGroup}>
+                      <label className={`${styles.label} ${styles.required}`}>
+                        Contact Person Role
+                      </label>
+                      <input
+                        type="text"
+                        name="company.contactPersonRole"
+                        value={formData.company.contactPersonRole}
+                        onChange={handleInputChange}
+                        required
+                        className={styles.input}
+                        placeholder="e.g., HR Manager, CEO"
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -662,28 +569,30 @@ export default function CompaniesTab() {
               </div>
             </div>
             )}
-
-            <div className={styles.formActions}>
-              <button
-                type="button"
-                onClick={handleCancelEdit}
-                className={styles.cancelButton}
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className={styles.submitButton}
-                disabled={isLoading}
-              >
-                {isLoading
-                  ? (isEditMode ? 'Updating...' : 'Creating...')
-                  : (isEditMode ? 'Update Company' : 'Create Company')
-                }
-              </button>
-            </div>
           </form>
+
+          {/* Action buttons outside form */}
+          <div className={styles.formActions}>
+            <button
+              type="button"
+              onClick={isEditMode ? handleUpdateSubmit : handleSubmit}
+              className={styles.submitButton}
+              disabled={isLoading}
+            >
+              {isLoading
+                ? (isEditMode ? 'Updating...' : 'Creating...')
+                : (isEditMode ? 'Update Company' : 'Create Company')
+              }
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className={styles.cancelButton}
+              disabled={isLoading}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 

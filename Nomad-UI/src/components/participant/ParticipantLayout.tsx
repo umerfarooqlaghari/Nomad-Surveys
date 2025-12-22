@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import LogoutConfirmationModal from '@/components/modals/LogoutConfirmationModal';
 import {
   HomeIcon,
   ClipboardDocumentListIcon,
@@ -24,6 +25,7 @@ export default function ParticipantLayout({ children }: ParticipantLayoutProps) 
   const params = useParams();
   const { user, tenant, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Get tenant slug from params or from auth context
   const tenantSlug = (params?.tenantSlug as string) || tenant?.Slug || tenant?.slug;
@@ -42,7 +44,16 @@ export default function ParticipantLayout({ children }: ParticipantLayoutProps) 
   }, [tenantSlug]);
 
   const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
     logout();
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
   };
 
   const isActive = (href: string) => pathname === href;
@@ -150,6 +161,13 @@ export default function ParticipantLayout({ children }: ParticipantLayoutProps) 
           {children}
         </main>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmationModal
+        isOpen={showLogoutModal}
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+      />
     </div>
   );
 }

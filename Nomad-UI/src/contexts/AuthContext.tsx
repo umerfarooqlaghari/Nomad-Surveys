@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { AuthContextType, User, Tenant, LoginRequest, SuperAdminLoginRequest } from '@/types/auth';
 import { AuthService } from '@/lib/auth';
@@ -18,21 +18,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [logoutTimer, setLogoutTimer] = useState<NodeJS.Timeout | null>(null);
   const [activityTimer, setActivityTimer] = useState<NodeJS.Timeout | null>(null);
 
+  // Track if logout is in progress to prevent infinite loops
+  const isLoggingOut = useRef(false);
+
   const logout = useCallback(() => {
+    // Prevent multiple simultaneous logout calls
+    if (isLoggingOut.current) return;
+
+    isLoggingOut.current = true;
+
     AuthService.clearAuth();
     setUser(null);
     setTenant(null);
     setToken(null);
 
-    setActivityTimer(null);
     // Clear timers
     if (logoutTimer) clearTimeout(logoutTimer);
     if (activityTimer) clearTimeout(activityTimer);
+    setLogoutTimer(null);
+    setActivityTimer(null);
 
-    router.replace('/login');
-  }, [router]); // Remove timer dependencies
+    router.push('/login');
+
+    // Reset the flag after a short delay to allow navigation to complete
+    setTimeout(() => {
+      isLoggingOut.current = false;
+    }, 1000);
+  }, [router, logoutTimer, activityTimer]);
 
   const resetActivityTimer = useCallback(() => {
+    // Don't reset timer if logout is in progress
+    if (isLoggingOut.current) return;
+
     if (activityTimer) clearTimeout(activityTimer);
 
     // Set 30-minute inactivity timer
@@ -41,9 +58,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, 60 * 60 * 1000); // 30 minutes
 
     setActivityTimer(newTimer);
-  }, [logout]); // Remove activityTimer dependency
+  }, [logout, activityTimer]);
 
   const setupAutoLogout = useCallback((expiresAt: string) => {
+    // Don't setup timer if logout is in progress
+    if (isLoggingOut.current) return;
+
     const expiryTime = new Date(expiresAt).getTime();
     const currentTime = new Date().getTime();
     const timeUntilExpiry = expiryTime - currentTime;
@@ -222,6 +242,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
 
     const handleActivity = () => {
+      // Don't reset timer if logout is in progress
+      if (isLoggingOut.current) return;
+
       if (activityTimer) clearTimeout(activityTimer);
 
       // Set 30-minute inactivity timer
@@ -241,8 +264,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       events.forEach(event => {
         document.removeEventListener(event, handleActivity, true);
       });
+      // Clear activity timer on cleanup
+      if (activityTimer) {
+        clearTimeout(activityTimer);
+      }
     };
-  }, [user]); // Remove resetActivityTimer dependency
+  }, [user, logout, activityTimer]);
 
   // Handle tab close/refresh
   useEffect(() => {
@@ -266,9 +293,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
   };
 
-  return <AuthContext.Provider value={value}>   
-   {isLoading ? null : children}
-</AuthContext.Provider>;
+//   return <AuthContext.Provider value={value}>   
+//    {isLoading ? null : children}
+// </AuthContext.Provider>;
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+
 }
 
 export function useAuth() {

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import ImageLibrary from './ImageLibrary';
+import ChartImagesModal from '../modals/ChartImagesModal';
 
 interface ProjectReportsTabProps {
   projectSlug: string;
@@ -51,6 +52,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
   const [showImageLibrary, setShowImageLibrary] = useState(false);
   const [imageLibraryType, setImageLibraryType] = useState<'logo' | 'cover' | 'general'>('general');
   const [showMenu, setShowMenu] = useState(false);
+  const [showPageImagesModal, setShowPageImagesModal] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLIFrameElement>(null);
 
@@ -523,8 +525,37 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
   return (
     <>
       <div className="flex h-[calc(100vh-200px)] gap-4">
-        {/* Settings Panel - Left Sidebar */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col overflow-y-auto">
+        {/* Preview Panel - Left Side */}
+        <div className="flex-1 flex flex-col bg-gray-50">
+          <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Report Preview</h2>
+              <p className="text-sm text-gray-600 mt-1">Live preview of your report design</p>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto p-6 flex justify-center bg-gray-100">
+            {previewHtml ? (
+              <iframe
+                ref={previewRef}
+                srcDoc={previewHtml}
+                className="w-full max-w-[210mm] bg-white shadow-lg border border-gray-300"
+                style={{ height: '297mm', minHeight: '100%' }}
+                title="Report Preview"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading preview...</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Settings Panel - Right Sidebar */}
+        <div className="w-80 bg-white border-l border-gray-200 flex flex-col overflow-y-auto">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-bold text-gray-900 mb-1">Report Settings</h2>
             <p className="text-sm text-gray-600">Customize your report design</p>
@@ -573,6 +604,60 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
               </p>
             </div>
 
+
+            {/* Survey Selection Dropdown */}
+            <div className="pt-4 border-t border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Survey
+              </label>
+              <select
+                value={selectedSurveyId}
+                onChange={(e) => {
+                  setSelectedSurveyId(e.target.value);
+                  setSelectedSubjectId(''); // Reset subject when survey changes
+                }}
+                disabled={isLoadingSurveys}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black bg-white"
+              >
+                <option value="">
+                  {isLoadingSurveys ? 'Loading surveys...' : '-- Select a Survey --'}
+                </option>
+                {surveys.map((survey) => (
+                  <option key={survey.Id} value={survey.Id}>
+                    {survey.Title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Subject Selection Dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Subject
+              </label>
+              <select
+                value={selectedSubjectId}
+                onChange={(e) => setSelectedSubjectId(e.target.value)}
+                disabled={!selectedSurveyId || isLoadingSubjects}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="">
+                  {!selectedSurveyId
+                    ? '-- Select a Survey first --'
+                    : isLoadingSubjects
+                      ? 'Loading subjects...'
+                      : subjectsForSurvey.length === 0
+                        ? '-- No subjects assigned --'
+                        : '-- Select a Subject --'}
+                </option>
+                {subjectsForSurvey.map((subject) => (
+                  <option key={subject.SubjectId} value={subject.SubjectId}>
+                    {subject.SubjectFullName} ({subject.SubjectEmployeeIdString})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
             {/* Company Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -748,6 +833,28 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
               )}
             </div>
 
+            {/* Chart Images Button */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Radial Chart Images
+              </label>
+              <button
+                onClick={() => setShowPageImagesModal(true)}
+                disabled={!selectedSurveyId}
+                className="w-full px-3 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Manage Chart Images
+              </button>
+              <p className="mt-1 text-xs text-gray-500">
+                {selectedSurveyId
+                  ? 'Upload chart images for pages, clusters, and competencies'
+                  : 'Select a survey first to manage chart images'}
+              </p>
+            </div>
+
             {/* Primary Color */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -811,87 +918,6 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
               </div>
             </div>
 
-            {/* Survey Selection Dropdown */}
-            <div className="pt-4 border-t border-gray-200">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Survey
-              </label>
-              <select
-                value={selectedSurveyId}
-                onChange={(e) => {
-                  setSelectedSurveyId(e.target.value);
-                  setSelectedSubjectId(''); // Reset subject when survey changes
-                }}
-                disabled={isLoadingSurveys}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black bg-white"
-              >
-                <option value="">
-                  {isLoadingSurveys ? 'Loading surveys...' : '-- Select a Survey --'}
-                </option>
-                {surveys.map((survey) => (
-                  <option key={survey.Id} value={survey.Id}>
-                    {survey.Title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Subject Selection Dropdown */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Subject
-              </label>
-              <select
-                value={selectedSubjectId}
-                onChange={(e) => setSelectedSubjectId(e.target.value)}
-                disabled={!selectedSurveyId || isLoadingSubjects}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                <option value="">
-                  {!selectedSurveyId
-                    ? '-- Select a Survey first --'
-                    : isLoadingSubjects
-                      ? 'Loading subjects...'
-                      : subjectsForSurvey.length === 0
-                        ? '-- No subjects assigned --'
-                        : '-- Select a Subject --'}
-                </option>
-                {subjectsForSurvey.map((subject) => (
-                  <option key={subject.SubjectId} value={subject.SubjectId}>
-                    {subject.SubjectFullName} ({subject.SubjectEmployeeIdString})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Preview Panel - Right Side */}
-        <div className="flex-1 flex flex-col bg-gray-50">
-          <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Report Preview</h2>
-              <p className="text-sm text-gray-600 mt-1">Live preview of your report design</p>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-auto p-6 flex justify-center bg-gray-100">
-            {previewHtml ? (
-              <iframe
-                ref={previewRef}
-                srcDoc={previewHtml}
-                className="w-full max-w-[210mm] bg-white shadow-lg border border-gray-300"
-                style={{ height: '297mm', minHeight: '100%' }}
-                title="Report Preview"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading preview...</p>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -903,6 +929,14 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
         onClose={() => setShowImageLibrary(false)}
         onSelectImage={imageLibraryType === 'logo' ? handleLogoSelect : handleCoverImageSelect}
         type={imageLibraryType}
+      />
+
+      {/* Chart Images Modal */}
+      <ChartImagesModal
+        projectSlug={projectSlug}
+        surveyId={selectedSurveyId}
+        isOpen={showPageImagesModal}
+        onClose={() => setShowPageImagesModal(false)}
       />
     </>
   );

@@ -13,6 +13,7 @@ import ProjectParticipantsTab from '@/components/project/ProjectParticipantsTab'
 import ProjectEmployeesTab from '@/components/project/ProjectEmployeesTab';
 import ProjectSurveysTab from '@/components/project/ProjectSurveysTab';
 import ProjectQuestionsTab from '@/components/project/ProjectQuestionsTab';
+import LogoutConfirmationModal from '@/components/modals/LogoutConfirmationModal';
 import { Toaster } from 'react-hot-toast';
 
 const tabs = [
@@ -22,7 +23,6 @@ const tabs = [
   { id: 'participants', name: 'Participants', icon: "/Icons/person-add.svg" },
   { id: 'employees', name: 'Employees', icon: "/Icons/person-add.svg" },
   { id: 'reports', name: 'Reports', icon: "/Icons/archive.svg" },
-  { id: 'analytics', name: 'Analytics', icon: "/Icons/clipboard-data.svg" },
 ];
 
 export default function ProjectDashboard() {
@@ -30,6 +30,7 @@ export default function ProjectDashboard() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [projectInfo, setProjectInfo] = useState<any>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const projectSlug = params.slug as string;
 
   useEffect(() => {
@@ -41,6 +42,19 @@ export default function ProjectDashboard() {
       description: 'Project management dashboard'
     });
   }, [projectSlug]);
+
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
+    logout();
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -115,7 +129,7 @@ export default function ProjectDashboard() {
                   <span className="font-medium">{user?.fullName}</span>
                 </div>
                 <button
-                  onClick={logout}
+                  onClick={handleLogoutClick}
                   className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Logout
@@ -160,6 +174,13 @@ export default function ProjectDashboard() {
           </div>
         </main>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      <LogoutConfirmationModal
+        isOpen={showLogoutModal}
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+      />
     </ProtectedRoute>
   );
 }
