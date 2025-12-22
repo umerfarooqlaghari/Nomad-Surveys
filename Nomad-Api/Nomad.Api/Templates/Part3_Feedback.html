@@ -73,6 +73,35 @@
             object-fit: contain;
         }
 
+        /* Print/PDF specific footer styles */
+        @media print {
+            .page-footer {
+                height: 12mm;
+                padding: 2mm 15mm;
+                box-sizing: border-box;
+            }
+            .ascend-logo {
+                height: 8mm;
+            }
+            .footer-text {
+                font-size: 7pt;
+            }
+            .page-number {
+                font-size: 7pt;
+            }
+            .page-content {
+                padding-bottom: 15mm;
+            }
+            /* Ensure consistent horizontal padding for all page content in PDF */
+            .page-content,
+            .page-content.respondent-summary-page {
+                padding-left: 15mm !important;
+                padding-right: 15mm !important;
+                box-sizing: border-box;
+                width: 100%;
+            }
+        }
+
         .footer-text {
             font-size: 8pt;
             color: var(--dark-gray);

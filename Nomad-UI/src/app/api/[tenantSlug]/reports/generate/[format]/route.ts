@@ -49,10 +49,24 @@ export async function POST(
 
     if (format === 'pdf') {
       const blob = await response.blob();
+
+      // Get the filename from the backend response (Content-Disposition header)
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = `report_${Date.now()}.pdf`;
+
+      if (contentDisposition) {
+        // Parse filename from Content-Disposition header
+        // Format: attachment; filename="Subject_Name.pdf" or attachment; filename=Subject_Name.pdf
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '');
+        }
+      }
+
       return new NextResponse(blob, {
         headers: {
           'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename="report_${Date.now()}.pdf"`,
+          'Content-Disposition': `attachment; filename="${filename}"`,
         },
       });
     } else {

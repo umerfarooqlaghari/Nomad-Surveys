@@ -486,7 +486,7 @@ public class ReportTemplateService : IReportTemplateService
         }
     }
 
-    public async Task<byte[]> GenerateReportPdfAsync(
+    public async Task<PdfGenerationResult> GenerateReportPdfAsync(
         Guid subjectId,
         Guid? surveyId,
         Guid tenantId,
@@ -498,13 +498,24 @@ public class ReportTemplateService : IReportTemplateService
     {
         try
         {
+            // Fetch subject name for the filename
+            string subjectName = "Report";
+            if (_subjectService != null)
+            {
+                var subject = await _subjectService.GetSubjectByIdAsync(subjectId);
+                if (subject?.Employee != null)
+                {
+                    subjectName = subject.Employee.FullName ?? "Report";
+                }
+            }
+
             // Generate HTML first
             var html = await GenerateReportHtmlAsync(
                 subjectId, surveyId, tenantId, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor);
 
             // Convert HTML to PDF using PuppeteerSharp
             var pdfBytes = await GeneratePdfFromHtmlAsync(html);
-            
+
             // Save template settings if provided
             await SaveTemplateSettingsIfProvided(
                 tenantId,
@@ -514,13 +525,42 @@ public class ReportTemplateService : IReportTemplateService
                 secondaryColor,
                 tertiaryColor);
 
-            return pdfBytes;
+            // Sanitize subject name for filename (remove invalid characters)
+            var sanitizedName = SanitizeFileName(subjectName);
+
+            return new PdfGenerationResult
+            {
+                PdfBytes = pdfBytes,
+                SubjectName = subjectName,
+                FileName = $"{sanitizedName}.pdf"
+            };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error generating report PDF for subject {SubjectId}", subjectId);
             throw;
         }
+    }
+
+    /// <summary>
+    /// Sanitizes a string to be used as a valid filename
+    /// </summary>
+    private static string SanitizeFileName(string fileName)
+    {
+        // Remove invalid filename characters
+        var invalidChars = Path.GetInvalidFileNameChars();
+        var sanitized = string.Join("", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
+
+        // Replace spaces with underscores for cleaner filenames
+        sanitized = sanitized.Replace(" ", "_");
+
+        // Ensure the filename is not empty
+        if (string.IsNullOrWhiteSpace(sanitized))
+        {
+            sanitized = "Report";
+        }
+
+        return sanitized;
     }
 
     public async Task<byte[]> GenerateChartImageAsync(
@@ -1418,25 +1458,13 @@ public class ReportTemplateService : IReportTemplateService
 
 await using var page = await browser.NewPageAsync();
 
-// ====== START: Set viewport to A4 dimensions (210mm x 297mm at 96dpi) ======
-// A4 at 96dpi: 210mm = 794px, 297mm = 1123px
-await page.SetViewportAsync(new ViewPortOptions
-{
-    Width = 794,
-    Height = 1123
-});
-// ====== END: Set viewport to A4 dimensions ======
-
-// Set page content (removed unsupported WaitUntilNavigation member)
+// Set page content
 await page.SetContentAsync(html);
-
-// ====== START: Emulate print media type to hide View as PDF button and apply print styles ======
-await page.EmulateMediaTypeAsync(MediaType.Print);
-// ====== END: Emulate print media type to hide View as PDF button and apply print styles ======
 
 var pdfBytes = await page.PdfDataAsync(new PdfOptions
 {
-    Format = PaperFormat.A4,
+    Width = "210mm",
+    Height = "297mm",
     PrintBackground = true,
     MarginOptions = new MarginOptions
     {
@@ -2227,6 +2255,7 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
                 bool needsPageBreak = !(isLastQuestion && isLastPageOfQuestion);
                 if (needsPageBreak)
                 {
+                    sb.AppendLine("        </div>"); // Close open-ended-content
                     sb.AppendLine("    </div>"); // Close page-content
                     sb.AppendLine(footerHtml);
                     sb.AppendLine("</div>"); // Close current page
@@ -2235,6 +2264,7 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
                     sb.AppendLine("<div class=\"page\">");
                     sb.AppendLine($"    <div class=\"page-header\">{logoHtml}</div>");
                     sb.AppendLine("    <div class=\"page-content respondent-summary-page\">");
+                    sb.AppendLine("        <div class=\"open-ended-content\">"); // Reopen open-ended-content for new page
 
                     // Reset page budget for new page (no first page overhead)
                     currentPageBudget = pageHeightBudget;
