@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import styles from './CompaniesTab.module.css';
@@ -23,6 +23,7 @@ export default function ProjectsTab() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [tenantToDelete, setTenantToDelete] = useState<TenantListItem | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load tenants on component mount
   useEffect(() => {
@@ -218,6 +219,21 @@ export default function ProjectsTab() {
       e.target.value = ''; // Reset input on error
     } finally {
       setIsUploadingLogo(false);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setLogoPreview('');
+    setFormData(prev => ({
+      ...prev,
+      Company: {
+        ...prev.Company,
+        LogoUrl: ''
+      }
+    }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -571,11 +587,12 @@ export default function ProjectsTab() {
               </div>
 
               {/* Company Logo - Only show in create mode */}
-              {!isEditMode && (
+               
                 <div className={styles.formGroup}>
                   <label className={styles.label}>Company Logo</label>
                   <input
                     type="file"
+                    ref={fileInputRef}
                     accept="image/*"
                     onChange={handleLogoUpload}
                     className={styles.input}
@@ -585,23 +602,23 @@ export default function ProjectsTab() {
                     <p style={{ marginTop: '8px', color: '#7c3aed' }}>Uploading logo...</p>
                   )}
                   {logoPreview && (
-                    <div style={{ marginTop: '12px' }}>
+                    <div className={styles.logoPreviewWrapper}>
                       <img
                         src={logoPreview}
                         alt="Logo preview"
-                        style={{
-                          maxWidth: '128px',
-                          maxHeight: '128px',
-                          objectFit: 'contain',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '4px',
-                          padding: '8px'
-                        }}
+                        className={styles.logoPreviewImg}
                       />
+                      <button
+                        type="button"
+                        onClick={handleRemoveLogo}
+                        className={styles.removeLogoBtn}
+                      >
+                        Remove Logo
+                      </button>
                     </div>
                   )}
                 </div>
-              )}
+              
 
               {/* Admin Details - Only show in create mode */}
               {!editingTenantId && (
