@@ -55,7 +55,7 @@ export default function CompaniesTab() {
       setFormData(prev => ({
         ...prev,
         company: {
-          ...prev.company,
+          ...prev.Company,
           [fieldName]: fieldName === 'numberOfEmployees' ? parseInt(value) || 1 : value,
         },
       }));
@@ -64,7 +64,7 @@ export default function CompaniesTab() {
       setFormData(prev => ({
         ...prev,
         tenantAdmin: {
-          ...prev.tenantAdmin,
+          ...prev.TenantAdmin,
           [fieldName]: value,
         },
       }));
@@ -80,7 +80,7 @@ export default function CompaniesTab() {
       name,
       slug: tenantService.generateSlug(name),
       company: {
-        ...prev.company,
+        ...prev.Company,
         name, // Auto-sync organization name with company name
       },
     }));
@@ -91,27 +91,27 @@ export default function CompaniesTab() {
       const updatedData = {
         ...prev,
         tenantAdmin: {
-          ...prev.tenantAdmin,
+          ...prev.TenantAdmin,
           [field]: value,
         },
       };
 
       // Auto-sync tenant admin fields with contact person fields
       if (field === 'firstName' || field === 'lastName') {
-        const fullName = `${updatedData.tenantAdmin.firstName} ${updatedData.tenantAdmin.lastName}`.trim();
-        updatedData.company = {
-          ...updatedData.company,
-          contactPersonName: fullName,
+        const fullName = `${updatedData.tenantAdmin.FirstName} ${updatedData.tenantAdmin.LastName}`.trim();
+        updatedData.Company = {
+          ...updatedData.Company,
+          ContactPersonName: fullName,
         };
       } else if (field === 'email') {
-        updatedData.company = {
-          ...updatedData.company,
-          contactPersonEmail: value,
+        updatedData.Company = {
+          ...updatedData.Company,
+          ContactPersonEmail: value,
         };
       } else if (field === 'phoneNumber') {
-        updatedData.company = {
-          ...updatedData.company,
-          contactPersonPhone: value,
+        updatedData.Company = {
+          ...updatedData.Company,
+          ContactPersonPhone: value,
         };
       }
 
@@ -184,26 +184,26 @@ export default function CompaniesTab() {
       const adminPhone = data.TenantAdmin?.PhoneNumber || '';
 
       setFormData({
-        name: data.Name,
-        slug: data.Slug,
-        description: data.Description || '',
-        company: {
-          name: data.Company?.Name || '',
-          numberOfEmployees: data.Company?.NumberOfEmployees || 0,
-          location: data.Company?.Location || '',
-          industry: data.Company?.Industry || '',
-          contactPersonName: data.Company?.ContactPersonName || '',
-          contactPersonEmail: data.Company?.ContactPersonEmail || '',
-          contactPersonRole: data.Company?.ContactPersonRole || '',
-          contactPersonPhone: data.Company?.ContactPersonPhone || '',
-          logoUrl: data.Company?.LogoUrl || '',
+        Name: data.Name,
+        Slug: data.Slug,
+        Description: data.Description || '',
+        Company: {
+          Name: data.Company?.Name || '',
+          NumberOfEmployees: data.Company?.NumberOfEmployees || 0,
+          Location: data.Company?.Location || '',
+          Industry: data.Company?.Industry || '',
+          ContactPersonName: data.Company?.ContactPersonName || '',
+          ContactPersonEmail: data.Company?.ContactPersonEmail || '',
+          ContactPersonRole: data.Company?.ContactPersonRole || '',
+          ContactPersonPhone: data.Company?.ContactPersonPhone || '',
+          LogoUrl: data.Company?.LogoUrl || '',
         },
-        tenantAdmin: {
-          firstName: adminFirstName,
-          lastName: adminLastName,
-          email: adminEmail,
-          phoneNumber: adminPhone,
-          password: '', // Password is never returned from API for security
+        TenantAdmin: {
+          FirstName: adminFirstName,
+          LastName: adminLastName,
+          Email: adminEmail,
+          PhoneNumber: adminPhone,
+          Password: '', // Password is never returned from API for security
         },
       });
 
@@ -235,19 +235,19 @@ export default function CompaniesTab() {
       setError('');
 
       const updateData = {
-        Name: formData.name,
-        Slug: formData.slug,
-        Description: formData.description,
+        Name: formData.Name,
+        Slug: formData.Slug,
+        Description: formData.Description,
         Company: {
-          Name: formData.company.name,
-          NumberOfEmployees: formData.company.numberOfEmployees,
-          Location: formData.company.location,
-          Industry: formData.company.industry,
-          ContactPersonName: formData.company.contactPersonName,
-          ContactPersonEmail: formData.company.contactPersonEmail,
-          ContactPersonRole: formData.company.contactPersonRole,
-          ContactPersonPhone: formData.company.contactPersonPhone,
-          LogoUrl: formData.company.logoUrl,
+          Name: formData.Company.Name,
+          NumberOfEmployees: formData.Company.NumberOfEmployees,
+          Location: formData.Company.Location,
+          Industry: formData.Company.Industry,
+          ContactPersonName: formData.Company.ContactPersonName,
+          ContactPersonEmail: formData.Company.ContactPersonEmail,
+          ContactPersonRole: formData.Company.ContactPersonRole,
+          ContactPersonPhone: formData.Company.ContactPersonPhone,
+          LogoUrl: formData.Company.LogoUrl,
         },
         // TenantAdmin is not sent during updates since admin details are not editable in the UI
         TenantAdmin: null,
@@ -321,7 +321,7 @@ export default function CompaniesTab() {
                   <input
                     type="text"
                     name="name"
-                    value={formData.name}
+                    value={formData.Name}
                     onChange={handleNameChange}
                     required
                     className={styles.input}
@@ -336,7 +336,7 @@ export default function CompaniesTab() {
                   <input
                     type="text"
                     name="slug"
-                    value={formData.slug}
+                    value={formData.Slug}
                     onChange={handleInputChange}
                     required
                     className={styles.input}
@@ -350,7 +350,7 @@ export default function CompaniesTab() {
                   </label>
                   <textarea
                     name="description"
-                    value={formData.description}
+                    value={formData.Description}
                     onChange={handleInputChange}
                     className={styles.textarea}
                     placeholder="Brief description of the organization"
@@ -370,7 +370,7 @@ export default function CompaniesTab() {
                   <input
                     type="number"
                     name="company.numberOfEmployees"
-                    value={formData.company.numberOfEmployees}
+                    value={formData.Company.NumberOfEmployees}
                     onChange={handleInputChange}
                     required
                     min="1"
@@ -386,7 +386,7 @@ export default function CompaniesTab() {
                   <input
                     type="text"
                     name="company.location"
-                    value={formData.company.location}
+                    value={formData.Company.Location}
                     onChange={handleInputChange}
                     required
                     className={styles.input}
@@ -400,7 +400,7 @@ export default function CompaniesTab() {
                   </label>
                   <select
                     name="company.industry"
-                    value={formData.company.industry}
+                    value={formData.Company.Industry}
                     onChange={handleInputChange}
                     required
                     className={styles.select}
@@ -434,7 +434,7 @@ export default function CompaniesTab() {
                       </label>
                       <input
                         type="tel"
-                        value={formData.company.contactPersonPhone || 'Not provided'}
+                        value={formData.Company.ContactPersonPhone || 'Not provided'}
                         readOnly
                         className={`${styles.input} ${styles.readOnly}`}
                         style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
@@ -448,7 +448,7 @@ export default function CompaniesTab() {
                       <input
                         type="text"
                         name="company.contactPersonRole"
-                        value={formData.company.contactPersonRole}
+                        value={formData.Company.ContactPersonRole}
                         onChange={handleInputChange}
                         required
                         className={styles.input}
@@ -466,7 +466,7 @@ export default function CompaniesTab() {
                       <input
                         type="text"
                         name="company.contactPersonRole"
-                        value={formData.company.contactPersonRole}
+                        value={formData.Company.ContactPersonRole}
                         onChange={handleInputChange}
                         required
                         className={styles.input}
@@ -489,7 +489,7 @@ export default function CompaniesTab() {
                   </label>
                   <input
                     type="text"
-                    value={formData.tenantAdmin.firstName}
+                    value={formData.TenantAdmin.FirstName}
                     onChange={(e) => handleTenantAdminChange('firstName', e.target.value)}
                     required={!isEditMode}
                     className={styles.input}
@@ -503,7 +503,7 @@ export default function CompaniesTab() {
                   </label>
                   <input
                     type="text"
-                    value={formData.tenantAdmin.lastName}
+                    value={formData.TenantAdmin.LastName}
                     onChange={(e) => handleTenantAdminChange('lastName', e.target.value)}
                     required={!isEditMode}
                     className={styles.input}
@@ -517,7 +517,7 @@ export default function CompaniesTab() {
                   </label>
                   <input
                     type="email"
-                    value={formData.tenantAdmin.email}
+                    value={formData.TenantAdmin.Email}
                     onChange={(e) => handleTenantAdminChange('email', e.target.value)}
                     required={!isEditMode}
                     className={styles.input}
@@ -534,7 +534,7 @@ export default function CompaniesTab() {
                       </label>
                       <input
                         type="tel"
-                        value={formData.tenantAdmin.phoneNumber}
+                        value={formData.TenantAdmin.PhoneNumber}
                         onChange={(e) => handleTenantAdminChange('phoneNumber', e.target.value)}
                         className={styles.input}
                         placeholder="+1 (555) 123-4567"
@@ -548,7 +548,7 @@ export default function CompaniesTab() {
                       <div className={styles.passwordContainer}>
                         <input
                           type={showPassword ? "text" : "password"}
-                          value={formData.tenantAdmin.password}
+                          value={formData.TenantAdmin.Password}
                           onChange={(e) => handleTenantAdminChange('password', e.target.value)}
                           required
                           minLength={6}
