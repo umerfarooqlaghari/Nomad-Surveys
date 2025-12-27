@@ -118,8 +118,7 @@
 
 .input:focus {
   outline: none;
-  ring: 2px;
-  ring-color: #3b82f6;
+  box-shadow: 0 0 0 2px #3b82f6;
   border-color: #3b82f6;
 }
 
@@ -165,8 +164,7 @@
 
 .select:focus {
   outline: none;
-  ring: 2px;
-  ring-color: #3b82f6;
+  box-shadow: 0 0 0 2px #3b82f6;
   border-color: #3b82f6;
 }
 
@@ -183,8 +181,7 @@
 
 .textarea:focus {
   outline: none;
-  ring: 2px;
-  ring-color: #3b82f6;
+  box-shadow: 0 0 0 2px #3b82f6;
   border-color: #3b82f6;
 }
 
@@ -439,36 +436,67 @@
   font-size: 0.875rem;
 }
 
-/* Responsive Design */
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .formGrid {
     grid-template-columns: 1fr;
   }
-  
+
   .formActions {
     flex-direction: column;
   }
-  
+
   .tableContainer {
     font-size: 0.75rem;
   }
-  
+
   .tableCell {
     padding: 0.5rem;
   }
-  
+
   .companyInfo {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.5rem;
   }
-  
+
   .actionButtons {
     flex-direction: column;
   }
+}
+
+.logoPreviewWrapper {
+  margin-top: 1rem;
+}
+
+.logoPreviewImg {
+  max-width: 8rem;
+  max-height: 8rem;
+  object-fit: contain;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+}
+
+.removeLogoBtn {
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: #dc2626;
+  background-color: #fef2f2;
+  border: 1px solid #fee2e2;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  width: fit-content;
+  transition: all 0.2s;
+}
+
+.removeLogoBtn:hover {
+  background-color: #fee2e2;
+  border-color: #fecaca;
 }
