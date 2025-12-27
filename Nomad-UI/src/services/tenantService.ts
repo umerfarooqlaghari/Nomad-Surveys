@@ -3,26 +3,26 @@ import { apiClient, ApiResponse, handleApiResponse } from './api';
 
 // Types for Tenant API
 export interface CreateTenantData {
-  name: string;
-  slug: string;
-  description: string;
-  company: {
-    name: string;
-    numberOfEmployees: number;
-    location: string;
-    industry: string;
-    contactPersonName: string;
-    contactPersonEmail: string;
-    contactPersonRole: string;
-    contactPersonPhone: string;
-    logoUrl: string;
+  Name: string;
+  Slug: string;
+  Description: string;
+  Company: {
+    Name: string;
+    NumberOfEmployees: number;
+    Location: string;
+    Industry: string;
+    ContactPersonName: string;
+    ContactPersonEmail: string;
+    ContactPersonRole: string;
+    ContactPersonPhone: string;
+    LogoUrl: string;
   };
-  tenantAdmin: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phoneNumber: string;
-    password: string;
+  TenantAdmin: {
+    FirstName: string;
+    LastName: string;
+    Email: string;
+    PhoneNumber: string;
+    Password: string;
   };
 }
 
@@ -201,63 +201,69 @@ class TenantService {
     const errors: string[] = [];
 
     // Validate tenant info
-    if (!data.name.trim()) {
+    if (!data.Name.trim()) {
       errors.push('Organization name is required');
     }
-    if (!data.slug.trim()) {
+    if (!data.Slug.trim()) {
       errors.push('Tenant slug is required');
     }
 
     // Validate company info
-    if (!data.company.name.trim()) {
+    if (!data.Company.Name.trim()) {
       errors.push('Company name is required');
     }
-    if (data.company.numberOfEmployees < 1) {
+    if (data.Company.NumberOfEmployees < 1) {
       errors.push('Number of employees must be at least 1');
     }
-    if (!data.company.location.trim()) {
+    if (!data.Company.Location.trim()) {
       errors.push('Company location is required');
     }
-    if (!data.company.industry.trim()) {
+    if (!data.Company.Industry.trim()) {
       errors.push('Company industry is required');
     }
-    if (!data.company.contactPersonName.trim()) {
+    if (!data.Company.ContactPersonName.trim()) {
       errors.push('Contact person name is required');
     }
-    if (!data.company.contactPersonEmail.trim()) {
+    if (!data.Company.ContactPersonEmail.trim()) {
       errors.push('Contact person email is required');
     }
-    if (!data.company.contactPersonRole.trim()) {
+    if (!data.Company.ContactPersonRole.trim()) {
       errors.push('Contact person role is required');
+    }
+    if (!data.Company.ContactPersonPhone.trim()) {
+      errors.push('Contact person phone number is required');
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (data.company.contactPersonEmail && !emailRegex.test(data.company.contactPersonEmail)) {
+    if (data.Company.ContactPersonEmail && !emailRegex.test(data.Company.ContactPersonEmail)) {
       errors.push('Contact person email format is invalid');
     }
 
     // Validate tenant admin
-    if (!data.tenantAdmin.firstName.trim()) {
+    if (!data.TenantAdmin.FirstName.trim()) {
       errors.push('Tenant admin first name is required');
     }
-    if (!data.tenantAdmin.lastName.trim()) {
+    if (!data.TenantAdmin.LastName.trim()) {
       errors.push('Tenant admin last name is required');
     }
-    if (!data.tenantAdmin.email.trim()) {
+    if (!data.TenantAdmin.Email.trim()) {
       errors.push('Tenant admin email is required');
     }
-    if (data.tenantAdmin.email && !emailRegex.test(data.tenantAdmin.email)) {
+    if (data.TenantAdmin.Email && !emailRegex.test(data.TenantAdmin.Email)) {
       errors.push('Tenant admin email format is invalid');
     }
-    if (!data.tenantAdmin.password || data.tenantAdmin.password.length < 6) {
+    if (!data.TenantAdmin.PhoneNumber.trim()) {
+      errors.push('Tenant admin phone number is required');
+    }
+    if (!data.TenantAdmin.Password || data.TenantAdmin.Password.length < 6) {
       errors.push('Tenant admin password must be at least 6 characters');
     }
 
     // Validate logo URL if provided
-    if (data.company.logoUrl) {
+    if (data.Company.LogoUrl) {
       try {
-        new URL(data.company.logoUrl);
+        new URL(data.Company.LogoUrl);
       } catch {
         errors.push('Logo URL format is invalid');
       }
@@ -274,26 +280,26 @@ class TenantService {
    */
   getDefaultFormData(): CreateTenantData {
     return {
-      name: '',
-      slug: '',
-      description: '',
-      company: {
-        name: '',
-        numberOfEmployees: 1,
-        location: '',
-        industry: '',
-        contactPersonName: '',
-        contactPersonEmail: '',
-        contactPersonRole: '',
-        contactPersonPhone: '',
-        logoUrl: '',
+      Name: '',
+      Slug: '',
+      Description: '',
+      Company: {
+        Name: '',
+        NumberOfEmployees: 1,
+        Location: '',
+        Industry: '',
+        ContactPersonName: '',
+        ContactPersonEmail: '',
+        ContactPersonRole: '',
+        ContactPersonPhone: '',
+        LogoUrl: '',
       },
-      tenantAdmin: {
-        firstName: '',
-        lastName: '',
-        email: '',
-        phoneNumber: '',
-        password: '',
+      TenantAdmin: {
+        FirstName: '',
+        LastName: '',
+        Email: '',
+        PhoneNumber: '',
+        Password: '',
       },
     };
   }
