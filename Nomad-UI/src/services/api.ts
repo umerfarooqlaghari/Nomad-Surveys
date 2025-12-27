@@ -26,7 +26,7 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
-    
+
     const defaultHeaders: HeadersInit = {
       'Content-Type': 'application/json',
     };
@@ -56,7 +56,21 @@ class ApiClient {
 
         try {
           const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
+
+          if (errorData.errors && typeof errorData.errors === 'object') {
+            // Handle standard ASP.NET validation errors: { "Field": ["Error1", "Error2"] }
+            const errorMessages = Object.values(errorData.errors)
+              .flat()
+              .filter((msg): msg is string => typeof msg === 'string');
+
+            if (errorMessages.length > 0) {
+              errorMessage = errorMessages.join(', ');
+            } else {
+              errorMessage = errorData.message || errorData.title || errorMessage;
+            }
+          } else {
+            errorMessage = errorData.message || errorData.title || errorMessage;
+          }
         } catch {
           // If response is not JSON, use the default error message
         }

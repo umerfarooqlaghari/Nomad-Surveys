@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import styles from './CompaniesTab.module.css';
 import { tenantService, CreateTenantData, TenantListItem } from '@/services/tenantService';
+import DeleteConfirmationModal from '@/components/modals/DeleteConfirmationModal';
 
 export default function ProjectsTab() {
   const { token } = useAuth();
@@ -20,6 +21,8 @@ export default function ProjectsTab() {
   const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [tenantToDelete, setTenantToDelete] = useState<TenantListItem | null>(null);
 
   // Load tenants on component mount
   useEffect(() => {
@@ -28,7 +31,7 @@ export default function ProjectsTab() {
 
   const loadTenants = async () => {
     if (!token) return;
-    
+
     setIsLoading(true);
     try {
       const response = await tenantService.getTenants(token);
@@ -49,21 +52,24 @@ export default function ProjectsTab() {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
     // Handle nested object updates
-    if (name.startsWith('company.')) {
-      const fieldName = name.replace('company.', '');
+    if (name.startsWith('Company.')) {
+      const fieldName = name.replace('Company.', '');
       setFormData(prev => ({
         ...prev,
-        company: { ...prev.company, [fieldName]: value }
+        Company: {
+          ...prev.Company,
+          [fieldName]: fieldName === 'NumberOfEmployees' ? (parseInt(value) || 0) : value
+        }
       }));
-    } else if (name.startsWith('tenantAdmin.')) {
-      const fieldName = name.replace('tenantAdmin.', '');
+    } else if (name.startsWith('TenantAdmin.')) {
+      const fieldName = name.replace('TenantAdmin.', '');
       setFormData(prev => ({
         ...prev,
-        tenantAdmin: { ...prev.tenantAdmin, [fieldName]: value }
+        TenantAdmin: { ...prev.TenantAdmin, [fieldName]: value }
       }));
     } else {
       setFormData(prev => ({
@@ -75,7 +81,19 @@ export default function ProjectsTab() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
+
+    if (!token) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    // Validate form data
+    const validation = tenantService.validateTenantData(formData);
+    if (!validation.isValid) {
+      setError(validation.errors.join(', '));
+      toast.error('Please fix the form errors');
+      return;
+    }
 
     // Check if logo is still uploading
     if (isUploadingLogo) {
@@ -83,9 +101,9 @@ export default function ProjectsTab() {
       return;
     }
 
-    // Check if logo file is selected but not uploaded
-    if (logoFile && !formData.company.logoUrl) {
-      toast.error('Please wait for logo upload to complete');
+    // Check if logo file is selected but not uploaded (safety check)
+    if (logoFile && !formData.Company.LogoUrl) {
+      toast.error('Logo is still processing. Please wait.');
       return;
     }
 
@@ -93,7 +111,14 @@ export default function ProjectsTab() {
     setError('');
 
     try {
-      await tenantService.createTenant(formData, token);
+      const response = await tenantService.createTenant(formData, token);
+
+      if (response.error) {
+        setError(response.error);
+        toast.error(response.error);
+        return;
+      }
+
       toast.success('Company created successfully!');
       setShowForm(false);
       setFormData(tenantService.getDefaultFormData());
@@ -101,7 +126,6 @@ export default function ProjectsTab() {
       setLogoFile(null);
       await loadTenants(); // Reload the list
     } catch (err: any) {
-      console.error('Error creating tenant:', err);
       const errorMessage = err.message || 'Failed to create Company';
       setError(errorMessage);
       toast.error(errorMessage);
@@ -118,7 +142,9 @@ export default function ProjectsTab() {
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
@@ -144,7 +170,6 @@ export default function ProjectsTab() {
         setLogoPreview(reader.result as string);
       };
       reader.onerror = () => {
-        console.error('Error reading file');
         toast.error('Failed to read image file');
         setIsUploadingLogo(false);
         e.target.value = '';
@@ -155,7 +180,6 @@ export default function ProjectsTab() {
       const formDataUpload = new FormData();
       formDataUpload.append('images', file);
 
-      console.log('Uploading logo to Cloudinary...');
       const response = await fetch('/api/admin/cloudinary/upload/bulk?folder=company-logos', {
         method: 'POST',
         headers: {
@@ -164,35 +188,30 @@ export default function ProjectsTab() {
         body: formDataUpload,
       });
 
-      console.log('Upload response status:', response.status);
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('Upload failed:', errorData);
         throw new Error(errorData.error || 'Failed to upload logo');
       }
 
       const result = await response.json();
-      console.log('Upload result:', result);
 
       if (result.results && result.results.length > 0 && result.results[0].Success) {
-        const logoUrl = result.results[0].Url;
+        const logoUrl = result.results[0].SecureUrl;
         setFormData(prev => ({
           ...prev,
-          company: {
-            ...prev.company,
-            logoUrl: logoUrl,
+          Company: {
+            ...prev.Company,
+            LogoUrl: logoUrl,
           },
         }));
         toast.success('Logo uploaded successfully');
         e.target.value = ''; // Reset input to allow re-uploading
       } else {
-        console.error('Upload result invalid:', result);
-        throw new Error('Upload failed - invalid response');
+        const errorMsg = result.results?.[0]?.ErrorMessage || 'Upload failed - invalid response';
+        throw new Error(errorMsg);
       }
-    } catch (error) {
-      console.error('Error uploading logo:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upload logo';
+    } catch (error: any) {
+      const errorMessage = error.message || 'Failed to upload logo';
       toast.error(errorMessage);
       setLogoPreview('');
       setLogoFile(null);
@@ -200,6 +219,37 @@ export default function ProjectsTab() {
     } finally {
       setIsUploadingLogo(false);
     }
+  };
+
+  const handleDeleteClick = (tenant: TenantListItem) => {
+    setTenantToDelete(tenant);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!tenantToDelete || !token) return;
+
+    setIsLoading(true);
+    try {
+      const response = await tenantService.deactivateTenant(tenantToDelete.Id, token);
+      if (response.error) {
+        toast.error(response.error);
+      } else {
+        toast.success(`Company ${tenantToDelete.CompanyName || tenantToDelete.Name} deactivated successfully`);
+        await loadTenants();
+      }
+    } catch (err: any) {
+      toast.error('Failed to deactivate company');
+    } finally {
+      setIsLoading(false);
+      setShowDeleteModal(false);
+      setTenantToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+    setTenantToDelete(null);
   };
 
   const handleEditClick = async (tenantId: string) => {
@@ -216,26 +266,26 @@ export default function ProjectsTab() {
 
       // Convert TenantResponse to CreateTenantData format for editing
       setFormData({
-        name: data.Name,
-        slug: data.Slug,
-        description: data.Description || '',
-        company: {
-          name: data.Company?.Name || '',
-          numberOfEmployees: data.Company?.NumberOfEmployees || 0,
-          location: data.Company?.Location || '',
-          industry: data.Company?.Industry || '',
-          contactPersonName: data.Company?.ContactPersonName || '',
-          contactPersonEmail: data.Company?.ContactPersonEmail || '',
-          contactPersonRole: data.Company?.ContactPersonRole || '',
-          contactPersonPhone: data.Company?.ContactPersonPhone || '',
-          logoUrl: data.Company?.LogoUrl || '',
+        Name: data.Name,
+        Slug: data.Slug,
+        Description: data.Description || '',
+        Company: {
+          Name: data.Company?.Name || '',
+          NumberOfEmployees: data.Company?.NumberOfEmployees || 0,
+          Location: data.Company?.Location || '',
+          Industry: data.Company?.Industry || '',
+          ContactPersonName: data.Company?.ContactPersonName || '',
+          ContactPersonEmail: data.Company?.ContactPersonEmail || '',
+          ContactPersonRole: data.Company?.ContactPersonRole || '',
+          ContactPersonPhone: data.Company?.ContactPersonPhone || '',
+          LogoUrl: data.Company?.LogoUrl || '',
         },
-        tenantAdmin: {
-          firstName: data.TenantAdmin?.FirstName || '',
-          lastName: data.TenantAdmin?.LastName || '',
-          email: data.TenantAdmin?.Email || '',
-          phoneNumber: data.TenantAdmin?.PhoneNumber || '',
-          password: '', // Password is never returned from API for security
+        TenantAdmin: {
+          FirstName: data.TenantAdmin?.FirstName || '',
+          LastName: data.TenantAdmin?.LastName || '',
+          Email: data.TenantAdmin?.Email || '',
+          PhoneNumber: data.TenantAdmin?.PhoneNumber || '',
+          Password: '', // Password is never returned from API for security
         },
       });
 
@@ -262,44 +312,43 @@ export default function ProjectsTab() {
   const handleUpdateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!token || !editingTenantId) return;
+    if (!token || !editingTenantId) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    // Since validation is partially based on things like admin password (which we don't have on edit),
+    // we should be careful here. However, tenantService.validateTenantData might need 
+    // a variant for updates or we can just validate the company fields locally.
+
+    // For simplicity, we'll validate the basic requirements
+    if (!formData.Name.trim() || !formData.Slug.trim()) {
+      toast.error('Name and slug are required');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
 
     try {
-      setIsLoading(true);
-      setError('');
-
       const updateData = {
-        Name: formData.name,
-        Slug: formData.slug,
-        Description: formData.description,
-        Company: {
-          Name: formData.company.name,
-          NumberOfEmployees: formData.company.numberOfEmployees,
-          Location: formData.company.location,
-          Industry: formData.company.industry,
-          ContactPersonName: formData.company.contactPersonName,
-          ContactPersonEmail: formData.company.contactPersonEmail,
-          ContactPersonRole: formData.company.contactPersonRole,
-          ContactPersonPhone: formData.company.contactPersonPhone,
-          LogoUrl: formData.company.logoUrl,
-        },
-        // TenantAdmin is not sent during updates since admin details are not editable in the UI
-        TenantAdmin: null,
+        ...formData,
+        TenantAdmin: null, // Ensure TenantAdmin is null for updates
       };
 
-      const { error } = await tenantService.updateTenant(editingTenantId, updateData, token);
+      const response = await tenantService.updateTenant(editingTenantId, updateData, token);
 
-      if (error) {
-        setError(error);
-        toast.error(error);
+      if (response.error) {
+        setError(response.error);
+        toast.error(response.error);
         return;
       }
 
       toast.success('Company updated successfully!');
       handleCancelEdit();
       await loadTenants();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update company';
+    } catch (err: any) {
+      const errorMessage = err.message || 'Failed to update company';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -324,7 +373,7 @@ export default function ProjectsTab() {
             }
           }}
           className={styles.addButton}
-          disabled={isLoading}
+          disabled={isLoading || isUploadingLogo}
         >
           {showForm ? 'Cancel' : 'Add Company'}
         </button>
@@ -354,8 +403,8 @@ export default function ProjectsTab() {
                 </label>
                 <input
                   type="text"
-                  name="name"
-                  value={formData.name}
+                  name="Name"
+                  value={formData.Name}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter project name"
@@ -370,8 +419,8 @@ export default function ProjectsTab() {
                 </label>
                 <input
                   type="text"
-                  name="company.name"
-                  value={formData.company.name}
+                  name="Company.Name"
+                  value={formData.Company.Name}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter company name"
@@ -386,8 +435,8 @@ export default function ProjectsTab() {
                 </label>
                 <input
                   type="text"
-                  name="slug"
-                  value={formData.slug}
+                  name="Slug"
+                  value={formData.Slug}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter company slug (e.g., company-name)"
@@ -399,8 +448,8 @@ export default function ProjectsTab() {
               <div className={styles.formGroup}>
                 <label className={styles.label}>Description</label>
                 <textarea
-                  name="description"
-                  value={formData.description}
+                  name="Description"
+                  value={formData.Description}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter company description"
@@ -415,8 +464,8 @@ export default function ProjectsTab() {
                 </label>
                 <input
                   type="number"
-                  name="company.numberOfEmployees"
-                  value={formData.company.numberOfEmployees}
+                  name="Company.NumberOfEmployees"
+                  value={formData.Company.NumberOfEmployees}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter number of employees"
@@ -432,8 +481,8 @@ export default function ProjectsTab() {
                 </label>
                 <input
                   type="text"
-                  name="company.industry"
-                  value={formData.company.industry}
+                  name="Company.Industry"
+                  value={formData.Company.Industry}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter industry"
@@ -448,8 +497,8 @@ export default function ProjectsTab() {
                 </label>
                 <input
                   type="text"
-                  name="company.location"
-                  value={formData.company.location}
+                  name="Company.Location"
+                  value={formData.Company.Location}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter location"
@@ -464,8 +513,8 @@ export default function ProjectsTab() {
                 </label>
                 <input
                   type="text"
-                  name="company.contactPersonName"
-                  value={formData.company.contactPersonName}
+                  name="Company.ContactPersonName"
+                  value={formData.Company.ContactPersonName}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter contact person name"
@@ -480,8 +529,8 @@ export default function ProjectsTab() {
                 </label>
                 <input
                   type="email"
-                  name="company.contactPersonEmail"
-                  value={formData.company.contactPersonEmail}
+                  name="Company.ContactPersonEmail"
+                  value={formData.Company.ContactPersonEmail}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter contact person email"
@@ -496,8 +545,8 @@ export default function ProjectsTab() {
                 </label>
                 <input
                   type="text"
-                  name="company.contactPersonRole"
-                  value={formData.company.contactPersonRole}
+                  name="Company.ContactPersonRole"
+                  value={formData.Company.ContactPersonRole}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter contact person role"
@@ -512,8 +561,8 @@ export default function ProjectsTab() {
                 </label>
                 <input
                   type="tel"
-                  name="company.contactPersonPhone"
-                  value={formData.company.contactPersonPhone}
+                  name="Company.ContactPersonPhone"
+                  value={formData.Company.ContactPersonPhone}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter contact person phone (e.g., +1234567890)"
@@ -530,7 +579,7 @@ export default function ProjectsTab() {
                     accept="image/*"
                     onChange={handleLogoUpload}
                     className={styles.input}
-                    disabled={isUploadingLogo}
+                    disabled={isUploadingLogo || isLoading}
                   />
                   {isUploadingLogo && (
                     <p style={{ marginTop: '8px', color: '#7c3aed' }}>Uploading logo...</p>
@@ -563,8 +612,8 @@ export default function ProjectsTab() {
                     </label>
                     <input
                       type="text"
-                      name="tenantAdmin.firstName"
-                      value={formData.tenantAdmin.firstName}
+                      name="TenantAdmin.FirstName"
+                      value={formData.TenantAdmin.FirstName}
                       onChange={handleInputChange}
                       className={styles.input}
                       placeholder="Enter admin first name"
@@ -578,8 +627,8 @@ export default function ProjectsTab() {
                     </label>
                     <input
                       type="text"
-                      name="tenantAdmin.lastName"
-                      value={formData.tenantAdmin.lastName}
+                      name="TenantAdmin.LastName"
+                      value={formData.TenantAdmin.LastName}
                       onChange={handleInputChange}
                       className={styles.input}
                       placeholder="Enter admin last name"
@@ -593,8 +642,8 @@ export default function ProjectsTab() {
                     </label>
                     <input
                       type="email"
-                      name="tenantAdmin.email"
-                      value={formData.tenantAdmin.email}
+                      name="TenantAdmin.Email"
+                      value={formData.TenantAdmin.Email}
                       onChange={handleInputChange}
                       className={styles.input}
                       placeholder="Enter admin email"
@@ -608,8 +657,8 @@ export default function ProjectsTab() {
                     </label>
                     <input
                       type="tel"
-                      name="tenantAdmin.phoneNumber"
-                      value={formData.tenantAdmin.phoneNumber}
+                      name="TenantAdmin.PhoneNumber"
+                      value={formData.TenantAdmin.PhoneNumber}
                       onChange={handleInputChange}
                       className={styles.input}
                       placeholder="Enter admin phone (e.g., +1234567890)"
@@ -624,12 +673,13 @@ export default function ProjectsTab() {
                     <div className={styles.passwordContainer}>
                       <input
                         type={showPassword ? "text" : "password"}
-                        name="tenantAdmin.password"
-                        value={formData.tenantAdmin.password}
+                        name="TenantAdmin.Password"
+                        value={formData.TenantAdmin.Password}
                         onChange={handleInputChange}
                         className={styles.input}
                         placeholder="Enter admin password"
                         required
+                        minLength={6}
                       />
                       <button
                         type="button"
@@ -648,14 +698,22 @@ export default function ProjectsTab() {
               <button
                 type="submit"
                 className={styles.submitButton}
-                disabled={isLoading || (!isEditMode && isUploadingLogo)}
+                disabled={isLoading || isUploadingLogo}
               >
-                {!isEditMode && isUploadingLogo
+                {isUploadingLogo
                   ? 'Uploading Logo...'
                   : isLoading
-                  ? (isEditMode ? 'Updating...' : 'Creating...')
-                  : (isEditMode ? 'Update Company' : 'Add Company')
+                    ? (isEditMode ? 'Updating...' : 'Creating...')
+                    : (isEditMode ? 'Update Company' : 'Add Company')
                 }
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className={styles.cancelButton}
+                disabled={isLoading || isUploadingLogo}
+              >
+                Cancel
               </button>
             </div>
           </form>
@@ -720,16 +778,15 @@ export default function ProjectsTab() {
                       </div>
                     </td>
                     <td className={styles.tableCell}>
-                    <div className={styles.companyDetails}>
-                          <div className={styles.companyName}>{tenant.CompanyName || tenant.Name}</div>
-                          <div className={styles.companySlug}>{tenant.Slug}</div>
-                        </div>
-                        </td>
+                      <div className={styles.companyDetails}>
+                        <div className={styles.companyName}>{tenant.CompanyName || tenant.Name}</div>
+                        <div className={styles.companySlug}>{tenant.Slug}</div>
+                      </div>
+                    </td>
                     <td className={styles.tableCell}>{tenant.UserCount}</td>
                     <td className={styles.tableCell}>
-                      <span className={`${styles.statusBadge} ${
-                        tenant.IsActive ? styles.statusActive : styles.statusInactive
-                      }`}>
+                      <span className={`${styles.statusBadge} ${tenant.IsActive ? styles.statusActive : styles.statusInactive
+                        }`}>
                         {tenant.IsActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -757,6 +814,18 @@ export default function ProjectsTab() {
                         >
                           Edit
                         </button>
+                        <button
+                          type="button"
+                          className={`${styles.actionButton} ${styles.deleteButton}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDeleteClick(tenant);
+                          }}
+                          disabled={isLoading}
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -766,6 +835,13 @@ export default function ProjectsTab() {
           </table>
         </div>
       </div>
+
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        companyName={tenantToDelete?.CompanyName || tenantToDelete?.Name || ''}
+      />
     </div>
   );
 }

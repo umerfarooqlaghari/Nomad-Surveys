@@ -22,7 +22,7 @@ export default function SuperAdminDashboard() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
 
-  console.log('SuperAdmin Dashboard - User:', user, 'isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
+  // console.log('SuperAdmin Dashboard - User:', user, 'isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
 
   if (isLoading) {
     return (
@@ -34,18 +34,18 @@ export default function SuperAdminDashboard() {
 
   const renderTabContent = () => {
     try {
-     switch (activeTab) {
-      case 'overview':
-        return <OverviewTab />;
-      case 'projects':
-        return <ProjectsTab />;
-      case 'survey-builder':
-        return <SurveyBuilderTab />;
-      case 'reports':
-        return <ReportsTab />;
-      default:
-        return <OverviewTab />;
-  }
+      switch (activeTab) {
+        case 'overview':
+          return <OverviewTab />;
+        case 'projects':
+          return <ProjectsTab />;
+        case 'survey-builder':
+          return <SurveyBuilderTab />;
+        case 'reports':
+          return <ReportsTab />;
+        default:
+          return <OverviewTab />;
+      }
     } catch (error) {
       console.error('Error rendering tab content:', error);
       return <div className="p-4 bg-red-100 text-red-700 rounded-lg">Error loading content</div>;
@@ -70,11 +70,10 @@ export default function SuperAdminDashboard() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`${
-                    activeTab === tab.id
+                  className={`${activeTab === tab.id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
+                    } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center space-x-2`}
                 >
                   <img
                     src={tab.icon}
@@ -82,8 +81,8 @@ export default function SuperAdminDashboard() {
                     width={20}
                     height={20}
                     className="w-5 h-5"
-                  />                
-                    <span>{tab.name}</span>
+                  />
+                  <span>{tab.name}</span>
                 </button>
               ))}
             </nav>
