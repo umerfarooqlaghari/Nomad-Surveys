@@ -46,7 +46,12 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                 return response;
             }
 
+            var tenant = await _context.Tenants.FindAsync(survey.TenantId);
+            var tenantName = tenant?.Name ?? "Nomad Surveys";
+            var tenantSlug = tenant?.Slug ?? "";
+
             var assignedCount = 0;
+            var pendingNotifications = new Dictionary<string, (string Name, string LastSubject, int Count, Guid LastId)>();
 
             foreach (var subjectEvaluatorId in request.SubjectEvaluatorIds)
             {
@@ -77,6 +82,11 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                     .FirstOrDefaultAsync(ses => ses.SubjectEvaluatorId == subjectEvaluatorId && 
                                                ses.SurveyId == surveyId);
 
+                var evaluatorEmail = relationship.Evaluator.Employee.Email;
+                var evaluatorName = relationship.Evaluator.Employee.FullName;
+                var subjectName = relationship.Subject.Employee.FullName;
+                Guid finalAssignmentId;
+
                 if (existingAssignment != null)
                 {
                     if (!existingAssignment.IsActive)
@@ -85,54 +95,47 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                         existingAssignment.IsActive = true;
                         existingAssignment.UpdatedAt = DateTime.UtcNow;
                         assignedCount++;
+                        finalAssignmentId = existingAssignment.Id;
                     }
                     else
                     {
                         errors.Add($"Relationship {relationship.Subject.Employee.FullName} - {relationship.Evaluator.Employee.FullName} is already assigned to this survey");
+                        continue;
                     }
-                    continue;
+                }
+                else
+                {
+                    // Create new assignment
+                    var assignment = new SubjectEvaluatorSurvey
+                    {
+                        Id = Guid.NewGuid(),
+                        SubjectEvaluatorId = subjectEvaluatorId,
+                        SurveyId = surveyId,
+                        TenantId = survey.TenantId,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _context.SubjectEvaluatorSurveys.Add(assignment);
+                    assignedCount++;
+                    finalAssignmentId = assignment.Id;
                 }
 
-                // Create new assignment
-                var assignment = new SubjectEvaluatorSurvey
+                // Collect notification data
+                if (pendingNotifications.TryGetValue(evaluatorEmail, out var data))
                 {
-                    Id = Guid.NewGuid(),
-                    SubjectEvaluatorId = subjectEvaluatorId,
-                    SurveyId = surveyId,
-                    TenantId = survey.TenantId,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                _context.SubjectEvaluatorSurveys.Add(assignment);
-                assignedCount++;
-
-                // Send email notification to evaluator
-                _ = Task.Run(async () =>
+                    pendingNotifications[evaluatorEmail] = (data.Name, subjectName, data.Count + 1, finalAssignmentId);
+                }
+                else
                 {
-                    try
-                    {
-                        var tenant = await _context.Tenants.FindAsync(survey.TenantId);
-                        var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:3000";
-                        var formLink = $"{frontendUrl}/{tenant?.Slug}/participant/forms/{assignment.Id}";
-
-                        await _emailService.SendFormAssignmentEmailAsync(
-                            relationship.Evaluator.Employee.Email,
-                            relationship.Evaluator.Employee.FullName,
-                            relationship.Subject.Employee.FullName,
-                            survey.Title,
-                            formLink,
-                            tenant?.Name ?? "Nomad Surveys"
-                        );
-                    }
-                    catch (Exception emailEx)
-                    {
-                        _logger.LogError(emailEx, "Failed to send form assignment email for assignment {AssignmentId}", assignment.Id);
-                    }
-                });
+                    pendingNotifications[evaluatorEmail] = (evaluatorName, subjectName, 1, finalAssignmentId);
+                }
             }
 
             await _context.SaveChangesAsync();
+
+            // Send grouped notifications
+            NotifyEvaluators(pendingNotifications, survey.Title, tenantSlug, tenantName);
 
             response.Success = true;
             response.AssignedCount = assignedCount;
@@ -171,9 +174,14 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                 return response;
             }
 
+            var tenant = await _context.Tenants.FindAsync(survey.TenantId);
+            var tenantName = tenant?.Name ?? "Nomad Surveys";
+            var tenantSlug = tenant?.Slug ?? "";
+
             var now = DateTime.UtcNow;
             var relationshipsProcessed = 0;
             var assignmentsCreatedOrReactivated = 0;
+            var pendingNotifications = new Dictionary<string, (string Name, string LastSubject, int Count, Guid LastId)>();
 
             for (var index = 0; index < request.Rows.Count; index++)
             {
@@ -227,7 +235,6 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                             existingEvaluator.IsActive = true;
                             existingEvaluator.UpdatedAt = now;
                             _context.Evaluators.Update(existingEvaluator);
-                            await _context.SaveChangesAsync();
                             _logger.LogInformation("✅ Reactivated evaluator for employee {EmployeeId}", evaluatorEmployeeId);
                         }
                         evaluator = existingEvaluator;
@@ -244,7 +251,6 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                             TenantId = survey.TenantId
                         };
                         _context.Evaluators.Add(evaluator);
-                        await _context.SaveChangesAsync();
                         _logger.LogInformation("✅ Created evaluator for employee {EmployeeId}", evaluatorEmployeeId);
                     }
 
@@ -269,7 +275,6 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                             existingSubject.IsActive = true;
                             existingSubject.UpdatedAt = now;
                             _context.Subjects.Update(existingSubject);
-                            await _context.SaveChangesAsync();
                             _logger.LogInformation("✅ Reactivated subject for employee {EmployeeId}", subjectEmployeeId);
                         }
                         subject = existingSubject;
@@ -286,7 +291,6 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                             TenantId = survey.TenantId
                         };
                         _context.Subjects.Add(subject);
-                        await _context.SaveChangesAsync();
                         _logger.LogInformation("✅ Created subject for employee {EmployeeId}", subjectEmployeeId);
                     }
 
@@ -330,28 +334,33 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                             CreatedAt = now
                         };
                         _context.SubjectEvaluators.Add(relationshipEntity);
-                        await _context.SaveChangesAsync();
                         _logger.LogInformation("✅ Created relationship: Subject {SubjectId} -> Evaluator {EvaluatorId} as {Relationship}", subjectEmployeeId, evaluatorEmployeeId, relationship);
                     }
 
                     relationshipsProcessed++;
 
                     // Step 4: Handle SubjectEvaluatorSurvey assignment
-                    var existingAssignment = await _context.SubjectEvaluatorSurveys
+                    var existingAssignmentInfo = await _context.SubjectEvaluatorSurveys
                         .FirstOrDefaultAsync(ses => ses.SubjectEvaluatorId == relationshipEntity.Id && ses.SurveyId == surveyId);
 
-                    if (existingAssignment != null)
+                    Guid finalAssignmentId;
+                    bool notificationNeeded = false;
+
+                    if (existingAssignmentInfo != null)
                     {
-                        if (!existingAssignment.IsActive)
+                        if (!existingAssignmentInfo.IsActive)
                         {
-                            existingAssignment.IsActive = true;
-                            existingAssignment.UpdatedAt = now;
+                            existingAssignmentInfo.IsActive = true;
+                            existingAssignmentInfo.UpdatedAt = now;
                             assignmentsCreatedOrReactivated++;
                             _logger.LogInformation("✅ Reactivated survey assignment for relationship {RelationshipId}", relationshipEntity.Id);
+                            finalAssignmentId = existingAssignmentInfo.Id;
+                            notificationNeeded = true;
                         }
                         else
                         {
                             _logger.LogInformation("ℹ️ Survey assignment already active for relationship {RelationshipId}", relationshipEntity.Id);
+                            continue;
                         }
                     }
                     else
@@ -368,6 +377,24 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                         _context.SubjectEvaluatorSurveys.Add(newAssignment);
                         assignmentsCreatedOrReactivated++;
                         _logger.LogInformation("✅ Created survey assignment for relationship {RelationshipId}", relationshipEntity.Id);
+                        finalAssignmentId = newAssignment.Id;
+                        notificationNeeded = true;
+                    }
+
+                    if (notificationNeeded)
+                    {
+                        var evaluatorEmail = evaluatorEmployee.Email;
+                        var evaluatorName = evaluatorEmployee.FullName;
+                        var subjectName = subjectEmployee.FullName;
+
+                        if (pendingNotifications.TryGetValue(evaluatorEmail, out var data))
+                        {
+                            pendingNotifications[evaluatorEmail] = (data.Name, subjectName, data.Count + 1, finalAssignmentId);
+                        }
+                        else
+                        {
+                            pendingNotifications[evaluatorEmail] = (evaluatorName, subjectName, 1, finalAssignmentId);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -379,6 +406,9 @@ public class SurveyAssignmentService : ISurveyAssignmentService
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            // Send grouped notifications
+            NotifyEvaluators(pendingNotifications, survey.Title, tenantSlug, tenantName);
 
             response.Success = assignmentsCreatedOrReactivated > 0 || relationshipsProcessed > 0;
             response.AssignedCount = assignmentsCreatedOrReactivated;
@@ -610,6 +640,38 @@ public class SurveyAssignmentService : ISurveyAssignmentService
         // No validation needed - surveys now support all relationship types
         // Questions will be conditionally displayed based on relationship type at runtime
         return null;
+    }
+
+    private void NotifyEvaluators(Dictionary<string, (string Name, string LastSubject, int Count, Guid LastId)> notifications, string formTitle, string tenantSlug, string tenantName)
+    {
+        foreach (var entry in notifications)
+        {
+            var email = entry.Key;
+            var data = entry.Value;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:3000";
+                    
+                    if (data.Count == 1)
+                    {
+                        var formLink = $"{frontendUrl}/{tenantSlug}/participant/forms/{data.LastId}";
+                        await _emailService.SendFormAssignmentEmailAsync(email, data.Name, data.LastSubject, formTitle, formLink, tenantName);
+                    }
+                    else
+                    {
+                        var dashboardLink = $"{frontendUrl}/{tenantSlug}/participant/forms";
+                        await _emailService.SendBulkFormAssignmentEmailAsync(email, data.Name, data.Count, formTitle, dashboardLink, tenantName);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send assignment notification to {Email}", email);
+                }
+            });
+        }
     }
 }
 
