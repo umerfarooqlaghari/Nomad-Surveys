@@ -197,6 +197,7 @@ public class TenantService : ITenantService
         {
             var tenants = await _context.Tenants
                 .IgnoreQueryFilters()
+                .Where(t => t.IsActive)
                 .Include(t => t.Company)
                 .Include(t => t.Users)
                 .ToListAsync();

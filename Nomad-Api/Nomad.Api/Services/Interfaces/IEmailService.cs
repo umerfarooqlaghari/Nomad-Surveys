@@ -20,6 +20,11 @@ public interface IEmailService
     Task<bool> SendFormReminderEmailAsync(string toEmail, string evaluatorName, string subjectName, string formTitle, string formLink, string dueDate, string tenantName);
 
     /// <summary>
+    /// Send a bulk form assignment notification email to an evaluator
+    /// </summary>
+    Task<bool> SendBulkFormAssignmentEmailAsync(string toEmail, string evaluatorName, int formCount, string formTitle, string dashboardLink, string tenantName);
+
+    /// <summary>
     /// Send a generic email with HTML content
     /// </summary>
     Task<bool> SendEmailAsync(string toEmail, string subject, string htmlBody, string? toName = null);

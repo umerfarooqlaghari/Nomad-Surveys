@@ -59,7 +59,9 @@ public class EmailController : ControllerBase
             var otp = new Random().Next(100000, 999999).ToString();
 
             // Store OTP in user's SecurityStamp temporarily (in production, use a dedicated OTP table)
-            user.SecurityStamp = $"{otp}:{DateTime.UtcNow.AddMinutes(10):O}";
+            // Format: otp|expiryUnix|attempts
+            var expiryUnix = DateTimeOffset.UtcNow.AddMinutes(2).ToUnixTimeSeconds();
+            user.SecurityStamp = $"{otp}|{expiryUnix}|0";
             await _context.SaveChangesAsync();
 
             // Send email
@@ -113,23 +115,46 @@ public class EmailController : ControllerBase
                 return BadRequest(new { message = "Invalid or expired OTP" });
             }
 
-            // Parse stored OTP and expiry
-            var parts = user.SecurityStamp.Split(':');
-            if (parts.Length != 2)
+            // Parse stored OTP, expiry, and attempts
+            var parts = user.SecurityStamp.Split('|');
+            if (parts.Length < 2)
             {
                 return BadRequest(new { message = "Invalid or expired OTP" });
             }
 
             var storedOtp = parts[0];
-            if (!DateTime.TryParse(parts[1], null, System.Globalization.DateTimeStyles.RoundtripKind, out var expiry))
+            if (!long.TryParse(parts[1], out var expiryUnix))
             {
                 return BadRequest(new { message = "Invalid or expired OTP" });
             }
 
-            // Verify OTP and expiry
-            if (storedOtp != request.Otp || DateTime.UtcNow > expiry)
+            var attempts = 0;
+            if (parts.Length >= 3 && int.TryParse(parts[2], out var parsedAttempts))
             {
-                return BadRequest(new { message = "Invalid or expired OTP" });
+                attempts = parsedAttempts;
+            }
+
+            // Check if max attempts (5) reached
+            if (attempts >= 5)
+            {
+                return BadRequest(new { message = "Too many failed attempts. Please request a new code." });
+            }
+
+            // Verify OTP and expiry
+            var currentUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            if (storedOtp != request.Otp || currentUnix > expiryUnix)
+            {
+                // Increment attempts on failure
+                attempts++;
+                user.SecurityStamp = $"{storedOtp}|{expiryUnix}|{attempts}";
+                await _context.SaveChangesAsync();
+
+                var remaining = 5 - attempts;
+                var message = remaining > 0 
+                    ? $"Invalid or expired OTP. {remaining} attempts remaining." 
+                    : "Too many failed attempts. Please request a new code.";
+                
+                return BadRequest(new { message });
             }
 
             // Reset password using UserManager
