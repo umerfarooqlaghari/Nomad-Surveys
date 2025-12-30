@@ -63,14 +63,14 @@ export default function ProjectsTab() {
         ...prev,
         Company: {
           ...prev.Company,
-          [fieldName]: fieldName === 'NumberOfEmployees' ? (parseInt(value) || 0) : value
+          [fieldName]: fieldName === 'NumberOfEmployees' ? (value ? parseInt(value) : null) : value
         }
       }));
     } else if (name.startsWith('TenantAdmin.')) {
       const fieldName = name.replace('TenantAdmin.', '');
       setFormData(prev => ({
         ...prev,
-        TenantAdmin: { ...prev.TenantAdmin, [fieldName]: value }
+        TenantAdmin: prev.TenantAdmin ? { ...prev.TenantAdmin, [fieldName]: value } : { [fieldName]: value } as any
       }));
     } else {
       setFormData(prev => ({
@@ -88,8 +88,14 @@ export default function ProjectsTab() {
       return;
     }
 
+    // Auto-set project name to company name
+    const dataToSubmit = {
+      ...formData,
+      Name: formData.Company.Name
+    };
+
     // Validate form data
-    const validation = tenantService.validateTenantData(formData);
+    const validation = tenantService.validateTenantData(dataToSubmit);
     if (!validation.isValid) {
       setError(validation.errors.join(', '));
       toast.error('Please fix the form errors');
@@ -103,7 +109,7 @@ export default function ProjectsTab() {
     }
 
     // Check if logo file is selected but not uploaded (safety check)
-    if (logoFile && !formData.Company.LogoUrl) {
+    if (logoFile && !dataToSubmit.Company.LogoUrl) {
       toast.error('Logo is still processing. Please wait.');
       return;
     }
@@ -112,7 +118,7 @@ export default function ProjectsTab() {
     setError('');
 
     try {
-      const response = await tenantService.createTenant(formData, token);
+      const response = await tenantService.createTenant(dataToSubmit, token);
 
       if (response.error) {
         setError(response.error);
@@ -292,17 +298,17 @@ export default function ProjectsTab() {
           Industry: data.Company?.Industry || '',
           ContactPersonName: data.Company?.ContactPersonName || '',
           ContactPersonEmail: data.Company?.ContactPersonEmail || '',
-          ContactPersonRole: data.Company?.ContactPersonRole || '',
-          ContactPersonPhone: data.Company?.ContactPersonPhone || '',
-          LogoUrl: data.Company?.LogoUrl || '',
+          ContactPersonRole: data.Company?.ContactPersonRole || null,
+          ContactPersonPhone: data.Company?.ContactPersonPhone || null,
+          LogoUrl: data.Company?.LogoUrl || null,
         },
-        TenantAdmin: {
-          FirstName: data.TenantAdmin?.FirstName || '',
-          LastName: data.TenantAdmin?.LastName || '',
-          Email: data.TenantAdmin?.Email || '',
-          PhoneNumber: data.TenantAdmin?.PhoneNumber || '',
+        TenantAdmin: data.TenantAdmin ? {
+          FirstName: data.TenantAdmin.FirstName || '',
+          LastName: data.TenantAdmin.LastName || '',
+          Email: data.TenantAdmin.Email || '',
+          PhoneNumber: data.TenantAdmin.PhoneNumber || '',
           Password: '', // Password is never returned from API for security
-        },
+        } : null,
       });
 
       setEditingTenantId(tenantId);
@@ -338,8 +344,8 @@ export default function ProjectsTab() {
     // a variant for updates or we can just validate the company fields locally.
 
     // For simplicity, we'll validate the basic requirements
-    if (!formData.Name.trim() || !formData.Slug.trim()) {
-      toast.error('Name and slug are required');
+    if (!formData.Company.Name.trim() || !formData.Slug.trim()) {
+      toast.error('Company name and slug are required');
       return;
     }
 
@@ -349,6 +355,7 @@ export default function ProjectsTab() {
     try {
       const updateData = {
         ...formData,
+        Name: formData.Company.Name, // Auto-set project name to company name
         TenantAdmin: null, // Ensure TenantAdmin is null for updates
       };
 
@@ -412,21 +419,7 @@ export default function ProjectsTab() {
           </div>
           <form onSubmit={isEditMode ? handleUpdateSubmit : handleSubmit} className={styles.form}>
             <div className={styles.formGrid}>
-              {/* Project Name */}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Project Name <span className={styles.required}></span>
-                </label>
-                <input
-                  type="text"
-                  name="Name"
-                  value={formData.Name}
-                  onChange={handleInputChange}
-                  className={styles.input}
-                  placeholder="Enter project name"
-                  required
-                />
-              </div>
+              {/* Project Name - Hidden, auto-set to Company Name */}
 
               {/* Company Name */}
               <div className={styles.formGroup}>
@@ -447,7 +440,7 @@ export default function ProjectsTab() {
               {/* Slug */}
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Company Slug <span className={styles.required}></span>
+                  Company Code <span className={styles.required}></span>
                 </label>
                 <input
                   type="text"
@@ -455,12 +448,12 @@ export default function ProjectsTab() {
                   value={formData.Slug}
                   onChange={handleInputChange}
                   className={styles.input}
-                  placeholder="Enter company slug (e.g., company-name)"
+                  placeholder="Enter company Code (e.g., company-name)"
                   required
                 />
               </div>
 
-              {/* Description */}
+              {/* Description
               <div className={styles.formGroup}>
                 <label className={styles.label}>Description</label>
                 <textarea
@@ -471,22 +464,20 @@ export default function ProjectsTab() {
                   placeholder="Enter company description"
                   rows={3}
                 />
-              </div>
+              </div> */}
 
               {/* Number of Employees */}
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Number of Employees <span className={styles.required}></span>
+                  Number of Employees
                 </label>
                 <input
                   type="number"
                   name="Company.NumberOfEmployees"
-                  value={formData.Company.NumberOfEmployees}
+                  value={formData.Company.NumberOfEmployees ?? ''}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter number of employees"
-                  required
-                  min="1"
                 />
               </div>
 
@@ -495,21 +486,40 @@ export default function ProjectsTab() {
                 <label className={styles.label}>
                   Industry <span className={styles.required}></span>
                 </label>
-                <input
-                  type="text"
+                <select
                   name="Company.Industry"
                   value={formData.Company.Industry}
                   onChange={handleInputChange}
                   className={styles.input}
-                  placeholder="Enter industry"
                   required
-                />
+                >
+                  <option value="">Select Industry</option>
+                  <option value="Technology">Technology</option>
+                  <option value="Healthcare">Healthcare</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Education">Education</option>
+                  <option value="Manufacturing">Manufacturing</option>
+                  <option value="Retail">Retail</option>
+                  <option value="Real Estate">Real Estate</option>
+                  <option value="Hospitality">Hospitality</option>
+                  <option value="Transportation">Transportation</option>
+                  <option value="Energy">Energy</option>
+                  <option value="Media & Entertainment">Media & Entertainment</option>
+                  <option value="Telecommunications">Telecommunications</option>
+                  <option value="Agriculture">Agriculture</option>
+                  <option value="Construction">Construction</option>
+                  <option value="Legal">Legal</option>
+                  <option value="Consulting">Consulting</option>
+                  <option value="Non-Profit">Non-Profit</option>
+                  <option value="Government">Government</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
 
               {/* Location */}
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Location <span className={styles.required}></span>
+                  City <span className={styles.required}></span>
                 </label>
                 <input
                   type="text"
@@ -517,7 +527,7 @@ export default function ProjectsTab() {
                   value={formData.Company.Location}
                   onChange={handleInputChange}
                   className={styles.input}
-                  placeholder="Enter location"
+                  placeholder="Enter City"
                   required
                 />
               </div>
@@ -557,16 +567,14 @@ export default function ProjectsTab() {
               {/* Contact Person Role */}
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Contact Person Role <span className={styles.required}></span>
-                </label>
+                  Contact Person Role</label>
                 <input
                   type="text"
                   name="Company.ContactPersonRole"
-                  value={formData.Company.ContactPersonRole}
+                  value={formData.Company.ContactPersonRole ?? ''}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter contact person role"
-                  required
                 />
               </div>
 
@@ -578,124 +586,113 @@ export default function ProjectsTab() {
                 <input
                   type="tel"
                   name="Company.ContactPersonPhone"
-                  value={formData.Company.ContactPersonPhone}
+                  value={formData.Company.ContactPersonPhone ?? ''}
                   onChange={handleInputChange}
                   className={styles.input}
                   placeholder="Enter contact person phone (e.g., +1234567890)"
-                  required
                 />
               </div>
 
               {/* Company Logo - Only show in create mode */}
-               
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Company Logo</label>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    className={styles.input}
-                    disabled={isUploadingLogo || isLoading}
-                  />
-                  {isUploadingLogo && (
-                    <p style={{ marginTop: '8px', color: '#7c3aed' }}>Uploading logo...</p>
-                  )}
-                  {logoPreview && (
-                    <div className={styles.logoPreviewWrapper}>
-                      <img
-                        src={logoPreview}
-                        alt="Logo preview"
-                        className={styles.logoPreviewImg}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleRemoveLogo}
-                        className={styles.removeLogoBtn}
-                      >
-                        Remove Logo
-                      </button>
-                    </div>
-                  )}
-                </div>
-              
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Company Logo</label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className={styles.input}
+                  disabled={isUploadingLogo || isLoading}
+                />
+                {isUploadingLogo && (
+                  <p style={{ marginTop: '8px', color: '#7c3aed' }}>Uploading logo...</p>
+                )}
+                {logoPreview && (
+                  <div className={styles.logoPreviewWrapper}>
+                    <img
+                      src={logoPreview}
+                      alt="Logo preview"
+                      className={styles.logoPreviewImg}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveLogo}
+                      className={styles.removeLogoBtn}
+                    >
+                      Remove Logo
+                    </button>
+                  </div>
+                )}
+              </div>
+
 
               {/* Admin Details - Only show in create mode */}
               {!editingTenantId && (
                 <>
                   <div className={styles.formGroup}>
                     <label className={styles.label}>
-                      Admin First Name <span className={styles.required}></span>
-                    </label>
+                      Admin First Name</label>
                     <input
                       type="text"
                       name="TenantAdmin.FirstName"
-                      value={formData.TenantAdmin.FirstName}
+                      value={formData.TenantAdmin?.FirstName ?? ''}
                       onChange={handleInputChange}
                       className={styles.input}
                       placeholder="Enter admin first name"
-                      required
                     />
                   </div>
 
                   <div className={styles.formGroup}>
                     <label className={styles.label}>
-                      Admin Last Name <span className={styles.required}></span>
-                    </label>
+                      Admin Last Name </label>
                     <input
                       type="text"
                       name="TenantAdmin.LastName"
-                      value={formData.TenantAdmin.LastName}
+                      value={formData.TenantAdmin?.LastName ?? ''}
                       onChange={handleInputChange}
                       className={styles.input}
                       placeholder="Enter admin last name"
-                      required
                     />
                   </div>
 
                   <div className={styles.formGroup}>
                     <label className={styles.label}>
-                      Admin Email <span className={styles.required}></span>
-                    </label>
+                      Admin Email </label>
                     <input
                       type="email"
                       name="TenantAdmin.Email"
-                      value={formData.TenantAdmin.Email}
+                      value={formData.TenantAdmin?.Email ?? ''}
                       onChange={handleInputChange}
                       className={styles.input}
                       placeholder="Enter admin email"
-                      required
                     />
                   </div>
 
                   <div className={styles.formGroup}>
                     <label className={styles.label}>
-                      Admin Phone Number <span className={styles.required}></span>
-                    </label>
+                      Admin Phone Number </label>
                     <input
                       type="tel"
                       name="TenantAdmin.PhoneNumber"
-                      value={formData.TenantAdmin.PhoneNumber}
+                      value={formData.TenantAdmin?.PhoneNumber ?? ''}
                       onChange={handleInputChange}
                       className={styles.input}
                       placeholder="Enter admin phone (e.g., +1234567890)"
-                      required
                     />
                   </div>
 
                   <div className={styles.formGroup}>
                     <label className={styles.label}>
-                      Admin Password <span className={styles.required}></span>
-                    </label>
+                      Admin Password                    </label>
                     <div className={styles.passwordContainer}>
                       <input
                         type={showPassword ? "text" : "password"}
                         name="TenantAdmin.Password"
-                        value={formData.TenantAdmin.Password}
+                        value={formData.TenantAdmin?.Password ?? ''}
                         onChange={handleInputChange}
                         className={styles.input}
                         placeholder="Enter admin password"
-                        required
                         minLength={6}
                       />
                       <button
@@ -739,9 +736,6 @@ export default function ProjectsTab() {
 
       {/* Projects List */}
       <div className={styles.companiesCard}>
-        <div className={styles.companiesHeader}>
-          <h3 className={styles.companiesTitle}>Companies List</h3>
-        </div>
         <div className={styles.tableContainer}>
           <table className={styles.table}>
             <thead className={styles.tableHead}>

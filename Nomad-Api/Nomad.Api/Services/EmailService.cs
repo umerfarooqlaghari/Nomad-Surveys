@@ -46,14 +46,6 @@ public class EmailService : IEmailService
         return await SendEmailAsync(toEmail, subject, htmlBody, evaluatorName);
     }
 
-    public async Task<bool> SendBulkFormAssignmentEmailAsync(string toEmail, string evaluatorName, int formCount, string formTitle, string dashboardLink, string tenantName)
-    {
-        var subject = $"New Forms Assigned: {formTitle}";
-        var htmlBody = GenerateBulkFormAssignmentEmailHtml(evaluatorName, formCount, formTitle, dashboardLink, tenantName);
-
-        return await SendEmailAsync(toEmail, subject, htmlBody, evaluatorName);
-    }
-
     public async Task<bool> SendFormReminderEmailAsync(string toEmail, string evaluatorName, string subjectName, string formTitle, string formLink, string dueDate, string tenantName)
     {
         var subject = $"Reminder: Complete {formTitle}";
@@ -244,77 +236,6 @@ public class EmailService : IEmailService
 </html>";
     }
 
-    private string GenerateBulkFormAssignmentEmailHtml(string evaluatorName, int formCount, string formTitle, string dashboardLink, string tenantName)
-    {
-        return $@"
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset=""UTF-8"">
-    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>New Forms Assigned</title>
-</head>
-<body style=""margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;"">
-    <table role=""presentation"" style=""width: 100%; border-collapse: collapse;"">
-        <tr>
-            <td align=""center"" style=""padding: 40px 0;"">
-                <table role=""presentation"" style=""width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"">
-                    <!-- Header -->
-                    <tr>
-                        <td style=""padding: 40px 40px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;"">
-                            <h1 style=""margin: 0; font-size: 24px; font-weight: 600; color: #111827;"">{tenantName}</h1>
-                        </td>
-                    </tr>
-
-                    <!-- Content -->
-                    <tr>
-                        <td style=""padding: 40px;"">
-                            <h2 style=""margin: 0 0 16px; font-size: 20px; font-weight: 600; color: #111827;"">Multiple Forms Assigned</h2>
-                            <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                Hello {evaluatorName},
-                            </p>
-                            <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                You have been assigned <strong>{formCount}</strong> new evaluation forms for the survey: <strong>{formTitle}</strong>.
-                            </p>
-
-                            <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                Please visit your dashboard to view and complete all your assigned evaluations.
-                            </p>
-
-                            <!-- CTA Button -->
-                            <table role=""presentation"" style=""margin: 0 0 24px;"">
-                                <tr>
-                                    <td style=""border-radius: 6px; background-color: #3b82f6;"">
-                                        <a href=""{dashboardLink}"" style=""display: inline-block; padding: 12px 32px; font-size: 15px; font-weight: 500; color: #ffffff; text-decoration: none;"">
-                                            View All My Forms
-                                        </a>
-                                    </td>
-                                </tr>
-                            </table>
-
-                            <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af;"">
-                                If the button doesn't work, copy and paste this link into your browser:<br>
-                                <a href=""{dashboardLink}"" style=""color: #3b82f6; text-decoration: none;"">{dashboardLink}</a>
-                            </p>
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style=""padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;"">
-                            <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af; text-align: center;"">
-                                This is an automated message from Nomad Surveys. Please do not reply to this email.
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>";
-    }
-
     private string GenerateFormReminderEmailHtml(string evaluatorName, string subjectName, string formTitle, string formLink, string dueDate, string tenantName)
     {
         return $@"
@@ -402,6 +323,76 @@ public class EmailService : IEmailService
     </table>
 </body>
 </html>";
+    }
+    public async Task<bool> SendBulkFormAssignmentEmailAsync(string toEmail, string evaluatorName, int formCount, string formTitle, string dashboardLink, string tenantName)
+    {
+        var subject = $"You Have {formCount} New Forms Assigned: {formTitle}";
+        var htmlBody = GenerateBulkFormAssignmentEmailHtml(evaluatorName, formCount, formTitle, dashboardLink, tenantName);
+
+        return await SendEmailAsync(toEmail, subject, htmlBody, evaluatorName);
+    }
+
+    private string GenerateBulkFormAssignmentEmailHtml(string evaluatorName, int formCount, string formTitle, string dashboardLink, string tenantName)
+    {
+        return $@"
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset=""UTF-8"">
+        <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+        <title>Bulk Form Assignment</title>
+    </head>
+    <body style=""margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;"">
+        <table role=""presentation"" style=""width: 100%; border-collapse: collapse;"">
+            <tr>
+                <td align=""center"" style=""padding: 40px 0;"">
+                    <table role=""presentation"" style=""width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"">
+                        <!-- Header -->
+                        <tr>
+                            <td style=""padding: 40px 40px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;"">
+                                <h1 style=""margin: 0; font-size: 24px; font-weight: 600; color: #111827;"">{tenantName}</h1>
+                            </td>
+                        </tr>
+                        <!-- Content -->
+                        <tr>
+                            <td style=""padding: 40px;"">
+                                <h2 style=""margin: 0 0 16px; font-size: 20px; font-weight: 600; color: #111827;"">You Have {formCount} New Forms Assigned</h2>
+                                <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
+                                    Hello {evaluatorName},
+                                </p>
+                                <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
+                                    You have been assigned <strong>{formCount}</strong> new evaluation forms titled <strong>{formTitle}</strong>. Please visit your dashboard to review and complete them.
+                                </p>
+                                <!-- CTA Button -->
+                                <table role=""presentation"" style=""margin: 0 0 24px;"">
+                                    <tr>
+                                        <td style=""border-radius: 6px; background-color: #3b82f6;"">
+                                            <a href=""{dashboardLink}"" style=""display: inline-block; padding: 12px 32px; font-size: 15px; font-weight: 500; color: #ffffff; text-decoration: none;"">
+                                                Go to Dashboard
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af;"">
+                                    If the button doesn't work, copy and paste this link into your browser:<br>
+                                    <a href=""{dashboardLink}"" style=""color: #3b82f6; text-decoration: none;"">{dashboardLink}</a>
+                                </p>
+                            </td>
+                        </tr>
+                        <!-- Footer -->
+                        <tr>
+                            <td style=""padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;"">
+                                <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af; text-align: center;"">
+                                    This is an automated message from Nomad Surveys. Please do not reply to this email.
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>";
     }
 }
 

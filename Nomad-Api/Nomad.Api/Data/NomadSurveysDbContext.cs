@@ -103,7 +103,7 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
             entity.Property(e => e.Industry).IsRequired().HasMaxLength(100);
             entity.Property(e => e.ContactPersonName).IsRequired().HasMaxLength(100);
             entity.Property(e => e.ContactPersonEmail).IsRequired().HasMaxLength(255);
-            entity.Property(e => e.ContactPersonRole).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.ContactPersonRole).HasMaxLength(100);
             entity.Property(e => e.ContactPersonPhone).HasMaxLength(20);
             entity.Property(e => e.LogoUrl).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
