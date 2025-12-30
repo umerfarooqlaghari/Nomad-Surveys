@@ -77,22 +77,28 @@ public class TenantService : ITenantService
             _context.Companies.Add(company);
             await _context.SaveChangesAsync();
 
-            // Create tenant admin user
-            var createUserRequest = new CreateUserRequest
+            // Create tenant admin user if data is provided
+            ApplicationUser? tenantAdmin = null;
+            if (request.TenantAdmin != null && 
+                !string.IsNullOrWhiteSpace(request.TenantAdmin.Email) && 
+                !string.IsNullOrWhiteSpace(request.TenantAdmin.Password))
             {
-                FirstName = request.TenantAdmin.FirstName,
-                LastName = request.TenantAdmin.LastName,
-                Email = request.TenantAdmin.Email,
-                PhoneNumber = request.TenantAdmin.PhoneNumber,
-                Password = request.TenantAdmin.Password,
-                Roles = new List<string> { "TenantAdmin" }
-            };
+                var createUserRequest = new CreateUserRequest
+                {
+                    FirstName = request.TenantAdmin.FirstName ?? string.Empty,
+                    LastName = request.TenantAdmin.LastName ?? string.Empty,
+                    Email = request.TenantAdmin.Email,
+                    PhoneNumber = request.TenantAdmin.PhoneNumber,
+                    Password = request.TenantAdmin.Password,
+                    Roles = new List<string> { "TenantAdmin" }
+                };
 
-            var tenantAdmin = await _authenticationService.CreateUserAsync(createUserRequest, tenant.Id);
+                var createdTenantAdmin = await _authenticationService.CreateUserAsync(createUserRequest, tenant.Id);
 
-            // Update company with contact person
-            company.ContactPersonId = tenantAdmin.Id;
-            await _context.SaveChangesAsync();
+                // Update company with contact person if admin was created
+                company.ContactPersonId = createdTenantAdmin.Id;
+                await _context.SaveChangesAsync();
+            }
 
             await transaction.CommitAsync();
 

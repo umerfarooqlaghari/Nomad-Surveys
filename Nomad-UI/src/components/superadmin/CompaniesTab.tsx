@@ -49,24 +49,24 @@ export default function CompaniesTab() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
-    if (name.startsWith('company.')) {
-      const fieldName = name.replace('company.', '');
+
+    if (name.startsWith('Company.')) {
+      const fieldName = name.replace('Company.', '');
       setFormData(prev => ({
         ...prev,
-        company: {
+        Company: {
           ...prev.Company,
-          [fieldName]: fieldName === 'numberOfEmployees' ? parseInt(value) || 1 : value,
+          [fieldName]: fieldName === 'NumberOfEmployees' ? (value ? parseInt(value) : null) : value,
         },
       }));
-    } else if (name.startsWith('tenantAdmin.')) {
-      const fieldName = name.replace('tenantAdmin.', '');
+    } else if (name.startsWith('TenantAdmin.')) {
+      const fieldName = name.replace('TenantAdmin.', '');
       setFormData(prev => ({
         ...prev,
-        tenantAdmin: {
+        TenantAdmin: prev.TenantAdmin ? {
           ...prev.TenantAdmin,
           [fieldName]: value,
-        },
+        } : { [fieldName]: value } as any,
       }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
@@ -77,11 +77,11 @@ export default function CompaniesTab() {
     const name = e.target.value;
     setFormData(prev => ({
       ...prev,
-      name,
-      slug: tenantService.generateSlug(name),
-      company: {
+      Name: name,
+      Slug: tenantService.generateSlug(name),
+      Company: {
         ...prev.Company,
-        name, // Auto-sync organization name with company name
+        Name: name, // Auto-sync organization name with company name
       },
     }));
   };
@@ -90,29 +90,31 @@ export default function CompaniesTab() {
     setFormData(prev => {
       const updatedData = {
         ...prev,
-        tenantAdmin: {
+        TenantAdmin: prev.TenantAdmin ? {
           ...prev.TenantAdmin,
           [field]: value,
-        },
+        } : { [field]: value } as any,
       };
 
-      // Auto-sync tenant admin fields with contact person fields
-      if (field === 'firstName' || field === 'lastName') {
-        const fullName = `${updatedData.tenantAdmin.FirstName} ${updatedData.tenantAdmin.LastName}`.trim();
-        updatedData.Company = {
-          ...updatedData.Company,
-          ContactPersonName: fullName,
-        };
-      } else if (field === 'email') {
-        updatedData.Company = {
-          ...updatedData.Company,
-          ContactPersonEmail: value,
-        };
-      } else if (field === 'phoneNumber') {
-        updatedData.Company = {
-          ...updatedData.Company,
-          ContactPersonPhone: value,
-        };
+      // Auto-sync tenant admin fields with contact person fields if TenantAdmin exists
+      if (updatedData.TenantAdmin) {
+        if (field === 'FirstName' || field === 'LastName') {
+          const fullName = `${updatedData.TenantAdmin.FirstName || ''} ${updatedData.TenantAdmin.LastName || ''}`.trim();
+          updatedData.Company = {
+            ...updatedData.Company,
+            ContactPersonName: fullName,
+          };
+        } else if (field === 'Email') {
+          updatedData.Company = {
+            ...updatedData.Company,
+            ContactPersonEmail: value,
+          };
+        } else if (field === 'PhoneNumber') {
+          updatedData.Company = {
+            ...updatedData.Company,
+            ContactPersonPhone: value,
+          };
+        }
       }
 
       return updatedData;
@@ -189,22 +191,22 @@ export default function CompaniesTab() {
         Description: data.Description || '',
         Company: {
           Name: data.Company?.Name || '',
-          NumberOfEmployees: data.Company?.NumberOfEmployees || 0,
+          NumberOfEmployees: data.Company?.NumberOfEmployees ?? null,
           Location: data.Company?.Location || '',
           Industry: data.Company?.Industry || '',
           ContactPersonName: data.Company?.ContactPersonName || '',
           ContactPersonEmail: data.Company?.ContactPersonEmail || '',
-          ContactPersonRole: data.Company?.ContactPersonRole || '',
-          ContactPersonPhone: data.Company?.ContactPersonPhone || '',
-          LogoUrl: data.Company?.LogoUrl || '',
+          ContactPersonRole: data.Company?.ContactPersonRole || null,
+          ContactPersonPhone: data.Company?.ContactPersonPhone || null,
+          LogoUrl: data.Company?.LogoUrl || null,
         },
-        TenantAdmin: {
-          FirstName: adminFirstName,
-          LastName: adminLastName,
-          Email: adminEmail,
-          PhoneNumber: adminPhone,
-          Password: '', // Password is never returned from API for security
-        },
+        TenantAdmin: data.TenantAdmin ? {
+          FirstName: data.TenantAdmin.FirstName || '',
+          LastName: data.TenantAdmin.LastName || '',
+          Email: data.TenantAdmin.Email || '',
+          PhoneNumber: data.TenantAdmin.PhoneNumber || '',
+          Password: '',
+        } : null,
       });
 
       setEditingTenantId(tenantId);
@@ -313,14 +315,14 @@ export default function CompaniesTab() {
             <div className={styles.formGrid}>
               {/* Tenant Information */}
               <div className={styles.formSection}>
-                
+
                 <div className={styles.fieldGroup}>
                   <label className={`${styles.label} ${styles.required}`}>
                     Organization Name
                   </label>
                   <input
                     type="text"
-                    name="name"
+                    name="Name"
                     value={formData.Name}
                     onChange={handleNameChange}
                     required
@@ -335,7 +337,7 @@ export default function CompaniesTab() {
                   </label>
                   <input
                     type="text"
-                    name="slug"
+                    name="Slug"
                     value={formData.Slug}
                     onChange={handleInputChange}
                     required
@@ -349,7 +351,7 @@ export default function CompaniesTab() {
                     Description
                   </label>
                   <textarea
-                    name="description"
+                    name="Description"
                     value={formData.Description}
                     onChange={handleInputChange}
                     className={styles.textarea}
@@ -364,16 +366,14 @@ export default function CompaniesTab() {
                 {/* Company Name is auto-synced with Organization Name - hidden from UI */}
 
                 <div className={styles.fieldGroup}>
-                  <label className={`${styles.label} ${styles.required}`}>
+                  <label className={styles.label}>
                     Number of Employees
                   </label>
                   <input
                     type="number"
-                    name="company.numberOfEmployees"
-                    value={formData.Company.NumberOfEmployees}
+                    name="Company.NumberOfEmployees"
+                    value={formData.Company.NumberOfEmployees ?? ''}
                     onChange={handleInputChange}
-                    required
-                    min="1"
                     className={styles.input}
                     placeholder="Number of employees"
                   />
@@ -385,7 +385,7 @@ export default function CompaniesTab() {
                   </label>
                   <input
                     type="text"
-                    name="company.location"
+                    name="Company.Location"
                     value={formData.Company.Location}
                     onChange={handleInputChange}
                     required
@@ -399,7 +399,7 @@ export default function CompaniesTab() {
                     Industry
                   </label>
                   <select
-                    name="company.industry"
+                    name="Company.Industry"
                     value={formData.Company.Industry}
                     onChange={handleInputChange}
                     required
@@ -442,15 +442,14 @@ export default function CompaniesTab() {
                     </div>
 
                     <div className={styles.fieldGroup}>
-                      <label className={`${styles.label} ${styles.required}`}>
+                      <label className={styles.label}>
                         Contact Person Role
                       </label>
                       <input
                         type="text"
-                        name="company.contactPersonRole"
-                        value={formData.Company.ContactPersonRole}
+                        name="Company.ContactPersonRole"
+                        value={formData.Company.ContactPersonRole ?? ''}
                         onChange={handleInputChange}
-                        required
                         className={styles.input}
                         placeholder="e.g., HR Manager, CEO"
                       />
@@ -460,15 +459,14 @@ export default function CompaniesTab() {
                   <>
                     {/* In create mode, only show role - name, email, phone are auto-synced from Tenant Admin */}
                     <div className={styles.fieldGroup}>
-                      <label className={`${styles.label} ${styles.required}`}>
+                      <label className={styles.label}>
                         Contact Person Role
                       </label>
                       <input
                         type="text"
-                        name="company.contactPersonRole"
-                        value={formData.Company.ContactPersonRole}
+                        name="Company.ContactPersonRole"
+                        value={formData.Company.ContactPersonRole ?? ''}
                         onChange={handleInputChange}
-                        required
                         className={styles.input}
                         placeholder="e.g., HR Manager, CEO"
                       />
@@ -482,92 +480,88 @@ export default function CompaniesTab() {
             {!isEditMode && (
               <div className={styles.formSection}>
                 <h4 className={styles.sectionTitle}>Tenant Admin Account</h4>
-              <div className={styles.formGrid}>
-                <div className={styles.fieldGroup}>
-                  <label className={`${styles.label} ${styles.required}`}>
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.TenantAdmin.FirstName}
-                    onChange={(e) => handleTenantAdminChange('firstName', e.target.value)}
-                    required={!isEditMode}
-                    className={styles.input}
-                    placeholder="First name"
-                  />
-                </div>
+                <div className={styles.formGrid}>
+                  <div className={styles.fieldGroup}>
+                    <label className={styles.label}>
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.TenantAdmin?.FirstName ?? ''}
+                      onChange={(e) => handleTenantAdminChange('FirstName', e.target.value)}
+                      className={styles.input}
+                      placeholder="First name"
+                    />
+                  </div>
 
-                <div className={styles.fieldGroup}>
-                  <label className={`${styles.label} ${styles.required}`}>
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.TenantAdmin.LastName}
-                    onChange={(e) => handleTenantAdminChange('lastName', e.target.value)}
-                    required={!isEditMode}
-                    className={styles.input}
-                    placeholder="Last name"
-                  />
-                </div>
+                  <div className={styles.fieldGroup}>
+                    <label className={styles.label}>
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.TenantAdmin?.LastName ?? ''}
+                      onChange={(e) => handleTenantAdminChange('LastName', e.target.value)}
+                      className={styles.input}
+                      placeholder="Last name"
+                    />
+                  </div>
 
-                <div className={styles.fieldGroup}>
-                  <label className={`${styles.label} ${styles.required}`}>
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.TenantAdmin.Email}
-                    onChange={(e) => handleTenantAdminChange('email', e.target.value)}
-                    required={!isEditMode}
-                    className={styles.input}
-                    placeholder="admin@company.com"
-                  />
-                </div>
+                  <div className={styles.fieldGroup}>
+                    <label className={styles.label}>
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={formData.TenantAdmin?.Email ?? ''}
+                      onChange={(e) => handleTenantAdminChange('Email', e.target.value)}
+                      className={styles.input}
+                      placeholder="admin@company.com"
+                    />
+                  </div>
 
-                {/* Phone Number and Password - Only show in create mode */}
-                {!isEditMode && (
-                  <>
-                    <div className={styles.fieldGroup}>
-                      <label className={styles.label}>
-                        Phone Number
-                      </label>
-                      <input
-                        type="tel"
-                        value={formData.TenantAdmin.PhoneNumber}
-                        onChange={(e) => handleTenantAdminChange('phoneNumber', e.target.value)}
-                        className={styles.input}
-                        placeholder="+1 (555) 123-4567"
-                      />
-                    </div>
-
-                    <div className={styles.fieldGroup}>
-                      <label className={`${styles.label} ${styles.required}`}>
-                        Password
-                      </label>
-                      <div className={styles.passwordContainer}>
+                  {/* Phone Number and Password - Only show in create mode */}
+                  {!isEditMode && (
+                    <>
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.label}>
+                          Phone Number
+                        </label>
                         <input
-                          type={showPassword ? "text" : "password"}
-                          value={formData.TenantAdmin.Password}
-                          onChange={(e) => handleTenantAdminChange('password', e.target.value)}
-                          required
-                          minLength={6}
+                          type="tel"
+                          value={formData.TenantAdmin?.PhoneNumber ?? ''}
+                          onChange={(e) => handleTenantAdminChange('PhoneNumber', e.target.value)}
                           className={styles.input}
-                          placeholder="Minimum 6 characters"
+                          placeholder="+1 (555) 123-4567"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className={styles.passwordToggle}
-                        >
-                          {showPassword ? 'HIDE' : 'SHOW'}
-                        </button>
                       </div>
-                    </div>
-                  </>
-                )}
+
+                      <div className={styles.fieldGroup}>
+                        <label className={`${styles.label} ${styles.required}`}>
+                          Password
+                        </label>
+                        <div className={styles.passwordContainer}>
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            value={formData.TenantAdmin?.Password ?? ''}
+                            onChange={(e) => handleTenantAdminChange('Password', e.target.value)}
+                            minLength={6}
+                            className={styles.input}
+                            placeholder="Minimum 6 characters"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className={styles.passwordToggle}
+                          >
+                            {showPassword ? 'HIDE' : 'SHOW'}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
             )}
           </form>
 
@@ -660,9 +654,8 @@ export default function CompaniesTab() {
                     <td className={styles.tableCell}>{tenant.Slug}</td>
                     <td className={styles.tableCell}>{tenant.UserCount}</td>
                     <td className={styles.tableCell}>
-                      <span className={`${styles.statusBadge} ${
-                        tenant.IsActive ? styles.statusActive : styles.statusInactive
-                      }`}>
+                      <span className={`${styles.statusBadge} ${tenant.IsActive ? styles.statusActive : styles.statusInactive
+                        }`}>
                         {tenant.IsActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>

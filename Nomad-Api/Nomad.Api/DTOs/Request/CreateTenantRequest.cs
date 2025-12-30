@@ -19,8 +19,7 @@ public class CreateTenantRequest
     [Required]
     public CreateCompanyRequest Company { get; set; } = null!;
     
-    [Required]
-    public CreateTenantAdminRequest TenantAdmin { get; set; } = null!;
+    public CreateTenantAdminRequest? TenantAdmin { get; set; }
 }
 
 public class CreateCompanyRequest
@@ -29,9 +28,8 @@ public class CreateCompanyRequest
     [StringLength(200, MinimumLength = 2)]
     public string Name { get; set; } = string.Empty;
     
-    [Required]
     [Range(1, int.MaxValue)]
-    public int NumberOfEmployees { get; set; }
+    public int? NumberOfEmployees { get; set; }
     
     [Required]
     [StringLength(200, MinimumLength = 2)]
@@ -50,9 +48,8 @@ public class CreateCompanyRequest
     [StringLength(255)]
     public string ContactPersonEmail { get; set; } = string.Empty;
     
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
-    public string ContactPersonRole { get; set; } = string.Empty;
+    [StringLength(100)]
+    public string? ContactPersonRole { get; set; }
     
     [Phone]
     [StringLength(20)]
@@ -64,34 +61,30 @@ public class CreateCompanyRequest
 
 public class CreateTenantAdminRequest
 {
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
-    public string FirstName { get; set; } = string.Empty;
+    [StringLength(100)]
+    public string? FirstName { get; set; }
 
-    [Required]
-    [StringLength(100, MinimumLength = 2)]
-    public string LastName { get; set; } = string.Empty;
+    [StringLength(100)]
+    public string? LastName { get; set; }
 
-    [Required]
     [EmailAddress]
     [StringLength(255)]
-    public string Email { get; set; } = string.Empty;
+    public string? Email { get; set; }
 
     [Phone]
     [StringLength(20)]
     public string? PhoneNumber { get; set; }
 
-    [Required]
-    [StringLength(100, MinimumLength = 6)]
-    public string Password { get; set; } = string.Empty;
+    [StringLength(100)]
+    public string? Password { get; set; }
 }
 
 public class UpdateTenantAdminRequest
 {
-    [StringLength(100, MinimumLength = 2)]
+    [StringLength(100)]
     public string? FirstName { get; set; }
 
-    [StringLength(100, MinimumLength = 2)]
+    [StringLength(100)]
     public string? LastName { get; set; }
 
     [EmailAddress]

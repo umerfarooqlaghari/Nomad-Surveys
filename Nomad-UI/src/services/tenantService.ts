@@ -8,22 +8,22 @@ export interface CreateTenantData {
   Description: string;
   Company: {
     Name: string;
-    NumberOfEmployees: number;
+    NumberOfEmployees: number | null;
     Location: string;
     Industry: string;
     ContactPersonName: string;
     ContactPersonEmail: string;
-    ContactPersonRole: string;
-    ContactPersonPhone: string;
-    LogoUrl: string;
+    ContactPersonRole: string | null;
+    ContactPersonPhone: string | null;
+    LogoUrl: string | null;
   };
   TenantAdmin: {
-    FirstName: string;
-    LastName: string;
-    Email: string;
-    PhoneNumber: string;
-    Password: string;
-  };
+    FirstName: string | null;
+    LastName: string | null;
+    Email: string | null;
+    PhoneNumber: string | null;
+    Password: string | null;
+  } | null;
 }
 
 export interface TenantListItem {
@@ -48,12 +48,12 @@ export interface TenantResponse {
   Company?: {
     Id: string;
     Name: string;
-    NumberOfEmployees: number;
+    NumberOfEmployees?: number;
     Location: string;
     Industry: string;
     ContactPersonName: string;
     ContactPersonEmail: string;
-    ContactPersonRole: string;
+    ContactPersonRole?: string;
     ContactPersonPhone: string;
     LogoUrl?: string;
     ContactPerson?: {
@@ -97,20 +97,20 @@ export interface UpdateTenantData {
   Description: string;
   Company: {
     Name: string;
-    NumberOfEmployees: number;
+    NumberOfEmployees: number | null;
     Location: string;
     Industry: string;
     ContactPersonName: string;
     ContactPersonEmail: string;
-    ContactPersonRole: string;
-    ContactPersonPhone: string;
-    LogoUrl: string;
+    ContactPersonRole: string | null;
+    ContactPersonPhone: string | null;
+    LogoUrl: string | null;
   };
   // TenantAdmin is nullable since admin details are not editable in the UI during updates
   TenantAdmin: {
-    FirstName: string;
-    LastName: string;
-    Email: string;
+    FirstName: string | null;
+    LastName: string | null;
+    Email: string | null;
     // Password and PhoneNumber are NOT included in updates
   } | null;
 }
@@ -146,7 +146,8 @@ class TenantService {
    * Create a new tenant (SuperAdmin only)
    */
   async createTenant(data: CreateTenantData, token: string): Promise<{ data: TenantResponse | null; error: string | null }> {
-    const response = await apiClient.post<TenantResponse>(this.endpoint, data, token);
+    const cleanedData = this.cleanData(data);
+    const response = await apiClient.post<TenantResponse>(this.endpoint, cleanedData, token);
     return handleApiResponse(response);
   }
 
@@ -154,7 +155,8 @@ class TenantService {
    * Update tenant (SuperAdmin only)
    */
   async updateTenant(id: string, data: UpdateTenantData, token: string): Promise<{ data: any | null; error: string | null }> {
-    const response = await apiClient.put(`${this.endpoint}/${id}`, data, token);
+    const cleanedData = this.cleanData(data);
+    const response = await apiClient.put(`${this.endpoint}/${id}`, cleanedData, token);
     return handleApiResponse(response);
   }
 
@@ -195,6 +197,24 @@ class TenantService {
   }
 
   /**
+   * Recursively clean data by converting empty strings to null
+   */
+  private cleanData(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj !== 'object') return obj === '' ? null : obj;
+
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.cleanData(item));
+    }
+
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      cleaned[key] = this.cleanData(value);
+    }
+    return cleaned;
+  }
+
+  /**
    * Validate tenant data before submission
    */
   validateTenantData(data: CreateTenantData): { isValid: boolean; errors: string[] } {
@@ -212,26 +232,8 @@ class TenantService {
     if (!data.Company.Name.trim()) {
       errors.push('Company name is required');
     }
-    if (data.Company.NumberOfEmployees < 1) {
-      errors.push('Number of employees must be at least 1');
-    }
-    if (!data.Company.Location.trim()) {
-      errors.push('Company location is required');
-    }
-    if (!data.Company.Industry.trim()) {
-      errors.push('Company industry is required');
-    }
-    if (!data.Company.ContactPersonName.trim()) {
-      errors.push('Contact person name is required');
-    }
     if (!data.Company.ContactPersonEmail.trim()) {
       errors.push('Contact person email is required');
-    }
-    if (!data.Company.ContactPersonRole.trim()) {
-      errors.push('Contact person role is required');
-    }
-    if (!data.Company.ContactPersonPhone.trim()) {
-      errors.push('Contact person phone number is required');
     }
 
     // Validate email format
@@ -240,24 +242,13 @@ class TenantService {
       errors.push('Contact person email format is invalid');
     }
 
-    // Validate tenant admin
-    if (!data.TenantAdmin.FirstName.trim()) {
-      errors.push('Tenant admin first name is required');
-    }
-    if (!data.TenantAdmin.LastName.trim()) {
-      errors.push('Tenant admin last name is required');
-    }
-    if (!data.TenantAdmin.Email.trim()) {
-      errors.push('Tenant admin email is required');
-    }
-    if (data.TenantAdmin.Email && !emailRegex.test(data.TenantAdmin.Email)) {
-      errors.push('Tenant admin email format is invalid');
-    }
-    if (!data.TenantAdmin.PhoneNumber.trim()) {
-      errors.push('Tenant admin phone number is required');
-    }
-    if (!data.TenantAdmin.Password || data.TenantAdmin.Password.length < 6) {
-      errors.push('Tenant admin password must be at least 6 characters');
+    if (data.TenantAdmin) {
+      if (data.TenantAdmin.Email && data.TenantAdmin.Email.trim() !== '' && !emailRegex.test(data.TenantAdmin.Email)) {
+        errors.push('Tenant admin email format is invalid');
+      }
+      if (data.TenantAdmin.Password && data.TenantAdmin.Password.trim() !== '' && data.TenantAdmin.Password.length < 6) {
+        errors.push('Tenant admin password must be at least 6 characters');
+      }
     }
 
     // Validate logo URL if provided
@@ -285,21 +276,21 @@ class TenantService {
       Description: '',
       Company: {
         Name: '',
-        NumberOfEmployees: 1,
+        NumberOfEmployees: null,
         Location: '',
         Industry: '',
         ContactPersonName: '',
         ContactPersonEmail: '',
-        ContactPersonRole: '',
-        ContactPersonPhone: '',
-        LogoUrl: '',
+        ContactPersonRole: null,
+        ContactPersonPhone: null,
+        LogoUrl: null,
       },
       TenantAdmin: {
-        FirstName: '',
-        LastName: '',
-        Email: '',
-        PhoneNumber: '',
-        Password: '',
+        FirstName: null,
+        LastName: null,
+        Email: null,
+        PhoneNumber: null,
+        Password: null,
       },
     };
   }

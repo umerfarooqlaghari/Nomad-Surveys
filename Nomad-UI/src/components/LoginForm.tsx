@@ -212,7 +212,7 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
             {!isSuperAdmin && (
               <div className={styles.fieldGroup}>
                 <label htmlFor="tenantSlug" className={styles.label}>
-                  Company ID
+                  Company Code
                 </label>
                 <input
                   id="tenantSlug"
@@ -220,7 +220,7 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
                   type="text"
                   required
                   className={styles.input}
-                  placeholder="Company ID"
+                  placeholder="Company Code"
                   value={tenantSlug}
                   onChange={(e) => setTenantSlug(e.target.value)}
                 />

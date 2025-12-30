@@ -11,7 +11,7 @@ public class Company
     public string Name { get; set; } = string.Empty;
     
     [Range(1, int.MaxValue)]
-    public int NumberOfEmployees { get; set; }
+    public int? NumberOfEmployees { get; set; }
     
     [Required]
     [MaxLength(200)]
@@ -30,9 +30,8 @@ public class Company
     [MaxLength(255)]
     public string ContactPersonEmail { get; set; } = string.Empty;
     
-    [Required]
     [MaxLength(100)]
-    public string ContactPersonRole { get; set; } = string.Empty;
+    public string? ContactPersonRole { get; set; }
     
     [Phone]
     [MaxLength(20)]
