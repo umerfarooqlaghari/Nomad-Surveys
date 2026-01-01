@@ -59,6 +59,9 @@ public class SubjectListResponse
     public DateTime? LastLoginAt { get; set; }
     public Guid TenantId { get; set; }
     public int EvaluatorCount { get; set; }
+    public string EvaluationsReceived { get; set; } = string.Empty;
+    public string EvaluationsCompleted { get; set; } = string.Empty;
+    public bool IsEvaluator { get; set; }
 }
 
 public class EvaluatorResponse
@@ -122,6 +125,9 @@ public class EvaluatorListResponse
     public DateTime? LastLoginAt { get; set; }
     public Guid TenantId { get; set; }
     public int SubjectCount { get; set; }
+    public string EvaluationsCompleted { get; set; } = string.Empty;
+    public string EvaluationsReceived { get; set; } = string.Empty;
+    public bool IsSubject { get; set; }
 }
 
 public class SubjectEvaluatorResponse

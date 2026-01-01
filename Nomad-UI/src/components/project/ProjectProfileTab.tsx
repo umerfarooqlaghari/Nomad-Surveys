@@ -62,7 +62,7 @@ export default function ProjectProfileTab({ projectSlug }: ProjectProfileTabProp
         <div className="text-gray-500 font-medium">Company Name</div>
         <div className="text-gray-900 font-semibold">{projectData.name}</div>
 
-        <div className="text-gray-500 font-medium">Project Slug</div>
+        <div className="text-gray-500 font-medium">Company Code</div>
         <div className="text-gray-900 font-semibold">{projectData.slug}</div>
 
         {/* <div className="text-gray-500 font-medium">Industry</div>

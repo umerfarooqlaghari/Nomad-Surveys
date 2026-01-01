@@ -19,7 +19,7 @@ type SubTabType = 'evaluators' | 'subjects';
 export default function ProjectParticipantsTab({ projectSlug }: ProjectParticipantsTabProps) {
   const { token } = useAuth();
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>('evaluators');
-  
+
   // Evaluators state
   const [evaluators, setEvaluators] = useState<EvaluatorListResponse[]>([]);
   const [evaluatorsLoading, setEvaluatorsLoading] = useState(false);
@@ -80,7 +80,7 @@ export default function ProjectParticipantsTab({ projectSlug }: ProjectParticipa
   };
 
   const handleEvaluatorEmployeeSelect = (employeeId: string) => {
-    setSelectedEvaluatorEmployeeIds(prev => 
+    setSelectedEvaluatorEmployeeIds(prev =>
       prev.includes(employeeId) ? prev.filter(id => id !== employeeId) : [...prev, employeeId]
     );
   };
@@ -88,8 +88,8 @@ export default function ProjectParticipantsTab({ projectSlug }: ProjectParticipa
   const handleEvaluatorSelectAll = () => {
     const available = getAvailableEmployeesForEvaluators();
     setSelectedEvaluatorEmployeeIds(
-      selectedEvaluatorEmployeeIds.length === available.length 
-        ? [] 
+      selectedEvaluatorEmployeeIds.length === available.length
+        ? []
         : available.map(emp => emp.EmployeeId)
     );
   };
@@ -236,7 +236,7 @@ EMP001,EMP003,Peer`;
   };
 
   const handleSubjectEmployeeSelect = (employeeId: string) => {
-    setSelectedSubjectEmployeeIds(prev => 
+    setSelectedSubjectEmployeeIds(prev =>
       prev.includes(employeeId) ? prev.filter(id => id !== employeeId) : [...prev, employeeId]
     );
   };
@@ -244,8 +244,8 @@ EMP001,EMP003,Peer`;
   const handleSubjectSelectAll = () => {
     const available = getAvailableEmployeesForSubjects();
     setSelectedSubjectEmployeeIds(
-      selectedSubjectEmployeeIds.length === available.length 
-        ? [] 
+      selectedSubjectEmployeeIds.length === available.length
+        ? []
         : available.map(emp => emp.EmployeeId)
     );
   };
@@ -387,35 +387,35 @@ EMP001,EMP003,Peer`;
 
   // Filter functions
   const filteredEvaluators = evaluators.filter(evaluator => {
-    const matchesSearch = evaluatorSearchTerm === '' || 
+    const matchesSearch = evaluatorSearchTerm === '' ||
       evaluator.FullName.toLowerCase().includes(evaluatorSearchTerm.toLowerCase()) ||
       evaluator.Email.toLowerCase().includes(evaluatorSearchTerm.toLowerCase()) ||
       evaluator.EmployeeIdString.toLowerCase().includes(evaluatorSearchTerm.toLowerCase());
-    const matchesStatus = evaluatorFilterStatus === 'all' || 
+    const matchesStatus = evaluatorFilterStatus === 'all' ||
       (evaluatorFilterStatus === 'active' && evaluator.IsActive) ||
       (evaluatorFilterStatus === 'inactive' && !evaluator.IsActive);
     return matchesSearch && matchesStatus;
   });
 
   const filteredSubjects = subjects.filter(subject => {
-    const matchesSearch = subjectSearchTerm === '' || 
+    const matchesSearch = subjectSearchTerm === '' ||
       subject.FullName.toLowerCase().includes(subjectSearchTerm.toLowerCase()) ||
       subject.Email.toLowerCase().includes(subjectSearchTerm.toLowerCase()) ||
       subject.EmployeeIdString.toLowerCase().includes(subjectSearchTerm.toLowerCase());
-    const matchesStatus = subjectFilterStatus === 'all' || 
+    const matchesStatus = subjectFilterStatus === 'all' ||
       (subjectFilterStatus === 'active' && subject.IsActive) ||
       (subjectFilterStatus === 'inactive' && !subject.IsActive);
     return matchesSearch && matchesStatus;
   });
 
-  const filteredAvailableEmployeesForEvaluators = getAvailableEmployeesForEvaluators().filter(emp => 
+  const filteredAvailableEmployeesForEvaluators = getAvailableEmployeesForEvaluators().filter(emp =>
     evaluatorSearchTerm === '' ||
     emp.FullName.toLowerCase().includes(evaluatorSearchTerm.toLowerCase()) ||
     emp.Email.toLowerCase().includes(evaluatorSearchTerm.toLowerCase()) ||
     emp.EmployeeId.toLowerCase().includes(evaluatorSearchTerm.toLowerCase())
   );
 
-  const filteredAvailableEmployeesForSubjects = getAvailableEmployeesForSubjects().filter(emp => 
+  const filteredAvailableEmployeesForSubjects = getAvailableEmployeesForSubjects().filter(emp =>
     subjectSearchTerm === '' ||
     emp.FullName.toLowerCase().includes(subjectSearchTerm.toLowerCase()) ||
     emp.Email.toLowerCase().includes(subjectSearchTerm.toLowerCase()) ||
@@ -430,21 +430,19 @@ EMP001,EMP003,Peer`;
           <nav className="flex -mb-px">
             <button
               onClick={() => setActiveSubTab('evaluators')}
-              className={`${
-                activeSubTab === 'evaluators'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm`}
+              className={`${activeSubTab === 'evaluators'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm`}
             >
               Evaluators
             </button>
             <button
               onClick={() => setActiveSubTab('subjects')}
-              className={`${
-                activeSubTab === 'subjects'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm`}
+              className={`${activeSubTab === 'subjects'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm`}
             >
               Subjects
             </button>
@@ -529,7 +527,7 @@ EMP001,EMP003,Peer`;
                             <input
                               type="checkbox"
                               checked={selectedEvaluatorEmployeeIds.includes(employee.EmployeeId)}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               className="mr-3 cursor-pointer"
                               onClick={(e) => e.stopPropagation()}
                             />
@@ -605,9 +603,10 @@ EMP001,EMP003,Peer`;
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Relationships</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluations Completed</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluations Received</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Is Subject</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
@@ -624,9 +623,6 @@ EMP001,EMP003,Peer`;
                             {evaluator.Email}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {evaluator.Designation || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             <button
                               onClick={() => {
                                 setSelectedEvaluatorForView({ id: evaluator.Id, name: evaluator.FullName });
@@ -637,12 +633,16 @@ EMP001,EMP003,Peer`;
                               View ({evaluator.SubjectCount || 0})
                             </button>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              evaluator.IsActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {evaluator.IsActive ? 'Active' : 'Inactive'}
-                            </span>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {evaluator.EvaluationsCompleted || '0/0'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {evaluator.EvaluationsReceived || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-center">
+                            {evaluator.IsSubject ? (
+                              <span className="text-green-600 font-bold" title="Also a Subject">✓</span>
+                            ) : '-'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button
@@ -705,7 +705,7 @@ EMP001,EMP003,Peer`;
                     className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
                   >
                     {showAddSubjectForm ? 'Cancel' : 'Add Subjects'}
-                  </button> 
+                  </button>
                 </div>
               </div>
 
@@ -751,7 +751,7 @@ EMP001,EMP003,Peer`;
                             <input
                               type="checkbox"
                               checked={selectedSubjectEmployeeIds.includes(employee.EmployeeId)}
-                              onChange={() => {}}
+                              onChange={() => { }}
                               className="mr-3 cursor-pointer"
                               onClick={(e) => e.stopPropagation()}
                             />
@@ -827,9 +827,10 @@ EMP001,EMP003,Peer`;
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Designation</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Relationships</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluations Received</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluations Completed</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Is Evaluator</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
@@ -846,9 +847,6 @@ EMP001,EMP003,Peer`;
                             {subject.Email}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                            {subject.Designation || '-'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                             <button
                               onClick={() => {
                                 setSelectedSubjectForView({ id: subject.Id, name: subject.FullName });
@@ -859,12 +857,16 @@ EMP001,EMP003,Peer`;
                               View ({subject.EvaluatorCount || 0})
                             </button>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              subject.IsActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {subject.IsActive ? 'Active' : 'Inactive'}
-                            </span>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {subject.EvaluationsReceived || '0/0'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {subject.EvaluationsCompleted || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-center">
+                            {subject.IsEvaluator ? (
+                              <span className="text-green-600 font-bold" title="Also an Evaluator">✓</span>
+                            ) : '-'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                             <button

@@ -36,38 +36,84 @@ public class SubjectService : ISubjectService
     {
         try
         {
-            var query = _context.Subjects.AsQueryable();
-
-            if (tenantId.HasValue)
-            {
-                query = query.Where(s => s.TenantId == tenantId.Value);
-            }
-
-            var subjects = await query
+            var query = _context.Subjects
                 .Include(s => s.Employee)
                 .Include(s => s.SubjectEvaluators)
-                .Where(s => s.IsActive)
+                .Where(s => s.IsActive && (!tenantId.HasValue || s.TenantId == tenantId.Value));
+
+            var subjects = await query
                 .OrderBy(s => s.Employee.FirstName)
                 .ThenBy(s => s.Employee.LastName)
                 .ToListAsync();
 
-            return subjects.Select(s => new SubjectListResponse
+            var subjectIds = subjects.Select(s => s.Id).ToList();
+            var employeeIds = subjects.Select(s => s.EmployeeId).ToList();
+
+            // Get evaluator records for cross-role check
+            var evaluatorRecords = await _context.Evaluators
+                .Where(e => employeeIds.Contains(e.EmployeeId) && e.IsActive && (!tenantId.HasValue || e.TenantId == tenantId.Value))
+                .ToDictionaryAsync(e => e.EmployeeId);
+
+            // Get received evaluation counts
+            var receivedCounts = await _context.SubjectEvaluatorSurveys
+                .Where(ses => subjectIds.Contains(ses.SubjectEvaluator.SubjectId) && ses.IsActive)
+                .GroupBy(ses => ses.SubjectEvaluator.SubjectId)
+                .Select(g => new { SubjectId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.SubjectId, x => x.Count);
+
+            var completedReceivedCounts = await _context.SurveySubmissions
+                .Where(ss => subjectIds.Contains(ss.SubjectId) && ss.Status == SurveySubmissionStatus.Completed)
+                .GroupBy(ss => ss.SubjectId)
+                .Select(g => new { SubjectId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.SubjectId, x => x.Count);
+
+            // Get completed evaluation counts (where they are evaluators)
+            var evaluatorIdsForTheseSubjects = evaluatorRecords.Values.Select(e => e.Id).ToList();
+            
+            var completedAsEvaluatorCounts = await _context.SurveySubmissions
+                .Where(ss => evaluatorIdsForTheseSubjects.Contains(ss.EvaluatorId) && ss.Status == SurveySubmissionStatus.Completed)
+                .GroupBy(ss => ss.EvaluatorId)
+                .Select(g => new { EvaluatorId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.EvaluatorId, x => x.Count);
+
+            var totalAsEvaluatorCounts = await _context.SubjectEvaluatorSurveys
+                .Where(ses => evaluatorIdsForTheseSubjects.Contains(ses.SubjectEvaluator.EvaluatorId) && ses.IsActive)
+                .GroupBy(ses => ses.SubjectEvaluator.EvaluatorId)
+                .Select(g => new { EvaluatorId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.EvaluatorId, x => x.Count);
+
+            return subjects.Select(s =>
             {
-                Id = s.Id,
-                EmployeeId = s.EmployeeId,
-                FirstName = s.Employee.FirstName,
-                LastName = s.Employee.LastName,
-                FullName = s.Employee.FullName,
-                Email = s.Employee.Email,
-                EmployeeIdString = s.Employee.EmployeeId,
-                CompanyName = s.Employee.CompanyName,
-                Designation = s.Employee.Designation,
-                Department = s.Employee.Department,
-                IsActive = s.IsActive,
-                CreatedAt = s.CreatedAt,
-                LastLoginAt = s.LastLoginAt,
-                TenantId = s.TenantId,
-                EvaluatorCount = s.SubjectEvaluators.Count(se => se.IsActive)
+                var isEvaluator = evaluatorRecords.ContainsKey(s.EmployeeId);
+                var evaluatorId = isEvaluator ? (Guid?)evaluatorRecords[s.EmployeeId].Id : null;
+
+                var totalReceived = receivedCounts.GetValueOrDefault(s.Id, 0);
+                var completedReceived = completedReceivedCounts.GetValueOrDefault(s.Id, 0);
+
+                var totalAsEvaluator = evaluatorId.HasValue ? totalAsEvaluatorCounts.GetValueOrDefault(evaluatorId.Value, 0) : 0;
+                var completedAsEvaluator = evaluatorId.HasValue ? completedAsEvaluatorCounts.GetValueOrDefault(evaluatorId.Value, 0) : 0;
+
+                return new SubjectListResponse
+                {
+                    Id = s.Id,
+                    EmployeeId = s.EmployeeId,
+                    FirstName = s.Employee.FirstName,
+                    LastName = s.Employee.LastName,
+                    FullName = s.Employee.FullName,
+                    Email = s.Employee.Email,
+                    EmployeeIdString = s.Employee.EmployeeId,
+                    CompanyName = s.Employee.CompanyName,
+                    Designation = s.Employee.Designation,
+                    Department = s.Employee.Department,
+                    IsActive = s.IsActive,
+                    CreatedAt = s.CreatedAt,
+                    LastLoginAt = s.LastLoginAt,
+                    TenantId = s.TenantId,
+                    EvaluatorCount = s.SubjectEvaluators.Count(se => se.IsActive),
+                    EvaluationsReceived = $"{completedReceived}/{totalReceived}",
+                    EvaluationsCompleted = isEvaluator ? $"{completedAsEvaluator}/{totalAsEvaluator}" : "-",
+                    IsEvaluator = isEvaluator
+                };
             }).ToList();
         }
         catch (Exception ex)

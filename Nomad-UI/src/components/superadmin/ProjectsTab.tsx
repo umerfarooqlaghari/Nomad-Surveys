@@ -63,7 +63,7 @@ export default function ProjectsTab() {
         ...prev,
         Company: {
           ...prev.Company,
-          [fieldName]: fieldName === 'NumberOfEmployees' ? (value ? parseInt(value) : null) : value
+          [fieldName]: value
         }
       }));
     } else if (name.startsWith('TenantAdmin.')) {
@@ -293,7 +293,7 @@ export default function ProjectsTab() {
         Description: data.Description || '',
         Company: {
           Name: data.Company?.Name || '',
-          NumberOfEmployees: data.Company?.NumberOfEmployees || 0,
+          NumberOfEmployees: data.Company?.NumberOfEmployees?.toString() ?? null,
           Location: data.Company?.Location || '',
           Industry: data.Company?.Industry || '',
           ContactPersonName: data.Company?.ContactPersonName || '',
@@ -471,14 +471,19 @@ export default function ProjectsTab() {
                 <label className={styles.label}>
                   Number of Employees
                 </label>
-                <input
-                  type="number"
+                <select
                   name="Company.NumberOfEmployees"
                   value={formData.Company.NumberOfEmployees ?? ''}
                   onChange={handleInputChange}
                   className={styles.input}
-                  placeholder="Enter number of employees"
-                />
+                >
+                  <option value="">Select Range</option>
+                  <option value="0-100">0-100</option>
+                  <option value="101-250">101-250</option>
+                  <option value="251-500">251-500</option>
+                  <option value="501-1000">501-1000</option>
+                  <option value="1000+">1000+</option>
+                </select>
               </div>
 
               {/* Industry */}
@@ -581,7 +586,7 @@ export default function ProjectsTab() {
               {/* Contact Person Phone */}
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Contact Person Phone <span className={styles.required}></span>
+                  Contact Person Phone
                 </label>
                 <input
                   type="tel"

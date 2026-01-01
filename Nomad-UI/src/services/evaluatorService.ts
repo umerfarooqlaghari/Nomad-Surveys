@@ -39,6 +39,9 @@ export interface EvaluatorListResponse {
   LastLoginAt?: string;
   TenantId: string;
   SubjectCount: number;
+  EvaluationsCompleted: string;
+  EvaluationsReceived: string;
+  IsSubject: boolean;
 }
 
 export interface SubjectRelationship {

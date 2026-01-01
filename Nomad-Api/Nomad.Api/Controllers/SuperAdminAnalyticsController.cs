@@ -40,12 +40,14 @@ public class SuperAdminAnalyticsController : ControllerBase
             var totalCompanies = await _context.Companies.CountAsync();
             var companiesLastMonth = await _context.Companies
                 .Where(c => c.CreatedAt < startOfCurrentMonth)
+                .Where(c => c.Tenant.IsActive)
                 .CountAsync();
             
             // Get users count (excluding SuperAdmin users - those without TenantId)
-            var totalUsers = await _context.Users.Where(u => u.TenantId != null).CountAsync();
+            var totalUsers = await _context.Users.Where(u => u.TenantId != null).Where(c => c.Tenant.IsActive).CountAsync();
             var usersLastMonth = await _context.Users
                 .Where(u => u.TenantId != null && u.CreatedAt < startOfCurrentMonth)
+                .Where(c => c.Tenant.IsActive)
                 .CountAsync();
             
             // Get completed surveys count
@@ -54,19 +56,22 @@ public class SuperAdminAnalyticsController : ControllerBase
                 .CountAsync();
             var completedSurveysLastMonth = await _context.SurveySubmissions
                 .Where(s => s.Status == "Completed" && s.CompletedAt < startOfCurrentMonth)
+                .Where(c => c.Tenant.IsActive)
                 .CountAsync();
             
             // Get survey completion rate
-            var totalSurveySubmissions = await _context.SurveySubmissions.CountAsync();
+            var totalSurveySubmissions = await _context.SurveySubmissions.Where(c => c.Tenant.IsActive).CountAsync();
             var completionRate = totalSurveySubmissions > 0 
                 ? Math.Round((double)completedSurveys / totalSurveySubmissions * 100, 1)
                 : 0;
             
             var totalSubmissionsLastMonth = await _context.SurveySubmissions
                 .Where(s => s.CreatedAt < startOfCurrentMonth)
+                .Where(c => c.Tenant.IsActive)
                 .CountAsync();
             var completedSubmissionsLastMonth = await _context.SurveySubmissions
                 .Where(s => s.Status == "Completed" && s.CreatedAt < startOfCurrentMonth)
+                .Where(c => c.Tenant.IsActive)
                 .CountAsync();
             var completionRateLastMonth = totalSubmissionsLastMonth > 0 
                 ? Math.Round((double)completedSubmissionsLastMonth / totalSubmissionsLastMonth * 100, 1)
@@ -139,6 +144,7 @@ public class SuperAdminAnalyticsController : ControllerBase
 
             var count = await _context.Users
                 .Where(u => u.TenantId != null && u.CreatedAt >= monthStart && u.CreatedAt < monthEnd)
+                .Where(c => c.Tenant.IsActive)
                 .CountAsync();
 
             result.Add(new ChartDataPoint
@@ -163,6 +169,7 @@ public class SuperAdminAnalyticsController : ControllerBase
 
             var count = await _context.SurveySubmissions
                 .Where(s => s.Status == "Completed" && s.CompletedAt >= monthStart && s.CompletedAt < monthEnd)
+                .Where(c => c.Tenant.IsActive)
                 .CountAsync();
 
             result.Add(new ChartDataPoint
