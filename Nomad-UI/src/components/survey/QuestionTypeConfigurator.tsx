@@ -29,6 +29,7 @@ export default function QuestionTypeConfigurator({
         id: generateOptionId(),
         text: '',
         order: ratingOptions.length,
+        score: ratingOptions.length > 0 ? (ratingOptions[ratingOptions.length - 1].score ?? ratingOptions.length) + 1 : 1,
       };
       updateConfig({ ratingOptions: [...ratingOptions, newOption] });
     };
@@ -73,13 +74,13 @@ export default function QuestionTypeConfigurator({
             <button
               type="button"
               onClick={addRatingOption}
-              className="px-3 py-1 text-sm bg-blue-600 text-black rounded hover:bg-blue-700"
+              className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               + Add Option
             </button>
           </div>
           <p className="text-xs text-gray-600 mb-3">
-            Define custom rating options
+            Define custom rating options with their corresponding numerical scores
           </p>
 
           {ratingOptions.length === 0 ? (
@@ -88,6 +89,12 @@ export default function QuestionTypeConfigurator({
             </div>
           ) : (
             <div className="space-y-2">
+              <div className="flex px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <div className="w-8">#</div>
+                <div className="flex-1">Text</div>
+                <div className="w-20 mx-2">Score</div>
+                <div className="w-24 text-right">Actions</div>
+              </div>
               {ratingOptions.map((option, index) => (
                 <div key={option.id} className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-600 w-8">{index + 1}.</span>
@@ -98,32 +105,45 @@ export default function QuestionTypeConfigurator({
                     placeholder={`Option ${index + 1}`}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400"
                   />
-                  <button
-                    type="button"
-                    onClick={() => moveRatingOption(index, 'up')}
-                    disabled={index === 0}
-                    className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-30"
-                    title="Move up"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveRatingOption(index, 'down')}
-                    disabled={index === ratingOptions.length - 1}
-                    className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-30"
-                    title="Move down"
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => deleteRatingOption(index)}
-                    className="p-2 text-red-500 hover:text-red-700"
-                    title="Delete"
-                  >
-                    ✕
-                  </button>
+                  <input
+                    type="number"
+                    value={option.score ?? index + 1}
+                    onChange={(e) => {
+                      const updated = [...ratingOptions];
+                      updated[index] = { ...updated[index], score: parseInt(e.target.value) || 0 };
+                      updateConfig({ ratingOptions: updated });
+                    }}
+                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-center"
+                    title="Score value"
+                  />
+                  <div className="flex items-center justify-end w-24">
+                    <button
+                      type="button"
+                      onClick={() => moveRatingOption(index, 'up')}
+                      disabled={index === 0}
+                      className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                      title="Move up"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveRatingOption(index, 'down')}
+                      disabled={index === ratingOptions.length - 1}
+                      className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                      title="Move down"
+                    >
+                      ↓
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteRatingOption(index)}
+                      className="p-1 text-red-500 hover:text-red-700 ml-1"
+                      title="Delete"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -142,6 +162,7 @@ export default function QuestionTypeConfigurator({
         id: generateOptionId(),
         text: `Option ${options.length + 1}`,
         order: options.length,
+        score: options.length > 0 ? (options[options.length - 1].score ?? options.length) + 1 : 1,
       };
       updateConfig({ options: [...options, newOption] });
     };
@@ -213,6 +234,12 @@ export default function QuestionTypeConfigurator({
 
         {/* Options List */}
         <div className="space-y-2 mb-3">
+          <div className="flex px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div className="w-6">#</div>
+            <div className="flex-1">Text</div>
+            <div className="w-20 mx-2">Score</div>
+            <div className="w-24 text-right">Actions</div>
+          </div>
           {options.map((option, index) => (
             <div key={option.id} className="flex items-center gap-2">
               <span className="text-sm text-gray-500 w-6">{index + 1}.</span>
@@ -222,33 +249,49 @@ export default function QuestionTypeConfigurator({
                 onChange={(e) => updateOption(option.id, e.target.value)}
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500"
               />
-              <button
-                onClick={() => moveOption(index, 'up')}
-                disabled={index === 0}
-                className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-30"
-              >
-                ↑
-              </button>
-              <button
-                onClick={() => moveOption(index, 'down')}
-                disabled={index === options.length - 1}
-                className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-30"
-              >
-                ↓
-              </button>
-              <button
-                onClick={() => deleteOption(option.id)}
-                className="p-2 text-red-500 hover:text-red-700"
-              >
-                ✕
-              </button>
+              <input
+                type="number"
+                value={option.score ?? index + 1}
+                onChange={(e) => {
+                  const newScore = parseInt(e.target.value) || 0;
+                  updateConfig({
+                    options: options.map((opt) =>
+                      opt.id === option.id ? { ...opt, score: newScore } : opt
+                    ),
+                  });
+                }}
+                className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500 text-center"
+                title="Score value"
+              />
+              <div className="flex items-center justify-end w-24">
+                <button
+                  onClick={() => moveOption(index, 'up')}
+                  disabled={index === 0}
+                  className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => moveOption(index, 'down')}
+                  disabled={index === options.length - 1}
+                  className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                >
+                  ↓
+                </button>
+                <button
+                  onClick={() => deleteOption(option.id)}
+                  className="p-1 text-red-500 hover:text-red-700 ml-1"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           ))}
         </div>
 
         <button
           onClick={addOption}
-          className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
+          className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-white hover:border-blue-500 hover:text-blue-600 transition-colors"
         >
           + Add Option
         </button>
@@ -305,50 +348,9 @@ export default function QuestionTypeConfigurator({
     );
   }
 
-  // Number Configuration
-  if (question.type === 'number') {
-    return (
-      <div className="border-t border-gray-200 pt-4">
-        <h4 className="text-sm font-semibold text-gray-700 mb-3">Number Input Settings</h4>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Minimum Value
-            </label>
-            <input
-              type="number"
-              value={question.config.numberMin ?? 0}
-              onChange={(e) => updateConfig({ numberMin: parseInt(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Maximum Value
-            </label>
-            <input
-              type="number"
-              value={question.config.numberMax ?? 100}
-              onChange={(e) => updateConfig({ numberMax: parseInt(e.target.value) })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-500"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  // Yes/No and Date don't need configuration
-  if (['yes-no', 'date'].includes(question.type)) {
-    return (
-      <div className="border-t border-gray-200 pt-4">
-        <p className="text-sm text-gray-500 italic">
-          No additional configuration needed for this question type.
-        </p>
-      </div>
-    );
-  }
+
 
   return null;
 }

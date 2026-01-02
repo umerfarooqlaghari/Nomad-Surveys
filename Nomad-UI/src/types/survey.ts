@@ -5,21 +5,19 @@
  * that replaces the SurveyJS implementation.
  */
 
-export type QuestionType = 
+export type QuestionType =
   | 'rating'
   | 'single-choice'
   | 'multiple-choice'
   | 'text'
   | 'textarea'
-  | 'dropdown'
-  | 'yes-no'
-  | 'date'
-  | 'number';
+  | 'dropdown';
 
 export interface ChoiceOption {
   id: string;
   text: string;
   order: number;
+  score: number;
 }
 
 export interface QuestionConfig {
@@ -31,20 +29,20 @@ export interface QuestionConfig {
     min: string;
     max: string;
   };
-  ratingOptions?: ChoiceOption[]; // Custom rating options (e.g., "Happy", "Sad", "Neutral" or "100", "200", "500")
+  ratingOptions?: ChoiceOption[]; // Custom rating options with scores
 
   // Multiple Choice / Dropdown Configuration
   options?: ChoiceOption[];
-  
+
   // Multiple Choice (Multi-select) Configuration
   minSelections?: number;
   maxSelections?: number;
-  
+
   // Text Input Configuration
   maxLength?: number;
   minLength?: number;
   placeholder?: string;
-  
+
   // Number Input Configuration
   numberMin?: number;
   numberMax?: number;
@@ -61,7 +59,7 @@ export interface Question {
   order: number;
   config: QuestionConfig;
   showTo?: 'everyone' | 'self' | 'others'; // Visibility control
-  
+
   // Metadata for imported questions
   importedFrom?: {
     questionId: string;
@@ -96,9 +94,6 @@ export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   'text': 'Short Text',
   'textarea': 'Long Text',
   'dropdown': 'Dropdown',
-  'yes-no': 'Yes/No',
-  'date': 'Date',
-  'number': 'Number',
 };
 
 // Default configurations for each question type
@@ -111,14 +106,14 @@ export const DEFAULT_QUESTION_CONFIGS: Record<QuestionType, QuestionConfig> = {
   },
   'single-choice': {
     options: [
-      { id: 'opt1', text: 'Option 1', order: 0 },
-      { id: 'opt2', text: 'Option 2', order: 1 },
+      { id: 'opt1', text: 'Option 1', order: 0, score: 1 },
+      { id: 'opt2', text: 'Option 2', order: 1, score: 2 },
     ],
   },
   'multiple-choice': {
     options: [
-      { id: 'opt1', text: 'Option 1', order: 0 },
-      { id: 'opt2', text: 'Option 2', order: 1 },
+      { id: 'opt1', text: 'Option 1', order: 0, score: 1 },
+      { id: 'opt2', text: 'Option 2', order: 1, score: 2 },
     ],
     minSelections: 0,
     maxSelections: undefined,
@@ -133,15 +128,9 @@ export const DEFAULT_QUESTION_CONFIGS: Record<QuestionType, QuestionConfig> = {
   },
   'dropdown': {
     options: [
-      { id: 'opt1', text: 'Option 1', order: 0 },
-      { id: 'opt2', text: 'Option 2', order: 1 },
+      { id: 'opt1', text: 'Option 1', order: 0, score: 1 },
+      { id: 'opt2', text: 'Option 2', order: 1, score: 2 },
     ],
-  },
-  'yes-no': {},
-  'date': {},
-  'number': {
-    numberMin: 0,
-    numberMax: 100,
   },
 };
 
@@ -153,15 +142,17 @@ export interface ValidationError {
 
 export function validateQuestion(question: Question): ValidationError[] {
   const errors: ValidationError[] = [];
-  
-  if (!question.selfText.trim()) {
+
+  // Self text validation: Optional only for text/textarea types
+  const isTextType = ['text', 'textarea'].includes(question.type);
+  if (!isTextType && !question.selfText.trim()) {
     errors.push({ field: 'selfText', message: 'Self question text is required' });
   }
-  
+
   if (!question.othersText.trim()) {
     errors.push({ field: 'othersText', message: 'Others question text is required' });
   }
-  
+
   // Type-specific validation
   if (question.type === 'rating') {
     const { ratingMin, ratingMax } = question.config;
@@ -169,36 +160,36 @@ export function validateQuestion(question: Question): ValidationError[] {
       errors.push({ field: 'config.rating', message: 'Minimum must be less than maximum' });
     }
   }
-  
+
   if (['single-choice', 'multiple-choice', 'dropdown'].includes(question.type)) {
     if (!question.config.options || question.config.options.length < 2) {
       errors.push({ field: 'config.options', message: 'At least 2 options are required' });
     }
   }
-  
+
   return errors;
 }
 
 export function validateSurvey(survey: SurveySchema): ValidationError[] {
   const errors: ValidationError[] = [];
-  
+
   if (!survey.title.trim()) {
     errors.push({ field: 'title', message: 'Survey title is required' });
   }
-  
+
   if (survey.pages.length === 0) {
     errors.push({ field: 'pages', message: 'Survey must have at least one page' });
   }
-  
+
   survey.pages.forEach((page, pageIndex) => {
     if (!page.title.trim()) {
       errors.push({ field: `pages[${pageIndex}].title`, message: 'Page title is required' });
     }
-    
+
     if (page.questions.length === 0) {
       errors.push({ field: `pages[${pageIndex}].questions`, message: 'Page must have at least one question' });
     }
-    
+
     page.questions.forEach((question, questionIndex) => {
       const questionErrors = validateQuestion(question);
       questionErrors.forEach(err => {
@@ -209,7 +200,7 @@ export function validateSurvey(survey: SurveySchema): ValidationError[] {
       });
     });
   });
-  
+
   return errors;
 }
 
@@ -265,6 +256,7 @@ export interface RatingOption {
   id: string;
   text: string;
   order: number;
+  score: number;
 }
 
 export interface TenantSettings {
@@ -286,11 +278,11 @@ export interface UpdateTenantSettingsRequest {
 export const DEFAULT_TENANT_SETTINGS: Omit<TenantSettings, 'id' | 'tenantId'> = {
   defaultQuestionType: 'rating',
   defaultRatingOptions: [
-    { id: '1', text: 'Very Unsatisfied', order: 0 },
-    { id: '2', text: 'Unsatisfied', order: 1 },
-    { id: '3', text: 'Neutral', order: 2 },
-    { id: '4', text: 'Satisfied', order: 3 },
-    { id: '5', text: 'Very Satisfied', order: 4 },
+    { id: '1', text: 'Never', order: 0, score: 1 },
+    { id: '2', text: 'Sometimes', order: 1, score: 2 },
+    { id: '3', text: 'Often', order: 2, score: 3 },
+    { id: '4', text: 'Always', order: 3, score: 4 },
+    { id: '5', text: 'N/A', order: 4, score: 0 },
   ],
   numberOfOptions: 5,
 };

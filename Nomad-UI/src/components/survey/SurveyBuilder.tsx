@@ -5,6 +5,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { SurveyCreatorComponent, SurveyCreator } from 'survey-creator-react';
 import { ICreatorPlugin } from 'survey-creator-core';
+import { Serializer } from 'survey-core';
 import 'survey-core/survey-core.min.css';
 import 'survey-creator-core/survey-creator-core.min.css';
 import toast from 'react-hot-toast';
@@ -141,6 +142,14 @@ export default function SurveyBuilder({
       showTranslationTab: false,
       isAutoSave: false,
     };
+
+    // Register score property for options (itemvalues)
+    Serializer.addProperty("itemvalue", {
+      name: "score:number",
+      displayName: "Score",
+      default: 0,
+      visibleIndex: 0 // Show at top of property grid for items
+    });
 
     const surveyCreator = new SurveyCreator(options);
 
@@ -456,12 +465,12 @@ export default function SurveyBuilder({
           )}
         </div>
 
-      {/* SurveyJS Creator */}
-      <div className="survey-creator-wrapper" style={{ height: 'calc(100vh - 250px)' }}>
-        <SurveyCreatorComponent creator={creator} />
-      </div>
+        {/* SurveyJS Creator */}
+        <div className="survey-creator-wrapper" style={{ height: 'calc(100vh - 250px)' }}>
+          <SurveyCreatorComponent creator={creator} />
+        </div>
 
-      <style jsx global>{`
+        <style jsx global>{`
         .survey-builder-container {
           background: white;
           border-radius: 8px;
@@ -1091,14 +1100,14 @@ export default function SurveyBuilder({
         }
       `}</style>
 
-      {/* Import Question Modal */}
-      <ImportQuestionModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImport={handleImportQuestion}
-        tenantSlug={tenantSlug}
-        token={token}
-      />
+        {/* Import Question Modal */}
+        <ImportQuestionModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          onImport={handleImportQuestion}
+          tenantSlug={tenantSlug}
+          token={token}
+        />
       </div>
     </div>
   );

@@ -183,6 +183,71 @@ public class SurveyAssignmentService : ISurveyAssignmentService
             var assignmentsCreatedOrReactivated = 0;
             var pendingNotifications = new Dictionary<string, (string Name, string LastSubject, int Count, Guid LastId)>();
 
+            // 1. Pre-fetch Analysis: Extract all unique IDs
+            var allSubjectIds = request.Rows
+                .Where(r => !string.IsNullOrWhiteSpace(r.SubjectId))
+                .Select(r => r.SubjectId.Trim())
+                .Distinct()
+                .ToList();
+
+            var allEvaluatorIds = request.Rows
+                .Where(r => !string.IsNullOrWhiteSpace(r.EvaluatorId))
+                .Select(r => r.EvaluatorId.Trim())
+                .Distinct()
+                .ToList();
+
+            var allEmployeeIds = allSubjectIds.Union(allEvaluatorIds).Distinct().ToList();
+
+            // 2. Bulk Fetch Employees
+            var employees = await _context.Employees
+                .Where(e => allEmployeeIds.Contains(e.EmployeeId) && e.TenantId == survey.TenantId && e.IsActive)
+                .ToDictionaryAsync(e => e.EmployeeId, e => e);
+
+            // 3. Bulk Fetch Existing Subjects & Evaluators
+            // Note: We fetch ALL subjects/evaluators involved in this batch to avoid N+1 queries
+            // and to populate our local cache for reuse.
+            var existingSubjects = await _context.Subjects
+                .Include(s => s.Employee)
+                .Where(s => allSubjectIds.Contains(s.Employee.EmployeeId) && s.TenantId == survey.TenantId)
+                .ToListAsync();
+
+            var existingEvaluators = await _context.Evaluators
+                .Include(e => e.Employee)
+                .Where(e => allEvaluatorIds.Contains(e.Employee.EmployeeId) && e.TenantId == survey.TenantId)
+                .ToListAsync();
+
+            // 4. Initialize Local Cache (Dictionaries)
+            // Keys are EmployeeId strings
+            var subjectMap = existingSubjects.ToDictionary(s => s.Employee.EmployeeId, s => s);
+            var evaluatorMap = existingEvaluators.ToDictionary(e => e.Employee.EmployeeId, e => e);
+
+            // We also need to cache relationships to avoid duplicates. 
+            // Key: "SubjectId_EvaluatorId" (Using GUIDs)
+            // We'll fetch existing relationships for the found subjects/evaluators
+            var subjectGuids = existingSubjects.Select(s => s.Id).ToList();
+            var evaluatorGuids = existingEvaluators.Select(e => e.Id).ToList();
+
+            var existingRelationships = await _context.SubjectEvaluators
+                .Where(se => subjectGuids.Contains(se.SubjectId) || evaluatorGuids.Contains(se.EvaluatorId))
+                .Where(se => se.TenantId == survey.TenantId)
+                .ToListAsync();
+
+            // Map Key: Tuple (SubjectGuid, EvaluatorGuid)
+            var relationshipMap = existingRelationships
+                .ToDictionary(se => (se.SubjectId, se.EvaluatorId), se => se);
+
+            // Fetch existing assignments for these relationships
+            var relationshipGuids = existingRelationships.Select(se => se.Id).ToList();
+            var existingAssignments = await _context.SubjectEvaluatorSurveys
+                .Where(ses => ses.SurveyId == surveyId && (relationshipGuids.Contains(ses.SubjectEvaluatorId))) // We'll double check locally for newly created ones
+                .ToListAsync();
+            
+            // Map Key: SubjectEvaluatorGuid
+            var assignmentMap = existingAssignments
+                .ToDictionary(ses => ses.SubjectEvaluatorId, ses => ses);
+
+
+            // 5. Iterate Rows with Local Cache
             for (var index = 0; index < request.Rows.Count; index++)
             {
                 var row = request.Rows[index];
@@ -200,166 +265,126 @@ public class SurveyAssignmentService : ISurveyAssignmentService
 
                     var subjectEmployeeId = row.SubjectId.Trim();
                     var evaluatorEmployeeId = row.EvaluatorId.Trim();
-                    var relationship = row.Relationship.Trim();
+                    var relationshipType = row.Relationship.Trim();
 
-                    if (relationship.Length == 0)
+                    if (relationshipType.Length == 0 || relationshipType.Length > 50)
                     {
-                        errors.Add($"Row {rowNumber}: Relationship cannot be empty.");
+                        errors.Add($"Row {rowNumber}: Relationship valid/length check failed.");
                         continue;
                     }
 
-                    if (relationship.Length > 50)
+                    // --- STEP A: RESOLVE EMPLOYEES ---
+                    if (!employees.TryGetValue(subjectEmployeeId, out var subjectEmployee))
                     {
-                        errors.Add($"Row {rowNumber}: Relationship exceeds maximum length of 50 characters.");
+                        errors.Add($"Row {rowNumber}: Subject Employee '{subjectEmployeeId}' not found.");
+                        continue;
+                    }
+                    if (!employees.TryGetValue(evaluatorEmployeeId, out var evaluatorEmployee))
+                    {
+                        errors.Add($"Row {rowNumber}: Evaluator Employee '{evaluatorEmployeeId}' not found.");
                         continue;
                     }
 
-                    // Step 1: Handle Evaluator - Check if employee exists, then check/create evaluator
-                    var evaluatorEmployee = await _context.Employees
-                        .FirstOrDefaultAsync(e => e.EmployeeId == evaluatorEmployeeId && e.TenantId == survey.TenantId && e.IsActive);
-
-                    if (evaluatorEmployee == null)
-                    {
-                        errors.Add($"Row {rowNumber}: Evaluator Employee '{evaluatorEmployeeId}' not found or is not active in this tenant.");
-                        continue;
-                    }
-
-                    var existingEvaluator = await _context.Evaluators
-                        .FirstOrDefaultAsync(e => e.EmployeeId == evaluatorEmployee.Id && e.TenantId == survey.TenantId);
-
-                    Evaluator evaluator;
-                    if (existingEvaluator != null)
-                    {
-                        if (!existingEvaluator.IsActive)
-                        {
-                            existingEvaluator.IsActive = true;
-                            existingEvaluator.UpdatedAt = now;
-                            _context.Evaluators.Update(existingEvaluator);
-                            _logger.LogInformation("✅ Reactivated evaluator for employee {EmployeeId}", evaluatorEmployeeId);
-                        }
-                        evaluator = existingEvaluator;
-                    }
-                    else
-                    {
-                        evaluator = new Evaluator
-                        {
-                            Id = Guid.NewGuid(),
-                            EmployeeId = evaluatorEmployee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
-                            IsActive = true,
-                            CreatedAt = now,
-                            TenantId = survey.TenantId
-                        };
-                        _context.Evaluators.Add(evaluator);
-                        _logger.LogInformation("✅ Created evaluator for employee {EmployeeId}", evaluatorEmployeeId);
-                    }
-
-                    // Step 2: Handle Subject - Check if employee exists, then check/create subject
-                    var subjectEmployee = await _context.Employees
-                        .FirstOrDefaultAsync(e => e.EmployeeId == subjectEmployeeId && e.TenantId == survey.TenantId && e.IsActive);
-
-                    if (subjectEmployee == null)
-                    {
-                        errors.Add($"Row {rowNumber}: Subject Employee '{subjectEmployeeId}' not found or is not active in this tenant.");
-                        continue;
-                    }
-
-                    var existingSubject = await _context.Subjects
-                        .FirstOrDefaultAsync(s => s.EmployeeId == subjectEmployee.Id && s.TenantId == survey.TenantId);
-
-                    Subject subject;
-                    if (existingSubject != null)
-                    {
-                        if (!existingSubject.IsActive)
-                        {
-                            existingSubject.IsActive = true;
-                            existingSubject.UpdatedAt = now;
-                            _context.Subjects.Update(existingSubject);
-                            _logger.LogInformation("✅ Reactivated subject for employee {EmployeeId}", subjectEmployeeId);
-                        }
-                        subject = existingSubject;
-                    }
-                    else
+                    // --- STEP B: RESOLVE/CREATE SUBJECT (Reuse from Map) ---
+                    if (!subjectMap.TryGetValue(subjectEmployeeId, out var subject))
                     {
                         subject = new Subject
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = subjectEmployee.Id,
+                            Employee = subjectEmployee, // Link for safety
                             PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
                             IsActive = true,
                             CreatedAt = now,
                             TenantId = survey.TenantId
                         };
                         _context.Subjects.Add(subject);
+                        subjectMap[subjectEmployeeId] = subject; // Add to cache immediately
                         _logger.LogInformation("✅ Created subject for employee {EmployeeId}", subjectEmployeeId);
                     }
-
-                    // Step 3: Handle SubjectEvaluator relationship
-                    var existingRelationship = await _context.SubjectEvaluators
-                        .FirstOrDefaultAsync(se => se.SubjectId == subject.Id && se.EvaluatorId == evaluator.Id);
-
-                    SubjectEvaluator relationshipEntity;
-                    if (existingRelationship != null)
+                    else if (!subject.IsActive)
                     {
-                        if (!existingRelationship.IsActive)
-                        {
-                            existingRelationship.IsActive = true;
-                            existingRelationship.UpdatedAt = now;
-                            _logger.LogInformation("✅ Reactivated relationship: Subject {SubjectId} -> Evaluator {EvaluatorId}", subjectEmployeeId, evaluatorEmployeeId);
-                        }
-                        else
-                        {
-                            _logger.LogInformation("ℹ️ Relationship already active: Subject {SubjectId} -> Evaluator {EvaluatorId}", subjectEmployeeId, evaluatorEmployeeId);
-                        }
-
-                        // Update relationship type if different
-                        if (!string.Equals(existingRelationship.Relationship, relationship, StringComparison.Ordinal))
-                        {
-                            existingRelationship.Relationship = relationship;
-                            existingRelationship.UpdatedAt = now;
-                        }
-
-                        relationshipEntity = existingRelationship;
+                        subject.IsActive = true;
+                        subject.UpdatedAt = now;
+                        // No need to Add, it's tracked. changing property sets state to Modified.
                     }
-                    else
+
+                    // --- STEP C: RESOLVE/CREATE EVALUATOR (Reuse from Map) ---
+                    if (!evaluatorMap.TryGetValue(evaluatorEmployeeId, out var evaluator))
+                    {
+                        evaluator = new Evaluator
+                        {
+                            Id = Guid.NewGuid(),
+                            EmployeeId = evaluatorEmployee.Id,
+                            Employee = evaluatorEmployee, // Link for safety
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            IsActive = true,
+                            CreatedAt = now,
+                            TenantId = survey.TenantId
+                        };
+                        _context.Evaluators.Add(evaluator);
+                        evaluatorMap[evaluatorEmployeeId] = evaluator; // Add to cache immediately
+                        _logger.LogInformation("✅ Created evaluator for employee {EmployeeId}", evaluatorEmployeeId);
+                    }
+                    else if (!evaluator.IsActive)
+                    {
+                        evaluator.IsActive = true;
+                        evaluator.UpdatedAt = now;
+                    }
+
+                    // --- STEP D: RESOLVE/CREATE RELATIONSHIP (Reuse from Map) ---
+                    var relKey = (subject.Id, evaluator.Id);
+                    if (!relationshipMap.TryGetValue(relKey, out var relationshipEntity))
                     {
                         relationshipEntity = new SubjectEvaluator
                         {
                             Id = Guid.NewGuid(),
                             SubjectId = subject.Id,
                             EvaluatorId = evaluator.Id,
-                            Relationship = relationship,
+                            Relationship = relationshipType,
                             TenantId = survey.TenantId,
                             IsActive = true,
                             CreatedAt = now
                         };
                         _context.SubjectEvaluators.Add(relationshipEntity);
-                        _logger.LogInformation("✅ Created relationship: Subject {SubjectId} -> Evaluator {EvaluatorId} as {Relationship}", subjectEmployeeId, evaluatorEmployeeId, relationship);
+                        relationshipMap[relKey] = relationshipEntity; // Add to cache
+                        _logger.LogInformation("✅ Created relationship: {Subject} -> {Evaluator}", subjectEmployeeId, evaluatorEmployeeId);
+                    }
+                    else
+                    {
+                        if (!relationshipEntity.IsActive)
+                        {
+                            relationshipEntity.IsActive = true;
+                            relationshipEntity.UpdatedAt = now;
+                        }
+                        // Update relationship type if different
+                        if (!string.Equals(relationshipEntity.Relationship, relationshipType, StringComparison.Ordinal))
+                        {
+                            relationshipEntity.Relationship = relationshipType;
+                            relationshipEntity.UpdatedAt = now;
+                        }
                     }
 
                     relationshipsProcessed++;
 
-                    // Step 4: Handle SubjectEvaluatorSurvey assignment
-                    var existingAssignmentInfo = await _context.SubjectEvaluatorSurveys
-                        .FirstOrDefaultAsync(ses => ses.SubjectEvaluatorId == relationshipEntity.Id && ses.SurveyId == surveyId);
-
-                    Guid finalAssignmentId;
+                    // --- STEP E: RESOLVE/CREATE ASSIGNMENT (Reuse from Map) ---
+                    var assignKey = relationshipEntity.Id;
                     bool notificationNeeded = false;
+                    Guid finalAssignmentId;
 
-                    if (existingAssignmentInfo != null)
+                    if (assignmentMap.TryGetValue(assignKey, out var existingAssignment))
                     {
-                        if (!existingAssignmentInfo.IsActive)
+                         if (!existingAssignment.IsActive)
                         {
-                            existingAssignmentInfo.IsActive = true;
-                            existingAssignmentInfo.UpdatedAt = now;
+                            existingAssignment.IsActive = true;
+                            existingAssignment.UpdatedAt = now;
                             assignmentsCreatedOrReactivated++;
-                            _logger.LogInformation("✅ Reactivated survey assignment for relationship {RelationshipId}", relationshipEntity.Id);
-                            finalAssignmentId = existingAssignmentInfo.Id;
+                            finalAssignmentId = existingAssignment.Id;
                             notificationNeeded = true;
                         }
                         else
                         {
-                            _logger.LogInformation("ℹ️ Survey assignment already active for relationship {RelationshipId}", relationshipEntity.Id);
+                            // Already exists and active, skip
                             continue;
                         }
                     }
@@ -375,32 +400,29 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                             IsActive = true
                         };
                         _context.SubjectEvaluatorSurveys.Add(newAssignment);
+                        assignmentMap[assignKey] = newAssignment; // Add to cache
                         assignmentsCreatedOrReactivated++;
-                        _logger.LogInformation("✅ Created survey assignment for relationship {RelationshipId}", relationshipEntity.Id);
                         finalAssignmentId = newAssignment.Id;
                         notificationNeeded = true;
                     }
 
                     if (notificationNeeded)
                     {
-                        var evaluatorEmail = evaluatorEmployee.Email;
-                        var evaluatorName = evaluatorEmployee.FullName;
-                        var subjectName = subjectEmployee.FullName;
-
-                        if (pendingNotifications.TryGetValue(evaluatorEmail, out var data))
+                        if (pendingNotifications.TryGetValue(evaluatorEmployee.Email, out var data))
                         {
-                            pendingNotifications[evaluatorEmail] = (data.Name, subjectName, data.Count + 1, finalAssignmentId);
+                            pendingNotifications[evaluatorEmployee.Email] = (data.Name, subjectEmployee.FullName, data.Count + 1, finalAssignmentId);
                         }
                         else
                         {
-                            pendingNotifications[evaluatorEmail] = (evaluatorName, subjectName, 1, finalAssignmentId);
+                            pendingNotifications[evaluatorEmployee.Email] = (evaluatorEmployee.FullName, subjectEmployee.FullName, 1, finalAssignmentId);
                         }
                     }
+
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error processing CSV row {RowNumber} for survey {SurveyId}", index + 2, surveyId);
-                    errors.Add($"Row {index + 2}: Error processing row - {ex.Message}");
+                    _logger.LogError(ex, "Error processing CSV row {RowNumber}", index + 2);
+                    errors.Add($"Row {index + 2}: Error - {ex.Message}");
                 }
             }
 
@@ -417,19 +439,18 @@ public class SurveyAssignmentService : ISurveyAssignmentService
             response.Message = assignmentsCreatedOrReactivated > 0
                 ? $"Successfully assigned {assignmentsCreatedOrReactivated} relationship(s) from CSV. {errors.Count} error(s) occurred."
                 : relationshipsProcessed > 0
-                    ? $"CSV processed: {relationshipsProcessed} relationship(s) processed but all were already assigned to this survey. {errors.Count} error(s) occurred."
-                    : $"No relationships were processed. {errors.Count} error(s) occurred.";
+                    ? $"CSV processed: {relationshipsProcessed} relationship(s) processed but all were already assigned. {errors.Count} error(s) occurred."
+                    : $"No valid relationships processed. {errors.Count} error(s) occurred.";
 
             return response;
         }
         catch (Exception ex)
         {
             await transaction.RollbackAsync();
-            _logger.LogError(ex, "Error assigning survey {SurveyId} relationships from CSV", surveyId);
+            _logger.LogError(ex, "CSV Import Fatal Error");
             response.Success = false;
-            response.Message = "An error occurred while assigning survey relationships from CSV";
+            response.Message = "Fatal error during CSV import";
             response.Errors.Add(ex.Message);
-            response.ErrorCount = response.Errors.Count;
             return response;
         }
     }

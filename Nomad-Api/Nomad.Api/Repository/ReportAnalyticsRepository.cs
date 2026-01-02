@@ -575,7 +575,7 @@ public class ReportAnalyticsRepository
 
                         int? scoreValue = null;
 
-                        if (answerElement.ValueKind == JsonValueKind.Number)
+                            if (answerElement.ValueKind == JsonValueKind.Number)
                         {
                             scoreValue = (int)Math.Round(answerElement.GetDouble());
                         }
@@ -587,9 +587,10 @@ public class ReportAnalyticsRepository
                                 scoreValue = parsed;
                             }
                             else if (!string.IsNullOrEmpty(answerText) &&
-                                     questionInfo.RatingOptionsMap.TryGetValue(answerText, out var mappedValue))
+                                     questionInfo.RatingOptionsMap.ContainsKey(answerText)) // Check if key exists
                             {
-                                scoreValue = mappedValue;
+                                // Look up the score from the mapping
+                                scoreValue = questionInfo.RatingOptionsMap[answerText];
                             }
                         }
 
@@ -724,10 +725,30 @@ public class ReportAnalyticsRepository
                 .GroupBy(ss => ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Relationship ?? "Unknown")
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            // Collect unique relationship types for column headers
-            result.RelationshipTypes = relationshipGroups.Keys.OrderBy(r => r).ToList();
+            // Collect unique relationship types for column headers (Anonymity Logic)
+            // Only show Peer, Stakeholder, Direct if count >= 3
+            result.RelationshipTypes = relationshipGroups
+                .Where(g => 
+                {
+                    var rel = g.Key.Trim().ToLowerInvariant();
+                    // Check if it's a restricted group
+                    if (rel == "peer" || rel == "stakeholder" || rel.Contains("direct"))
+                    {
+                        // Check anonymity threshold
+                        if (g.Value.Count < 3)
+                        {
+                            _logger.LogInformation("Hiding relationship column '{Rel}' due to anonymity threshold (Count: {Count})", g.Key, g.Value.Count);
+                            return false;
+                        }
+                    }
+                    return true;
+                })
+                .Select(g => g.Key)
+                .OrderBy(r => r)
+                .ToList();
 
             // Calculate scores per relationship per competency
+            // Note: We still calculate everything, but we only expose the Safe RelationshipTypes in the result list
             var scoresByRelationshipAndCompetency = new Dictionary<string, Dictionary<string, List<double>>>();
             foreach (var relationship in relationshipGroups)
             {
@@ -744,22 +765,22 @@ public class ReportAnalyticsRepository
                 var item = new RaterGroupSummaryItem
                 {
                     CompetencyName = competency,
-                    SelfScore = selfScoresByCompetency.TryGetValue(competency, out var selfScores) && selfScores.Count > 0
-                        ? Math.Round(selfScores.Average(), 2)
+                    SelfScore = selfScoresByCompetency.TryGetValue(competency, out var selfScores) && selfScores.Any(s => s > 0)
+                        ? Math.Round(selfScores.Where(s => s > 0).Average(), 2)
                         : null,
-                    OthersScore = othersScoresByCompetency.TryGetValue(competency, out var othersScores) && othersScores.Count > 0
-                        ? Math.Round(othersScores.Average(), 2)
+                    OthersScore = othersScoresByCompetency.TryGetValue(competency, out var othersScores) && othersScores.Any(s => s > 0)
+                        ? Math.Round(othersScores.Where(s => s > 0).Average(), 2)
                         : null,
                     RelationshipScores = new Dictionary<string, double?>()
                 };
 
-                // Add scores for each relationship type
+                // Add scores for each relationship type (only those that passed anonymity check)
                 foreach (var relationship in result.RelationshipTypes)
                 {
                     if (scoresByRelationshipAndCompetency.TryGetValue(relationship, out var relScores) &&
-                        relScores.TryGetValue(competency, out var compScores) && compScores.Count > 0)
+                        relScores.TryGetValue(competency, out var compScores) && compScores.Any(s => s > 0))
                     {
-                        item.RelationshipScores[relationship] = Math.Round(compScores.Average(), 2);
+                        item.RelationshipScores[relationship] = Math.Round(compScores.Where(s => s > 0).Average(), 2);
                     }
                     else
                     {
@@ -798,20 +819,12 @@ public class ReportAnalyticsRepository
             var subject = await _context.Subjects
                 .FirstOrDefaultAsync(s => s.Id == subjectId && s.TenantId == tenantId);
 
-            if (subject == null)
-            {
-                _logger.LogWarning("Subject not found for cluster hierarchy: {SubjectId}", subjectId);
-                return result;
-            }
+            if (subject == null) return result;
 
             var survey = await _context.Surveys
                 .FirstOrDefaultAsync(s => s.Id == surveyId && s.TenantId == tenantId);
 
-            if (survey?.Schema == null)
-            {
-                _logger.LogWarning("Survey not found or has no schema: {SurveyId}", surveyId);
-                return result;
-            }
+            if (survey?.Schema == null) return result;
 
             var questionMappings = await ExtractQuestionMappings(survey.Schema, tenantId);
 
@@ -836,178 +849,232 @@ public class ReportAnalyticsRepository
                   (ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Evaluator?.EmployeeId == subject.EmployeeId)))
                 .ToList();
 
+             // Calculate scores by relationship type for Hierarchy
             var relationshipGroups = otherSubmissions
                 .GroupBy(ss => ss.SubjectEvaluatorSurvey?.SubjectEvaluator?.Relationship ?? "Unknown")
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            result.RelationshipTypes = relationshipGroups.Keys.OrderBy(r => r).ToList();
+            // Collect unique relationship types for columns (Anonymity Logic)
+            result.RelationshipTypes = relationshipGroups
+                .Where(g => 
+                {
+                    var rel = g.Key.Trim().ToLowerInvariant();
+                    // Check if it's a restricted group
+                    if (rel == "peer" || rel == "stakeholder" || rel.Contains("direct"))
+                    {
+                        // Check anonymity threshold
+                        if (g.Value.Count < 3)
+                        {
+                            _logger.LogInformation("Hiding relationship column '{Rel}' in Hierarchy due to anonymity threshold (Count: {Count})", g.Key, g.Value.Count);
+                            return false;
+                        }
+                    }
+                    return true;
+                })
+                .Select(g => g.Key)
+                .OrderBy(r => r)
+                .ToList();
 
-            // Group questions by Cluster → Competency
-            var clusterCompetencyQuestions = questionMappings.Values
-                .Where(q => !string.IsNullOrEmpty(q.ClusterName) && !string.IsNullOrEmpty(q.CompetencyName))
+
+            // Group mappings by Cluster -> Competency
+            var hierarchy = questionMappings.Values
                 .GroupBy(q => q.ClusterName)
                 .OrderBy(g => g.Key)
                 .ToList();
 
-            foreach (var clusterGroup in clusterCompetencyQuestions)
+            foreach (var clusterGroup in hierarchy)
             {
-                var clusterItem = new ClusterSummaryItem
+                var clusterItem = new ClusterSummaryItem { ClusterName = clusterGroup.Key };
+                var clusterQuestions = clusterGroup.Select(q => q.QuestionName).ToList();
+
+                // Calculate Cluster Scores (Self)
+                if (selfSubmission != null)
                 {
-                    ClusterName = clusterGroup.Key,
-                    RelationshipScores = new Dictionary<string, double?>()
-                };
+                    clusterItem.SelfScore = CalculateAggregateScore(selfSubmission, clusterQuestions, questionMappings);
+                }
 
-                var clusterSelfScores = new List<double>();
-                var clusterOthersScores = new List<double>();
-                var clusterRelScores = result.RelationshipTypes.ToDictionary(r => r, r => new List<double>());
+                // Calculate Cluster Scores (Others - Aggregate)
+                clusterItem.OthersScore = CalculateAggregateScore(otherSubmissions, clusterQuestions, questionMappings);
 
+                // Calculate Cluster Scores (Relationships)
+                foreach (var rel in result.RelationshipTypes)
+                {
+                    if (relationshipGroups.TryGetValue(rel, out var relSubs))
+                    {
+                        clusterItem.RelationshipScores[rel] = CalculateAggregateScore(relSubs, clusterQuestions, questionMappings);
+                    }
+                    else
+                    {
+                         clusterItem.RelationshipScores[rel] = null;
+                    }
+                }
+
+                // Process Competencies
                 var competencyGroups = clusterGroup
                     .GroupBy(q => q.CompetencyName)
-                    .OrderBy(g => g.Key)
-                    .ToList();
+                    .OrderBy(g => g.Key);
 
-                foreach (var compGroup in competencyGroups)
+                foreach (var competencyGroup in competencyGroups)
                 {
-                    var compItem = new CompetencySummaryItem
-                    {
-                        CompetencyName = compGroup.Key,
-                        ClusterName = clusterGroup.Key,
-                        RelationshipScores = new Dictionary<string, double?>()
+                    var compItem = new CompetencySummaryItem 
+                    { 
+                        CompetencyName = competencyGroup.Key,
+                        ClusterName = clusterGroup.Key
                     };
+                    var compQuestions = competencyGroup.Select(q => q.QuestionName).ToList();
 
-                    var compSelfScores = new List<double>();
-                    var compOthersScores = new List<double>();
-                    var compRelScores = result.RelationshipTypes.ToDictionary(r => r, r => new List<double>());
+                    // Calculate Competency Scores
+                    if (selfSubmission != null)
+                        compItem.SelfScore = CalculateAggregateScore(selfSubmission, compQuestions, questionMappings);
+                    
+                    compItem.OthersScore = CalculateAggregateScore(otherSubmissions, compQuestions, questionMappings);
 
-                    foreach (var question in compGroup)
-                    {
-                        var questionItem = new QuestionSummaryItem
-                        {
-                            QuestionText = question.QuestionText,
-                            RelationshipScores = new Dictionary<string, double?>()
-                        };
-
-                        // Self score for question
-                        if (selfSubmission != null)
-                        {
-                            var selfScore = GetQuestionScore(selfSubmission, question.QuestionName, question);
-                            if (selfScore.HasValue)
-                            {
-                                questionItem.SelfScore = Math.Round(selfScore.Value, 2);
-                                compSelfScores.Add(selfScore.Value);
-                                clusterSelfScores.Add(selfScore.Value);
-                            }
-                        }
-
-                        // Others scores for question
-                        var othersQuestionScores = new List<double>();
-                        foreach (var sub in otherSubmissions)
-                        {
-                            var score = GetQuestionScore(sub, question.QuestionName, question);
-                            if (score.HasValue) othersQuestionScores.Add(score.Value);
-                        }
-                        if (othersQuestionScores.Count > 0)
-                        {
-                            questionItem.OthersScore = Math.Round(othersQuestionScores.Average(), 2);
-                            compOthersScores.AddRange(othersQuestionScores);
-                            clusterOthersScores.AddRange(othersQuestionScores);
-                        }
-
-                        // Relationship scores for question
-                        foreach (var rel in result.RelationshipTypes)
-                        {
-                            if (relationshipGroups.TryGetValue(rel, out var relSubs))
-                            {
-                                var relScores = new List<double>();
-                                foreach (var sub in relSubs)
-                                {
-                                    var score = GetQuestionScore(sub, question.QuestionName, question);
-                                    if (score.HasValue) relScores.Add(score.Value);
-                                }
-                                if (relScores.Count > 0)
-                                {
-                                    questionItem.RelationshipScores[rel] = Math.Round(relScores.Average(), 2);
-                                    compRelScores[rel].AddRange(relScores);
-                                    clusterRelScores[rel].AddRange(relScores);
-                                }
-                            }
-                        }
-
-                        compItem.Questions.Add(questionItem);
-                    }
-
-                    // Aggregate competency scores
-                    compItem.SelfScore = compSelfScores.Count > 0 ? Math.Round(compSelfScores.Average(), 2) : null;
-                    compItem.OthersScore = compOthersScores.Count > 0 ? Math.Round(compOthersScores.Average(), 2) : null;
                     foreach (var rel in result.RelationshipTypes)
                     {
-                        compItem.RelationshipScores[rel] = compRelScores[rel].Count > 0
-                            ? Math.Round(compRelScores[rel].Average(), 2) : null;
+                        if (relationshipGroups.TryGetValue(rel, out var relSubs))
+                        {
+                             compItem.RelationshipScores[rel] = CalculateAggregateScore(relSubs, compQuestions, questionMappings);
+                        }
+                        else
+                        {
+                             compItem.RelationshipScores[rel] = null;
+                        }
+                    }
+
+                    // Process Questions
+                    foreach (var question in competencyGroup)
+                    {
+                        var qItem = new QuestionSummaryItem { QuestionText = question.QuestionText };
+                        var qList = new List<string> { question.QuestionName };
+
+                        if (selfSubmission != null)
+                            qItem.SelfScore = CalculateAggregateScore(selfSubmission, qList, questionMappings);
+
+                        qItem.OthersScore = CalculateAggregateScore(otherSubmissions, qList, questionMappings);
+
+                        foreach (var rel in result.RelationshipTypes)
+                        {
+                             if (relationshipGroups.TryGetValue(rel, out var relSubs))
+                            {
+                                 qItem.RelationshipScores[rel] = CalculateAggregateScore(relSubs, qList, questionMappings);
+                            }
+                            else
+                            {
+                                 qItem.RelationshipScores[rel] = null;
+                            }
+                        }
+                        compItem.Questions.Add(qItem);
                     }
 
                     clusterItem.Competencies.Add(compItem);
                 }
 
-                // Aggregate cluster scores
-                clusterItem.SelfScore = clusterSelfScores.Count > 0 ? Math.Round(clusterSelfScores.Average(), 2) : null;
-                clusterItem.OthersScore = clusterOthersScores.Count > 0 ? Math.Round(clusterOthersScores.Average(), 2) : null;
-                foreach (var rel in result.RelationshipTypes)
-                {
-                    clusterItem.RelationshipScores[rel] = clusterRelScores[rel].Count > 0
-                        ? Math.Round(clusterRelScores[rel].Average(), 2) : null;
-                }
-
                 result.Clusters.Add(clusterItem);
             }
-
-            _logger.LogInformation(
-                "Generated cluster hierarchy: {ClusterCount} clusters with {RelCount} relationship types",
-                result.Clusters.Count, result.RelationshipTypes.Count);
 
             return result;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                "Error getting cluster hierarchy for Subject: {SubjectId}, Survey: {SurveyId}",
-                subjectId, surveyId);
-            throw;
+             _logger.LogError(ex, "Error getting cluster competency hierarchy");
+             throw;
         }
     }
 
-    /// <summary>
-    /// Helper to get a single question's score from a submission
-    /// </summary>
-    private double? GetQuestionScore(SurveySubmission submission, string questionName, QuestionMapping mapping)
+    // Helper: Calculate aggregate score for a set of question IDs across multiple submissions
+    // EXCLUDES 0 scores
+    private double? CalculateAggregateScore(List<SurveySubmission> submissions, List<string> questionIds, Dictionary<string, QuestionMapping> mappings)
     {
-        try
+        var scores = new List<double>();
+        foreach(var sub in submissions)
         {
-            if (submission.ResponseData == null) return null;
+            if(sub.ResponseData == null) continue;
+            var subScores = GetScoresFromResponse(sub.ResponseData, questionIds, mappings);
+            scores.AddRange(subScores);
+        }
 
-            var responseRoot = submission.ResponseData.RootElement;
-            if (responseRoot.TryGetProperty(questionName, out var answer))
+        if(!scores.Any()) return null;
+        return Math.Round(scores.Average(), 2);
+    }
+    
+    // Helper: Calculate aggregate score for a set of question IDs for one submission
+    // EXCLUDES 0 scores
+    private double? CalculateAggregateScore(SurveySubmission submission, List<string> questionIds, Dictionary<string, QuestionMapping> mappings)
+    {
+        if(submission.ResponseData == null) return null;
+        var scores = GetScoresFromResponse(submission.ResponseData, questionIds, mappings);
+        
+        if(!scores.Any()) return null;
+        return Math.Round(scores.Average(), 2);
+    }
+
+    // Helper: Extract valid (>0) scores from response
+    private List<double> GetScoresFromResponse(JsonDocument responseData, List<string> questionIds, Dictionary<string, QuestionMapping> mappings)
+    {
+        var scores = new List<double>();
+        var root = responseData.RootElement;
+
+        foreach(var qId in questionIds)
+        {
+             if(!mappings.TryGetValue(qId, out var map)) continue;
+             
+             if(root.TryGetProperty(qId, out var el))
+             {
+                 double val = 0;
+                 if(el.ValueKind == JsonValueKind.Number)
+                 {
+                     val = el.GetDouble();
+                 }
+                 else if(el.ValueKind == JsonValueKind.String)
+                 {
+                     var str = el.GetString();
+                     // Try parse or map
+                     if(double.TryParse(str, out var p)) val = p;
+                     else if(!string.IsNullOrEmpty(str) && map.RatingOptionsMap.TryGetValue(str, out var mapped)) val = mapped;
+                 }
+
+                 if(val > 0) scores.Add(val);
+             }
+        }
+        return scores;
+    }
+
+    // Helper used by RaterGroupSummary to populate dictionary
+    private void CalculateCompetencyScores(SurveySubmission submission, Dictionary<string, QuestionMapping> mappings, Dictionary<string, List<double>> bucket)
+    {
+        if (submission.ResponseData == null) return;
+        
+        var root = submission.ResponseData.RootElement;
+        foreach(var kvp in mappings)
+        {
+            var qId = kvp.Key;
+            var map = kvp.Value;
+            var comp = map.CompetencyName;
+            if(string.IsNullOrEmpty(comp)) continue;
+
+            if(root.TryGetProperty(qId, out var el))
             {
-                if (answer.ValueKind == JsonValueKind.Number)
-                {
-                    return answer.GetDouble();
-                }
-                if (answer.ValueKind == JsonValueKind.String)
-                {
-                    var answerText = answer.GetString();
-                    if (!string.IsNullOrEmpty(answerText) && mapping.RatingOptionsMap.TryGetValue(answerText, out var numericValue))
-                    {
-                        return numericValue;
-                    }
-                    if (double.TryParse(answerText, out var parsed))
-                    {
-                        return parsed;
-                    }
-                }
+                 double val = 0;
+                 if(el.ValueKind == JsonValueKind.Number)
+                 {
+                     val = el.GetDouble();
+                 }
+                 else if(el.ValueKind == JsonValueKind.String)
+                 {
+                     var str = el.GetString();
+                     if(double.TryParse(str, out var p)) val = p;
+                     else if(!string.IsNullOrEmpty(str) && map.RatingOptionsMap.TryGetValue(str, out var mapped)) val = mapped;
+                 }
+
+                 if(val > 0) 
+                 {
+                     if(!bucket.ContainsKey(comp)) bucket[comp] = new List<double>();
+                     bucket[comp].Add(val);
+                 }
             }
         }
-        catch { }
-        return null;
     }
+
 
     /// <summary>
     /// Gets open-ended feedback responses for a subject from all evaluators (excluding self)
@@ -1182,149 +1249,7 @@ public class ReportAnalyticsRepository
     /// <summary>
     /// Helper to calculate competency-level scores from a submission
     /// </summary>
-    private void CalculateCompetencyScores(
-        SurveySubmission submission,
-        Dictionary<string, QuestionMapping> questionMappings,
-        Dictionary<string, List<double>> competencyScores)
-    {
-        if (submission.ResponseData == null) return;
 
-        try
-        {
-            var responseRoot = submission.ResponseData.RootElement;
-
-            foreach (var mapping in questionMappings)
-            {
-                var questionId = mapping.Key;
-                var questionInfo = mapping.Value;
-                var competencyName = questionInfo.CompetencyName;
-
-                if (string.IsNullOrEmpty(competencyName)) continue;
-
-                if (!responseRoot.TryGetProperty(questionId, out var answerElement))
-                    continue;
-
-                double? scoreValue = null;
-
-                if (answerElement.ValueKind == JsonValueKind.Number)
-                {
-                    scoreValue = answerElement.GetDouble();
-                }
-                else if (answerElement.ValueKind == JsonValueKind.String)
-                {
-                    var answerText = answerElement.GetString();
-                    if (double.TryParse(answerText, out var parsed))
-                    {
-                        scoreValue = parsed;
-                    }
-                    else if (!string.IsNullOrEmpty(answerText) &&
-                             questionInfo.RatingOptionsMap.TryGetValue(answerText, out var mappedValue))
-                    {
-                        scoreValue = mappedValue;
-                    }
-                }
-
-                if (scoreValue.HasValue && scoreValue.Value >= 1 && scoreValue.Value <= 5)
-                {
-                    if (!competencyScores.ContainsKey(competencyName))
-                        competencyScores[competencyName] = new List<double>();
-
-                    competencyScores[competencyName].Add(scoreValue.Value);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error calculating competency scores for submission {Id}", submission.Id);
-        }
-    }
-
-    /// <summary>
-    /// Calculates scores for a single submission (used for self-assessment)
-    /// </summary>
-    private Dictionary<string, double> CalculateScoresForSubmission(
-        SurveySubmission submission,
-        Dictionary<string, QuestionMapping> questionMappings)
-    {
-        var scores = new Dictionary<string, double>();
-
-        if (submission.ResponseData == null)
-            return scores;
-
-        try
-        {
-            var responseRoot = submission.ResponseData.RootElement;
-
-            foreach (var mapping in questionMappings)
-            {
-                var questionId = mapping.Key;
-                var questionInfo = mapping.Value;
-
-                if (!responseRoot.TryGetProperty(questionId, out var answerElement))
-                    continue;
-
-                double? answerValue = null;
-
-                if (answerElement.ValueKind == JsonValueKind.Number)
-                {
-                    answerValue = answerElement.GetDouble();
-                }
-                else if (answerElement.ValueKind == JsonValueKind.String)
-                {
-                    var answerText = answerElement.GetString();
-
-                    if (double.TryParse(answerText, out var parsed))
-                    {
-                        answerValue = parsed;
-                    }
-                    else if (!string.IsNullOrEmpty(answerText) &&
-                             questionInfo.RatingOptionsMap.TryGetValue(answerText, out var mappedValue))
-                    {
-                        answerValue = mappedValue;
-                    }
-                }
-
-                if (answerValue.HasValue)
-                {
-                    scores[questionId] = answerValue.Value;
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Error calculating scores for submission {Id}", submission.Id);
-        }
-
-        return scores;
-    }
-
-    /// <summary>
-    /// Calculates average scores per question across multiple submissions
-    /// </summary>
-    private Dictionary<string, double> CalculateAverageScoresPerQuestion(
-        List<SurveySubmission> submissions,
-        Dictionary<string, QuestionMapping> questionMappings)
-    {
-        var scoresAccumulator = new Dictionary<string, List<double>>();
-
-        foreach (var submission in submissions)
-        {
-            var submissionScores = CalculateScoresForSubmission(submission, questionMappings);
-
-            foreach (var kvp in submissionScores)
-            {
-                if (!scoresAccumulator.ContainsKey(kvp.Key))
-                    scoresAccumulator[kvp.Key] = new List<double>();
-
-                scoresAccumulator[kvp.Key].Add(kvp.Value);
-            }
-        }
-
-        return scoresAccumulator.ToDictionary(
-            kvp => kvp.Key,
-            kvp => kvp.Value.Average()
-        );
-    }
 
     /// <summary>
     /// Extracts question mappings from survey schema including cluster/competency info
@@ -1369,8 +1294,8 @@ public class ReportAnalyticsRepository
 
                     _logger.LogDebug("Found question: id={Id}, name={Name}, type={Type}", questionId, questionName, questionType);
 
-                    // Only process rating-based questions (rating, radiogroup with rating options)
-                    var isRatingType = questionType == "rating" || questionType == "radiogroup";
+                    // Only process rating-based questions (rating, radiogroup, dropdown with rating options)
+                    var isRatingType = questionType == "rating" || questionType == "radiogroup" || questionType == "dropdown";
                     if (!isRatingType)
                         continue;
 
@@ -1448,33 +1373,99 @@ public class ReportAnalyticsRepository
                         _logger.LogWarning("Question {QuestionName} has NO importedFrom metadata", questionName);
                     }
 
+
                     // Get rating scale and options from config
+                    // Get rating scale and options from config or root question
                     var ratingMin = 1;
                     var ratingMax = 5;
                     var ratingOptionsMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-                    if (question.TryGetProperty("config", out var config))
+                    JsonElement config = default;
+                    bool hasConfig = question.TryGetProperty("config", out config);
+
+                    if (hasConfig)
                     {
                         if (config.TryGetProperty("ratingMin", out var minEl)) ratingMin = minEl.GetInt32();
                         if (config.TryGetProperty("ratingMax", out var maxEl)) ratingMax = maxEl.GetInt32();
+                    }
+                    else 
+                    {
+                         if (question.TryGetProperty("rateMin", out var minEl)) ratingMin = minEl.GetInt32();
+                         if (question.TryGetProperty("rateMax", out var maxEl)) ratingMax = maxEl.GetInt32();
+                    }
 
-                        // Extract rating options to map text to numeric value
-                        if (config.TryGetProperty("ratingOptions", out var ratingOptions) &&
-                            ratingOptions.ValueKind == JsonValueKind.Array)
+                        // Helper to extract scores from options array
+                        void ExtractOptionsScores(JsonElement optionsArray)
                         {
-                            foreach (var option in ratingOptions.EnumerateArray())
+                            foreach (var option in optionsArray.EnumerateArray())
                             {
-                                var optionText = option.TryGetProperty("text", out var textEl) ? textEl.GetString() : null;
-                                var optionId = option.TryGetProperty("id", out var optIdEl) ? optIdEl.GetString() : null;
-
-                                if (!string.IsNullOrEmpty(optionText) && !string.IsNullOrEmpty(optionId) &&
-                                    int.TryParse(optionId, out var numericValue))
+                                string optionText = null;
+                                if (option.ValueKind == JsonValueKind.Object)
                                 {
-                                    ratingOptionsMap[optionText] = numericValue;
+                                    optionText = option.TryGetProperty("text", out var textEl) ? textEl.GetString() : 
+                                                 option.TryGetProperty("value", out var valEl) ? valEl.ToString() : null;
+                                }
+                                else if (option.ValueKind == JsonValueKind.String)
+                                {
+                                    optionText = option.GetString();
+                                }
+
+                                // Try get explicit score first (case-insensitive check for Score/score)
+                                int? score = null;
+                                if (option.ValueKind == JsonValueKind.Object)
+                                {
+                                    if (option.TryGetProperty("score", out var scoreEl) && scoreEl.ValueKind == JsonValueKind.Number)
+                                    {
+                                        score = scoreEl.GetInt32();
+                                    }
+                                    else if (option.TryGetProperty("Score", out var scoreElCap) && scoreElCap.ValueKind == JsonValueKind.Number)
+                                    {
+                                        score = scoreElCap.GetInt32();
+                                    }
+                                }
+
+                                // Fallback to parsing numeric value from ID or Order if score not present (legacy support/safety)
+                                if (!score.HasValue && option.ValueKind == JsonValueKind.Object) 
+                                {
+                                     var optionId = option.TryGetProperty("id", out var optIdEl) ? optIdEl.GetString() : null;
+                                     if (!string.IsNullOrEmpty(optionId) && int.TryParse(optionId, out var numericId))
+                                     {
+                                         score = numericId;
+                                     }
+                                     else if(option.TryGetProperty("order", out var orderEl) && orderEl.ValueKind == JsonValueKind.Number)
+                                     {
+                                         score = orderEl.GetInt32() + 1; // 0-indexed order to 1-based score
+                                     }
+                                }
+
+                                if (!string.IsNullOrEmpty(optionText) && score.HasValue)
+                                {
+                                    ratingOptionsMap[optionText] = score.Value;
                                 }
                             }
                         }
-                    }
+
+                        // 1. Extract ratingOptions (Nomad custom for Rating type)
+                        if (hasConfig && config.TryGetProperty("ratingOptions", out var ratingOptions) && ratingOptions.ValueKind == JsonValueKind.Array)
+                        {
+                            ExtractOptionsScores(ratingOptions);
+                        }
+                        
+                        // 2. Extract options (Nomad custom for Choice types)
+                        if (hasConfig && config.TryGetProperty("options", out var standardOptions) && standardOptions.ValueKind == JsonValueKind.Array)
+                        {
+                            ExtractOptionsScores(standardOptions);
+                        }
+
+                        // 3. Extract choices (SurveyJS standard for Choice types - check config then root)
+                        if (hasConfig && config.TryGetProperty("choices", out var choicesConfig) && choicesConfig.ValueKind == JsonValueKind.Array)
+                        {
+                            ExtractOptionsScores(choicesConfig);
+                        }
+                        else if (question.TryGetProperty("choices", out var choicesRoot) && choicesRoot.ValueKind == JsonValueKind.Array)
+                        {
+                             ExtractOptionsScores(choicesRoot);
+                        }
 
                     _logger.LogInformation("Question {Id} rating options: {Options}",
                         questionId, string.Join(", ", ratingOptionsMap.Select(kvp => $"{kvp.Key}={kvp.Value}")));
@@ -1577,41 +1568,132 @@ public class ReportAnalyticsRepository
                         }
                     }
 
-                    if (!answerValue.HasValue)
-                        continue;
-
+                    if (answerValue.HasValue && answerValue.Value > 0)
+                {
                     if (!questionScoresAccumulator.ContainsKey(questionId))
                         questionScoresAccumulator[questionId] = new List<double>();
 
                     questionScoresAccumulator[questionId].Add(answerValue.Value);
                 }
             }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Error processing response data for submission {SubmissionId}", submission.Id);
-            }
         }
-
-        // Calculate averages
-        var results = new List<QuestionScoreResult>();
-        foreach (var kvp in questionScoresAccumulator)
+        catch (Exception ex)
         {
-            if (!kvp.Value.Any() || !questionMappings.TryGetValue(kvp.Key, out var mapping))
-                continue;
-
-            results.Add(new QuestionScoreResult
-            {
-                QuestionName = kvp.Key,
-                QuestionText = mapping.QuestionText,
-                ClusterName = mapping.ClusterName,
-                CompetencyName = mapping.CompetencyName,
-                AverageScore = kvp.Value.Average()
-            });
+            _logger.LogWarning(ex, "Error processing response data for submission {SubmissionId}", submission.Id);
         }
-
-        return results;
     }
 
+    // Calculate averages
+    var results = new List<QuestionScoreResult>();
+    foreach (var kvp in questionScoresAccumulator)
+    {
+        if (!kvp.Value.Any() || !questionMappings.TryGetValue(kvp.Key, out var mapping))
+            continue;
+
+        results.Add(new QuestionScoreResult
+        {
+            QuestionName = kvp.Key,
+            QuestionText = mapping.QuestionText,
+            ClusterName = mapping.ClusterName,
+            CompetencyName = mapping.CompetencyName,
+            AverageScore = kvp.Value.Average()
+        });
+    }
+
+    return results;
+}
+
+/// <summary>
+/// Calculates scores for a single submission based on mapping
+/// </summary>
+private Dictionary<string, double> CalculateScoresForSubmission(
+    SurveySubmission submission,
+    Dictionary<string, QuestionMapping> questionMappings)
+{
+    var scores = new Dictionary<string, double>();
+
+    if (submission.ResponseData == null)
+        return scores;
+
+    try
+    {
+        var responseRoot = submission.ResponseData.RootElement;
+
+        foreach (var mapping in questionMappings)
+        {
+            var questionId = mapping.Key;
+            var questionInfo = mapping.Value;
+
+            if (!responseRoot.TryGetProperty(questionId, out var answerElement))
+                continue;
+
+            double? answerValue = null;
+
+            if (answerElement.ValueKind == JsonValueKind.Number)
+            {
+                answerValue = answerElement.GetDouble();
+            }
+            else if (answerElement.ValueKind == JsonValueKind.String)
+            {
+                var answerText = answerElement.GetString();
+
+                if (double.TryParse(answerText, out var parsed))
+                {
+                    answerValue = parsed;
+                }
+                else if (!string.IsNullOrEmpty(answerText) &&
+                         questionInfo.RatingOptionsMap.TryGetValue(answerText, out var mappedValue))
+                {
+                    answerValue = mappedValue;
+                }
+            }
+
+            // Exclude 0 scores (N/A)
+            if (answerValue.HasValue && answerValue.Value > 0)
+            {
+                scores[questionId] = answerValue.Value;
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        _logger.LogWarning(ex, "Error calculating scores for submission {Id}", submission.Id);
+    }
+
+    return scores;
+}
+
+/// <summary>
+/// Calculates average scores per question across multiple submissions
+/// </summary>
+private Dictionary<string, double> CalculateAverageScoresPerQuestion(
+    List<SurveySubmission> submissions,
+    Dictionary<string, QuestionMapping> questionMappings)
+{
+    var scoresAccumulator = new Dictionary<string, List<double>>();
+
+    foreach (var submission in submissions)
+    {
+        var submissionScores = CalculateScoresForSubmission(submission, questionMappings);
+
+        foreach (var kvp in submissionScores)
+        {
+            // CalculateScoresForSubmission already filters > 0, but double check logic
+            if (kvp.Value > 0)
+            {
+                if (!scoresAccumulator.ContainsKey(kvp.Key))
+                    scoresAccumulator[kvp.Key] = new List<double>();
+
+                scoresAccumulator[kvp.Key].Add(kvp.Value);
+            }
+        }
+    }
+
+    return scoresAccumulator.ToDictionary(
+        kvp => kvp.Key,
+        kvp => kvp.Value.Any() ? kvp.Value.Average() : 0 
+    );
+}
     private class QuestionMapping
     {
         public string QuestionName { get; set; } = string.Empty;

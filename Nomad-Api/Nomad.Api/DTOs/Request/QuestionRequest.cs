@@ -10,9 +10,8 @@ public class CreateQuestionRequest
     [Required]
     public Guid CompetencyId { get; set; }
 
-    [Required]
-    [StringLength(2000, MinimumLength = 1)]
-    public string SelfQuestion { get; set; } = string.Empty;
+    [StringLength(2000)]
+    public string? SelfQuestion { get; set; }
 
     [Required]
     [StringLength(2000, MinimumLength = 1)]
@@ -27,9 +26,8 @@ public class UpdateQuestionRequest
     [Required]
     public Guid CompetencyId { get; set; }
 
-    [Required]
-    [StringLength(2000, MinimumLength = 1)]
-    public string SelfQuestion { get; set; } = string.Empty;
+    [StringLength(2000)]
+    public string? SelfQuestion { get; set; }
 
     [Required]
     [StringLength(2000, MinimumLength = 1)]

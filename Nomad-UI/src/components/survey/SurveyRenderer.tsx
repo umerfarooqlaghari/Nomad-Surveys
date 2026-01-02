@@ -33,6 +33,11 @@ export default function SurveyRenderer({
   // Filter questions based on showTo and relationship
   const getVisibleQuestions = (questions: Question[]) => {
     return questions.filter((q) => {
+      // Hide from self-evaluator if selfText is empty (optional self question)
+      if (isSelf && (!q.selfText || !q.selfText.trim())) {
+        return false;
+      }
+
       if (!q.showTo || q.showTo === 'everyone') return true;
       if (q.showTo === 'self' && isSelf) return true;
       if (q.showTo === 'others' && !isSelf) return true;
@@ -46,7 +51,7 @@ export default function SurveyRenderer({
   const handleAnswerChange = (questionId: string, value: any) => {
     const newResponses = { ...responses, [questionId]: value };
     setResponses(newResponses);
-    
+
     if (onDataChange) {
       onDataChange(newResponses);
     }
@@ -149,11 +154,10 @@ export default function SurveyRenderer({
               <button
                 key={index}
                 onClick={() => setCurrentPageIndex(index)}
-                className={`w-8 h-8 rounded-full transition-colors ${
-                  index === currentPageIndex
+                className={`w-8 h-8 rounded-full transition-colors ${index === currentPageIndex
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                }`}
+                  }`}
               >
                 {index + 1}
               </button>

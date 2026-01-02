@@ -4,6 +4,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  scroll-margin-top: -100px;
 }
 
 .header {
@@ -122,6 +123,30 @@
   border-color: #3b82f6;
 }
 
+/* Error state for inputs */
+.inputError {
+  border-color: #dc2626 !important;
+  /* Force the red border */
+  background-color: #fef2f2;
+  box-shadow: 0 0 0 1px #dc2626 !important;
+  /* Adds a red ring to ensure visibility */
+}
+
+.inputError:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px #dc2626 !important;
+  /* Ensure red glow on focus */
+  border-color: #dc2626 !important;
+}
+
+/* Error text below inputs */
+.errorText {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
 .passwordContainer {
   position: relative;
   display: flex;
@@ -232,6 +257,19 @@
 .submitButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background-color: #9ca3af !important;
+  pointer-events: none;
+}
+
+.submitButtonDisabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #9ca3af !important;
+}
+
+.submitButton:disabled:hover,
+.submitButtonDisabled:hover {
+  background-color: #9ca3af !important;
 }
 
 .companiesCard {
@@ -326,31 +364,45 @@
 
 .logoContainer {
   /* Remove fixed width/height if you had them (e.g., width: 40px) */
-  display: inline-flex;     /* Wraps tightly around the content */
-  align-items: center;      /* Centers items vertically */
-  justify-content: center;  /* Centers items horizontally */
-  overflow: hidden;         /* Keeps rounded corners if you have border-radius */
-  border-radius: 6px;       /* Optional: keeps it looking clean */
-  border: 1px solid #e5e7eb; /* Optional: border to define the box */
+  display: inline-flex;
+  /* Wraps tightly around the content */
+  align-items: center;
+  /* Centers items vertically */
+  justify-content: center;
+  /* Centers items horizontally */
+  overflow: hidden;
+  /* Keeps rounded corners if you have border-radius */
+  border-radius: 6px;
+  /* Optional: keeps it looking clean */
+  border: 1px solid #e5e7eb;
+  /* Optional: border to define the box */
 }
 
 .logoImage {
-  display: block;           /* Removes the tiny gap below inline images */
+  display: block;
+  /* Removes the tiny gap below inline images */
   /* Remove width: 100% and height: 100% */
-  
+
   /* Set a maximum to prevent massive logos from breaking your table */
-  max-height: 48px;         /* Adjust this based on your preferred row height */
-  max-width: 150px;         /* Optional: Limit width so it doesn't squash text */
-  
-  width: auto;              /* Let width adjust naturally */
-  height: auto;             /* Let height adjust naturally */
-  object-fit: contain;      /* Ensures the whole logo is visible without cropping */
+  max-height: 48px;
+  /* Adjust this based on your preferred row height */
+  max-width: 150px;
+  /* Optional: Limit width so it doesn't squash text */
+
+  width: auto;
+  /* Let width adjust naturally */
+  height: auto;
+  /* Let height adjust naturally */
+  object-fit: contain;
+  /* Ensures the whole logo is visible without cropping */
 }
 
 /* The placeholder needs fixed size because it has no image to "fit" to */
 .logoPlaceholder {
-  width: 32px;              /* Fixed width for placeholder */
-  height: 32px;             /* Fixed height for placeholder */
+  width: 32px;
+  /* Fixed width for placeholder */
+  height: 32px;
+  /* Fixed height for placeholder */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -535,4 +587,121 @@
 .removeLogoBtn:hover {
   background-color: #fee2e2;
   border-color: #fecaca;
+}
+
+/* Collapsible Sections */
+.collapsibleSection {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  /* More rounded for premium feel */
+  overflow: hidden;
+  margin-bottom: 1.5rem;
+  background-color: white;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.collapsibleSection:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.collapsibleHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  background-color: #ffffff;
+  /* Cleaner look than gray */
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid transparent;
+}
+
+.collapsibleHeaderExpanded {
+  border-bottom-color: #f3f4f6;
+  background-color: #f9fafb;
+}
+
+.collapsibleHeader:hover {
+  background-color: #f9fafb;
+}
+
+.collapsibleTitle {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sectionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background-color: #eff6ff;
+  /* Light blue brand tint */
+  color: #3b82f6;
+  /* Brand blue */
+  transition: transform 0.2s;
+}
+
+.collapsibleHeader:hover .sectionIcon {
+  transform: scale(1.05);
+}
+
+.chevron {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: #9ca3af;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+  color: #3b82f6;
+}
+
+.collapsibleContent {
+  padding: 1.5rem;
+  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: #ffffff;
+}
+
+.collapsedContent {
+  display: none;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhancements for inputs inside collapsible for consistency */
+.collapsibleContent .input,
+.collapsibleContent .select,
+.collapsibleContent .textarea {
+  background-color: #f9fafb;
+  border-color: #e5e7eb;
+  transition: all 0.2s;
+}
+
+.collapsibleContent .input:focus,
+.collapsibleContent .select:focus,
+.collapsibleContent .textarea:focus {
+  background-color: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }

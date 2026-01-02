@@ -24,6 +24,150 @@ export default function ProjectsTab() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [tenantToDelete, setTenantToDelete] = useState<TenantListItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const formTopRef = useRef<HTMLDivElement>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [adminToastShown, setAdminToastShown] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    company: true,
+    contact: false,
+    admin: false
+  });
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section as keyof typeof prev]
+    }));
+  };
+
+  // Real-time validation for Admin Fields "All or Nothing" rule
+  useEffect(() => {
+    const errors: Record<string, string> = {};
+
+    // Validate Slug (always required)
+    // Only show "Required" error if user has attempted to submit
+    if (!formData.Slug && hasSubmitted) {
+      errors['Slug'] = 'Slug is required';
+    } else if (formData.Slug && formData.Slug.length < 2) {
+      errors['Slug'] = 'Slug must be at least 2 characters';
+    } else if (formData.Slug && !/^[a-z0-9-]+$/.test(formData.Slug)) {
+      errors['Slug'] = 'Slug can only contain lowercase letters, numbers, and hyphens';
+    }
+
+    // Validate Company Name (always required)
+    if (!formData.Company.Name && hasSubmitted) {
+      errors['Name'] = 'Company Name is required';
+    }
+
+    // Admin fields validation: "All or Nothing" rule
+    // If TenantAdmin doesn't exist, no admin validation needed
+    if (formData.TenantAdmin) {
+      const admin = formData.TenantAdmin;
+
+      // Check which fields have values (treating empty strings as no value)
+      const hasFirstName = !!admin.FirstName?.trim();
+      const hasLastName = !!admin.LastName?.trim();
+      const hasEmail = !!admin.Email?.trim();
+      const hasPhoneNumber = !!admin.PhoneNumber?.trim();
+      const hasPassword = !!admin.Password && admin.Password.length > 0;
+
+      // Count filled fields (excluding password in edit mode since it's optional to keep current)
+      const filledFields = [hasFirstName, hasLastName, hasEmail, hasPhoneNumber];
+      const filledCount = filledFields.filter(Boolean).length;
+
+      // In create mode, password is also required if any other field is filled
+      // In edit mode, password is optional (leave blank to keep current)
+      const hasAnyValue = filledCount > 0 || (!isEditMode && hasPassword);
+      const allFieldsFilled = filledCount === 4 && (isEditMode || hasPassword);
+      const noFieldsFilled = filledCount === 0 && !hasPassword;
+
+      // "All or Nothing" rule: either all fields filled or none
+      // Only trigger if user has provided at least one value
+      if (hasAnyValue && !allFieldsFilled && !noFieldsFilled) {
+        // Some fields are filled but not all - show validation errors for missing fields
+        if (!hasFirstName) errors['FirstName'] = 'First Name is required when adding an admin';
+        if (!hasLastName) errors['LastName'] = 'Last Name is required when adding an admin';
+
+        if (!hasEmail) {
+          errors['Email'] = 'Email is required when adding an admin';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin.Email!)) {
+          errors['Email'] = 'Invalid email format';
+        }
+
+        if (!hasPhoneNumber) errors['PhoneNumber'] = 'Phone Number is required when adding an admin';
+
+        // Password required only in create mode
+        if (!isEditMode && !hasPassword) {
+          errors['Password'] = 'Password is required when adding an admin';
+        }
+      }
+
+      // Validate email format if provided
+      if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin.Email!)) {
+        errors['Email'] = 'Invalid email format';
+      }
+
+      // Validate password length if provided
+      if (hasPassword && admin.Password!.length < 8) {
+        errors['Password'] = 'Password must be at least 8 characters';
+      }
+    }
+
+    setValidationErrors(errors);
+
+  }, [formData.TenantAdmin, formData.Slug, formData.Company.Name, hasSubmitted, isEditMode]);
+
+  // Helper function to check if all admin fields are empty
+  const isAdminEmpty = (admin: CreateTenantData['TenantAdmin']): boolean => {
+    if (!admin) return true;
+    return !admin.FirstName?.trim() &&
+      !admin.LastName?.trim() &&
+      !admin.Email?.trim() &&
+      !admin.PhoneNumber?.trim() &&
+      (!admin.Password || admin.Password.length === 0);
+  };
+
+  // Helper to check if there are admin-related validation errors (for "all-or-nothing" rule)
+  const hasAdminValidationErrors = (): boolean => {
+    const adminFields = ['FirstName', 'LastName', 'Email', 'PhoneNumber', 'Password'];
+    return adminFields.some(field => validationErrors[field]);
+  };
+
+  // Auto-scroll to form top when admin "all-or-nothing" validation kicks in
+  // Removed per user request: only scroll on submit
+  /*
+  useEffect(() => {
+    if (hasAdminValidationErrors()) {
+      scrollToForm();
+    }
+  }, [validationErrors]);
+  */
+
+  // Show toast instead of inline banner for admin all-or-nothing rule
+  useEffect(() => {
+    const hasAdminErrors = hasAdminValidationErrors();
+    if (hasAdminErrors && !adminToastShown) {
+      toast.error('Admin fields are all-or-nothing: fill all admin fields or leave them all empty');
+      setAdminToastShown(true);
+    }
+    if (!hasAdminErrors && adminToastShown) {
+      setAdminToastShown(false);
+    }
+  }, [validationErrors, adminToastShown]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const scrollToForm = () => {
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      formTopRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  };
+
+  const hasBlockingValidation = Object.keys(validationErrors).length > 0 || hasAdminValidationErrors();
+  const isSubmitVisuallyDisabled = hasBlockingValidation || isLoading || isUploadingLogo;
 
   // Load tenants on component mount
   useEffect(() => {
@@ -88,17 +232,29 @@ export default function ProjectsTab() {
       return;
     }
 
+    // Check for blocking validation errors
+    if (Object.keys(validationErrors).length > 0) {
+      setHasSubmitted(true);
+      toast.error('Please fix validation errors before creating');
+      scrollToForm();
+      return;
+    }
+
     // Auto-set project name to company name
     const dataToSubmit = {
       ...formData,
       Name: formData.Company.Name
     };
 
+    // Ensure state reflects submission attempt
+    setHasSubmitted(true);
+
     // Validate form data
     const validation = tenantService.validateTenantData(dataToSubmit);
     if (!validation.isValid) {
       setError(validation.errors.join(', '));
       toast.error('Please fix the form errors');
+      scrollToForm();
       return;
     }
 
@@ -123,6 +279,7 @@ export default function ProjectsTab() {
       if (response.error) {
         setError(response.error);
         toast.error(response.error);
+        scrollToForm();
         return;
       }
 
@@ -136,6 +293,7 @@ export default function ProjectsTab() {
       const errorMessage = err.message || 'Failed to create Company';
       setError(errorMessage);
       toast.error(errorMessage);
+      scrollToForm();
     } finally {
       setIsLoading(false);
     }
@@ -339,17 +497,27 @@ export default function ProjectsTab() {
       return;
     }
 
+    if (Object.keys(validationErrors).length > 0) {
+      setHasSubmitted(true);
+      toast.error('Please fix validation errors before updating');
+      scrollToForm();
+      return;
+    }
+
     // Since validation is partially based on things like admin password (which we don't have on edit),
     // we should be careful here. However, tenantService.validateTenantData might need 
     // a variant for updates or we can just validate the company fields locally.
 
     // For simplicity, we'll validate the basic requirements
     if (!formData.Company.Name.trim() || !formData.Slug.trim()) {
+      setHasSubmitted(true);
       toast.error('Company name and slug are required');
+      scrollToForm();
       return;
     }
 
     setIsLoading(true);
+    setHasSubmitted(true);
     setError('');
 
     try {
@@ -364,6 +532,7 @@ export default function ProjectsTab() {
       if (response.error) {
         setError(response.error);
         toast.error(response.error);
+        scrollToForm();
         return;
       }
 
@@ -374,6 +543,7 @@ export default function ProjectsTab() {
       const errorMessage = err.message || 'Failed to update company';
       setError(errorMessage);
       toast.error(errorMessage);
+      scrollToForm();
     } finally {
       setIsLoading(false);
     }
@@ -382,7 +552,7 @@ export default function ProjectsTab() {
   return (
     <div className={styles.container}>
       {/* Header */}
-      <div className={styles.header}>
+      <div className={styles.header} ref={formTopRef}>
         <div className={styles.headerContent}>
           <h2>Companies</h2>
           <p>Manage company onboarding and information</p>
@@ -393,6 +563,8 @@ export default function ProjectsTab() {
               handleCancelEdit();
             } else {
               setShowForm(true);
+              // Wait for render then scroll
+              setTimeout(scrollToForm, 100);
             }
           }}
           className={styles.addButton}
@@ -417,299 +589,396 @@ export default function ProjectsTab() {
               {isEditMode ? 'Edit Company' : 'Add New Company'}
             </h3>
           </div>
-          <form onSubmit={isEditMode ? handleUpdateSubmit : handleSubmit} className={styles.form}>
-            <div className={styles.formGrid}>
-              {/* Project Name - Hidden, auto-set to Company Name */}
+          <form onSubmit={isEditMode ? handleUpdateSubmit : handleSubmit} className={styles.form} autoComplete="off">
 
-              {/* Company Name */}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Company Name <span className={styles.required}></span>
-                </label>
-                <input
-                  type="text"
-                  name="Company.Name"
-                  value={formData.Company.Name}
-                  onChange={handleInputChange}
-                  className={styles.input}
-                  placeholder="Enter company name"
-                  required
-                />
-              </div>
-
-              {/* Slug */}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Company Code <span className={styles.required}></span>
-                </label>
-                <input
-                  type="text"
-                  name="Slug"
-                  value={formData.Slug}
-                  onChange={handleInputChange}
-                  className={styles.input}
-                  placeholder="Enter company Code (e.g., company-name)"
-                  required
-                />
-              </div>
-
-              {/* Description
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Description</label>
-                <textarea
-                  name="Description"
-                  value={formData.Description}
-                  onChange={handleInputChange}
-                  className={styles.input}
-                  placeholder="Enter company description"
-                  rows={3}
-                />
-              </div> */}
-
-              {/* Number of Employees */}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Number of Employees
-                </label>
-                <select
-                  name="Company.NumberOfEmployees"
-                  value={formData.Company.NumberOfEmployees ?? ''}
-                  onChange={handleInputChange}
-                  className={styles.input}
+            {/* Section 1: Company Information */}
+            <div className={styles.collapsibleSection} style={{ borderColor: (validationErrors['Slug'] || validationErrors['Name']) ? '#fecaca' : undefined }}>
+              <div
+                className={`${styles.collapsibleHeader} ${expandedSections.company ? styles.collapsibleHeaderExpanded : ''}`}
+                onClick={() => toggleSection('company')}
+              >
+                <div className={styles.collapsibleTitle}>
+                  <div className={styles.sectionIcon}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 21h18M5 21V7l8-4 8 4v14M8 21v-8h8v8" />
+                    </svg>
+                  </div>
+                  Company Information
+                </div>
+                <svg
+                  className={`${styles.chevron} ${expandedSections.company ? styles.chevronOpen : ''}`}
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                 >
-                  <option value="">Select Range</option>
-                  <option value="0-100">0-100</option>
-                  <option value="101-250">101-250</option>
-                  <option value="251-500">251-500</option>
-                  <option value="501-1000">501-1000</option>
-                  <option value="1000+">1000+</option>
-                </select>
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
               </div>
 
-              {/* Industry */}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Industry <span className={styles.required}></span>
-                </label>
-                <select
-                  name="Company.Industry"
-                  value={formData.Company.Industry}
-                  onChange={handleInputChange}
-                  className={styles.input}
-                  required
-                >
-                  <option value="">Select Industry</option>
-                  <option value="Technology">Technology</option>
-                  <option value="Healthcare">Healthcare</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Education">Education</option>
-                  <option value="Manufacturing">Manufacturing</option>
-                  <option value="Retail">Retail</option>
-                  <option value="Real Estate">Real Estate</option>
-                  <option value="Hospitality">Hospitality</option>
-                  <option value="Transportation">Transportation</option>
-                  <option value="Energy">Energy</option>
-                  <option value="Media & Entertainment">Media & Entertainment</option>
-                  <option value="Telecommunications">Telecommunications</option>
-                  <option value="Agriculture">Agriculture</option>
-                  <option value="Construction">Construction</option>
-                  <option value="Legal">Legal</option>
-                  <option value="Consulting">Consulting</option>
-                  <option value="Non-Profit">Non-Profit</option>
-                  <option value="Government">Government</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              {/* Location */}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  City <span className={styles.required}></span>
-                </label>
-                <input
-                  type="text"
-                  name="Company.Location"
-                  value={formData.Company.Location}
-                  onChange={handleInputChange}
-                  className={styles.input}
-                  placeholder="Enter City"
-                  required
-                />
-              </div>
-
-              {/* Contact Person Name */}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Contact Person Name <span className={styles.required}></span>
-                </label>
-                <input
-                  type="text"
-                  name="Company.ContactPersonName"
-                  value={formData.Company.ContactPersonName}
-                  onChange={handleInputChange}
-                  className={styles.input}
-                  placeholder="Enter contact person name"
-                  required
-                />
-              </div>
-
-              {/* Contact Person Email */}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Contact Person Email <span className={styles.required}></span>
-                </label>
-                <input
-                  type="email"
-                  name="Company.ContactPersonEmail"
-                  value={formData.Company.ContactPersonEmail}
-                  onChange={handleInputChange}
-                  className={styles.input}
-                  placeholder="Enter contact person email"
-                  required
-                />
-              </div>
-
-              {/* Contact Person Role */}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Contact Person Role</label>
-                <input
-                  type="text"
-                  name="Company.ContactPersonRole"
-                  value={formData.Company.ContactPersonRole ?? ''}
-                  onChange={handleInputChange}
-                  className={styles.input}
-                  placeholder="Enter contact person role"
-                />
-              </div>
-
-              {/* Contact Person Phone */}
-              <div className={styles.formGroup}>
-                <label className={styles.label}>
-                  Contact Person Phone
-                </label>
-                <input
-                  type="tel"
-                  name="Company.ContactPersonPhone"
-                  value={formData.Company.ContactPersonPhone ?? ''}
-                  onChange={handleInputChange}
-                  className={styles.input}
-                  placeholder="Enter contact person phone (e.g., +1234567890)"
-                />
-              </div>
-
-              {/* Company Logo - Only show in create mode */}
-
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Company Logo</label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  className={styles.input}
-                  disabled={isUploadingLogo || isLoading}
-                />
-                {isUploadingLogo && (
-                  <p style={{ marginTop: '8px', color: '#7c3aed' }}>Uploading logo...</p>
-                )}
-                {logoPreview && (
-                  <div className={styles.logoPreviewWrapper}>
-                    <img
-                      src={logoPreview}
-                      alt="Logo preview"
-                      className={styles.logoPreviewImg}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleRemoveLogo}
-                      className={styles.removeLogoBtn}
-                    >
-                      Remove Logo
-                    </button>
-                  </div>
-                )}
-              </div>
-
-
-              {/* Admin Details - Only show in create mode */}
-              {!editingTenantId && (
-                <>
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>
-                      Admin First Name</label>
-                    <input
-                      type="text"
-                      name="TenantAdmin.FirstName"
-                      value={formData.TenantAdmin?.FirstName ?? ''}
-                      onChange={handleInputChange}
-                      className={styles.input}
-                      placeholder="Enter admin first name"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>
-                      Admin Last Name </label>
-                    <input
-                      type="text"
-                      name="TenantAdmin.LastName"
-                      value={formData.TenantAdmin?.LastName ?? ''}
-                      onChange={handleInputChange}
-                      className={styles.input}
-                      placeholder="Enter admin last name"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>
-                      Admin Email </label>
-                    <input
-                      type="email"
-                      name="TenantAdmin.Email"
-                      value={formData.TenantAdmin?.Email ?? ''}
-                      onChange={handleInputChange}
-                      className={styles.input}
-                      placeholder="Enter admin email"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>
-                      Admin Phone Number </label>
-                    <input
-                      type="tel"
-                      name="TenantAdmin.PhoneNumber"
-                      value={formData.TenantAdmin?.PhoneNumber ?? ''}
-                      onChange={handleInputChange}
-                      className={styles.input}
-                      placeholder="Enter admin phone (e.g., +1234567890)"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>
-                      Admin Password                    </label>
-                    <div className={styles.passwordContainer}>
+              {expandedSections.company && (
+                <div className={styles.collapsibleContent}>
+                  <div className={styles.formGrid}>
+                    {/* Company Name */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Company Name <span className={styles.required}></span>
+                      </label>
                       <input
-                        type={showPassword ? "text" : "password"}
-                        name="TenantAdmin.Password"
-                        value={formData.TenantAdmin?.Password ?? ''}
+                        type="text"
+                        name="Company.Name"
+                        value={formData.Company.Name}
                         onChange={handleInputChange}
                         className={styles.input}
-                        placeholder="Enter admin password"
-                        minLength={6}
+                        placeholder="Enter company name"
+                        required
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className={styles.passwordToggle}
+                    </div>
+
+                    {/* Slug */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Company Code <span className={styles.required}></span>
+                      </label>
+                      <input
+                        type="text"
+                        name="Slug"
+                        value={formData.Slug}
+                        onChange={handleInputChange}
+                        className={styles.input}
+                        placeholder="Enter company Code (e.g., company-name)"
+                        required
+                      />
+                      {validationErrors['Slug'] && <span className={styles.errorText}>{validationErrors['Slug']}</span>}
+                    </div>
+
+                    {/* Number of Employees */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Number of Employees
+                      </label>
+                      <select
+                        name="Company.NumberOfEmployees"
+                        value={formData.Company.NumberOfEmployees ?? ''}
+                        onChange={handleInputChange}
+                        className={styles.select}
                       >
-                        {showPassword ? '👁️' : '👁️‍🗨️'}
-                      </button>
+                        <option value="">Select Range</option>
+                        <option value="0-100">0-100</option>
+                        <option value="101-250">101-250</option>
+                        <option value="251-500">251-500</option>
+                        <option value="501-1000">501-1000</option>
+                        <option value="1000+">1000+</option>
+                      </select>
+                    </div>
+
+                    {/* Industry */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Industry <span className={styles.required}></span>
+                      </label>
+                      <select
+                        name="Company.Industry"
+                        value={formData.Company.Industry}
+                        onChange={handleInputChange}
+                        className={styles.select}
+                        required
+                      >
+                        <option value="">Select Industry</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Healthcare">Healthcare</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Education">Education</option>
+                        <option value="Manufacturing">Manufacturing</option>
+                        <option value="Retail">Retail</option>
+                        <option value="Real Estate">Real Estate</option>
+                        <option value="Hospitality">Hospitality</option>
+                        <option value="Transportation">Transportation</option>
+                        <option value="Energy">Energy</option>
+                        <option value="Media & Entertainment">Media & Entertainment</option>
+                        <option value="Telecommunications">Telecommunications</option>
+                        <option value="Agriculture">Agriculture</option>
+                        <option value="Construction">Construction</option>
+                        <option value="Legal">Legal</option>
+                        <option value="Consulting">Consulting</option>
+                        <option value="Non-Profit">Non-Profit</option>
+                        <option value="Government">Government</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    {/* Location */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        City <span className={styles.required}></span>
+                      </label>
+                      <input
+                        type="text"
+                        name="Company.Location"
+                        value={formData.Company.Location}
+                        onChange={handleInputChange}
+                        className={styles.input}
+                        placeholder="Enter City"
+                        required
+                      />
+                    </div>
+
+                    {/* Company Logo */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>Company Logo</label>
+                      <div className={styles.logoUploadContainer}>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          className={styles.input}
+                          disabled={isUploadingLogo || isLoading}
+                        />
+                        {isUploadingLogo && (
+                          <p style={{ marginTop: '8px', color: '#7c3aed', fontSize: '0.875rem' }}>Uploading logo...</p>
+                        )}
+                        {logoPreview && (
+                          <div className={styles.logoPreviewWrapper}>
+                            <img
+                              src={logoPreview}
+                              alt="Logo preview"
+                              className={styles.logoPreviewImg}
+                            />
+                            <button
+                              type="button"
+                              onClick={handleRemoveLogo}
+                              className={styles.removeLogoBtn}
+                            >
+                              Remove Logo
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </>
+                </div>
+              )}
+            </div>
+
+            {/* Section 2: Contact Person Information */}
+            <div className={styles.collapsibleSection}>
+              <div
+                className={`${styles.collapsibleHeader} ${expandedSections.contact ? styles.collapsibleHeaderExpanded : ''}`}
+                onClick={() => toggleSection('contact')}
+              >
+                <div className={styles.collapsibleTitle}>
+                  <div className={styles.sectionIcon}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </div>
+                  Contact Person Information
+                </div>
+                <svg
+                  className={`${styles.chevron} ${expandedSections.contact ? styles.chevronOpen : ''}`}
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+
+              {expandedSections.contact && (
+                <div className={styles.collapsibleContent}>
+                  <div className={styles.formGrid}>
+                    {/* Contact Person Name */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Contact Person Name <span className={styles.required}></span>
+                      </label>
+                      <input
+                        type="text"
+                        name="Company.ContactPersonName"
+                        value={formData.Company.ContactPersonName}
+                        onChange={handleInputChange}
+                        className={styles.input}
+                        placeholder="Enter contact person name"
+                        required
+                      />
+                    </div>
+
+                    {/* Contact Person Email */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Contact Person Email <span className={styles.required}></span>
+                      </label>
+                      <input
+                        type="email"
+                        name="Company.ContactPersonEmail"
+                        value={formData.Company.ContactPersonEmail}
+                        onChange={handleInputChange}
+                        className={styles.input}
+                        placeholder="Enter contact person email"
+                        required
+                      />
+                    </div>
+
+                    {/* Contact Person Role */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Contact Person Role
+                      </label>
+                      <input
+                        type="text"
+                        name="Company.ContactPersonRole"
+                        value={formData.Company.ContactPersonRole ?? ''}
+                        onChange={handleInputChange}
+                        className={styles.input}
+                        placeholder="Enter contact person role"
+                      />
+                    </div>
+
+                    {/* Contact Person Phone */}
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Contact Person Phone
+                      </label>
+                      <input
+                        type="tel"
+                        name="Company.ContactPersonPhone"
+                        value={formData.Company.ContactPersonPhone ?? ''}
+                        onChange={handleInputChange}
+                        className={styles.input}
+                        placeholder="Enter contact person phone"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Section 3: Admin Information */}
+            <div className={styles.collapsibleSection} style={{ borderColor: hasAdminValidationErrors() ? '#fecaca' : undefined }}>
+              <div
+                className={`${styles.collapsibleHeader} ${expandedSections.admin ? styles.collapsibleHeaderExpanded : ''}`}
+                onClick={() => toggleSection('admin')}
+              >
+                <div className={styles.collapsibleTitle}>
+                  <div className={styles.sectionIcon}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                  </div>
+                  Admin Information {isEditMode && <span style={{ fontSize: '0.8em', fontWeight: 'normal', marginLeft: '8px', color: '#6b7280' }}>(Optional)</span>}
+                </div>
+                <svg
+                  className={`${styles.chevron} ${expandedSections.admin ? styles.chevronOpen : ''}`}
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+
+              {expandedSections.admin && (
+                <div className={styles.collapsibleContent}>
+                  {isEditMode && <div style={{ marginBottom: '1rem', fontSize: '0.9rem', color: '#6b7280' }}>Leaves fields blank to keep current admin details unchanged.</div>}
+                  {/* Admin Details - Only show in create mode or allow editing in update (logic handled by isEditMode check in fields? No, original hid it completely. But typically users want to update admin. I'll expose it but keep logic clean) */}
+                  {/* Original code HID it during edit: {!editingTenantId && (...)} */}
+                  {/* User asked for "Admin toasts" which implies admin editing or creating. I will Show it always but handle the "null" sending on update if empty? */}
+                  {/* Actually, the handleUpdateSubmit code logic I saw sets TenantAdmin: null. So updating admin might not be supported by the backend update endpoint here? */}
+                  {/* Code: Name: formData.Company.Name, TenantAdmin: null. */}
+                  {/* So for Edit Mode, this section might be non-functional or just hidden? */}
+                  {/* I will follow the original logic: only show if !editingTenantId (Create Mode). */}
+
+                  {!editingTenantId ? (
+                    <div className={styles.formGrid}>
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.label}>
+                          Admin First Name
+                        </label>
+                        <input
+                          type="text"
+                          name="TenantAdmin.FirstName"
+                          value={formData.TenantAdmin?.FirstName ?? ''}
+                          onChange={handleInputChange}
+                          className={`${styles.input} ${validationErrors['FirstName'] ? styles.inputError : ''}`}
+                          placeholder="Enter admin first name"
+                        />
+                        {validationErrors['FirstName'] && <span className={styles.errorText}>{validationErrors['FirstName']}</span>}
+                      </div>
+
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.label}>
+                          Admin Last Name
+                        </label>
+                        <input
+                          type="text"
+                          name="TenantAdmin.LastName"
+                          value={formData.TenantAdmin?.LastName ?? ''}
+                          onChange={handleInputChange}
+                          className={`${styles.input} ${validationErrors['LastName'] ? styles.inputError : ''}`}
+                          placeholder="Enter admin last name"
+                        />
+                        {validationErrors['LastName'] && <span className={styles.errorText}>{validationErrors['LastName']}</span>}
+                      </div>
+
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.label}>
+                          Admin Email
+                        </label>
+                        <input
+                          type="email"
+                          name="TenantAdmin.Email"
+                          value={formData.TenantAdmin?.Email ?? ''}
+                          onChange={handleInputChange}
+                          className={`${styles.input} ${validationErrors['Email'] ? styles.inputError : ''}`}
+                          placeholder="Enter admin email"
+                          autoComplete="new-password"
+                        />
+                        {validationErrors['Email'] && <span className={styles.errorText}>{validationErrors['Email']}</span>}
+                      </div>
+
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.label}>
+                          Admin Phone Number
+                        </label>
+                        <input
+                          type="tel"
+                          name="TenantAdmin.PhoneNumber"
+                          value={formData.TenantAdmin?.PhoneNumber ?? ''}
+                          onChange={handleInputChange}
+                          className={`${styles.input} ${validationErrors['PhoneNumber'] ? styles.inputError : ''}`}
+                          placeholder="Enter admin phone (e.g., +1234567890)"
+                          autoComplete="new-password"
+                        />
+                        {validationErrors['PhoneNumber'] && <span className={styles.errorText}>{validationErrors['PhoneNumber']}</span>}
+                      </div>
+
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.label}>
+                          Admin Password
+                        </label>
+                        <div className={styles.passwordContainer}>
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            name="TenantAdmin.Password"
+                            value={formData.TenantAdmin?.Password ?? ''}
+                            onChange={handleInputChange}
+                            className={`${styles.input} ${validationErrors['Password'] ? styles.inputError : ''}`}
+                            placeholder="Enter admin password"
+                            minLength={6}
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className={styles.passwordToggle}
+                          >
+                            {showPassword ? 'HIDE' : 'SHOW'}
+                          </button>
+                        </div>
+                        {validationErrors['Password'] && <span className={styles.errorText}>{validationErrors['Password']}</span>}
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '0.5rem', color: '#6b7280', fontStyle: 'italic' }}>
+                      Admin details cannot be modified here. Please manage users in the Users tab.
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
@@ -717,7 +986,9 @@ export default function ProjectsTab() {
               <button
                 type="submit"
                 className={styles.submitButton}
-                disabled={isLoading || isUploadingLogo}
+                disabled={isSubmitVisuallyDisabled}
+                title={hasBlockingValidation ? "Please fix form errors" : ""}
+                style={hasBlockingValidation ? { opacity: 0.7, cursor: 'not-allowed' } : {}}
               >
                 {isUploadingLogo
                   ? 'Uploading Logo...'

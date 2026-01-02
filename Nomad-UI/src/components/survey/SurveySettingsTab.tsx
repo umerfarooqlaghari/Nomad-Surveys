@@ -18,9 +18,6 @@ const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
   { value: 'text', label: 'Short Text' },
   { value: 'textarea', label: 'Long Text' },
   { value: 'dropdown', label: 'Dropdown' },
-  { value: 'yes-no', label: 'Yes/No' },
-  { value: 'date', label: 'Date' },
-  { value: 'number', label: 'Number' },
 ];
 
 export default function SurveySettingsTab({ tenantSlug, token: tokenProp }: TenantSettingsTabProps) {
@@ -80,6 +77,7 @@ export default function SurveySettingsTab({ tenantSlug, token: tokenProp }: Tena
               id: opt.Id || opt.id,
               text: opt.Text || opt.text,
               order: opt.Order ?? opt.order,
+              score: opt.Score ?? opt.score ?? 0,
             })),
             numberOfOptions: data.NumberOfOptions,
           };
@@ -157,13 +155,14 @@ export default function SurveySettingsTab({ tenantSlug, token: tokenProp }: Tena
       id: Date.now().toString(),
       text: '',
       order: ratingOptions.length,
+      score: ratingOptions.length > 0 ? (ratingOptions[ratingOptions.length - 1].score ?? ratingOptions.length) + 1 : 1,
     };
     setRatingOptions([...ratingOptions, newOption]);
     setNumberOfOptions(ratingOptions.length + 1);
   };
 
   const handleUpdateOption = (id: string, text: string) => {
-    setRatingOptions(ratingOptions.map(opt => 
+    setRatingOptions(ratingOptions.map(opt =>
       opt.id === id ? { ...opt, text } : opt
     ));
   };
@@ -177,9 +176,9 @@ export default function SurveySettingsTab({ tenantSlug, token: tokenProp }: Tena
   const handleMoveOption = (index: number, direction: 'up' | 'down') => {
     const newOptions = [...ratingOptions];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
+
     if (targetIndex < 0 || targetIndex >= newOptions.length) return;
-    
+
     [newOptions[index], newOptions[targetIndex]] = [newOptions[targetIndex], newOptions[index]];
     setRatingOptions(newOptions.map((opt, idx) => ({ ...opt, order: idx })));
   };
@@ -232,6 +231,12 @@ export default function SurveySettingsTab({ tenantSlug, token: tokenProp }: Tena
           </div>
 
           <div className={styles.optionsList}>
+            <div className="flex px-2 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              <div className="w-8">#</div>
+              <div className="flex-1">Text</div>
+              <div className="w-20 mx-2">Score</div>
+              <div className="w-24 text-right">Actions</div>
+            </div>
             {ratingOptions.map((option, index) => (
               <div key={option.id} className={styles.optionItem}>
                 <div className={styles.optionOrder}>{index + 1}</div>
@@ -241,6 +246,18 @@ export default function SurveySettingsTab({ tenantSlug, token: tokenProp }: Tena
                   onChange={(e) => handleUpdateOption(option.id, e.target.value)}
                   placeholder={`Option ${index + 1}`}
                   className={styles.optionInput}
+                />
+                <input
+                  type="number"
+                  value={option.score ?? index + 1}
+                  onChange={(e) => {
+                    const newScore = parseInt(e.target.value) || 0;
+                    setRatingOptions(ratingOptions.map(opt =>
+                      opt.id === option.id ? { ...opt, score: newScore } : opt
+                    ));
+                  }}
+                  className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-center mx-2"
+                  title="Score value"
                 />
                 <div className={styles.optionActions}>
                   <button

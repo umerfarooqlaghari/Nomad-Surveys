@@ -136,7 +136,8 @@ export default function QuestionEditor({
           {/* Self Question Text */}
           <div className="mb-4">
             <label className="block text-black font-medium text-black mb-2">
-              Self Question Text *
+              Self Question Text
+              {!['text', 'textarea'].includes(question.type) ? ' *' : <span className="text-gray-500 font-normal text-sm ml-1">(Optional)</span>}
             </label>
             <textarea
               value={question.selfText}
@@ -185,7 +186,7 @@ export default function QuestionEditor({
                 type="checkbox"
                 checked={question.required}
                 // onChange={() => {}}
-                      onChange={() => handleFieldChange('required', !question.required)}
+                onChange={() => handleFieldChange('required', !question.required)}
                 // onClick={(e) => e.stopPropagation()}
                 className="w-5 h-5 relative z-10 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
                 style={{ pointerEvents: 'auto' }}
@@ -193,7 +194,7 @@ export default function QuestionEditor({
               <span className="text-sm font-medium text-black">Required Question</span>
             </div>
           </div>
-      {/* <div className="mb-4">
+          {/* <div className="mb-4">
   <label className="flex items-center gap-3 cursor-pointer select-none">
       onClick={(e) => handleFieldChange('false', e.target.checked)}
     <input

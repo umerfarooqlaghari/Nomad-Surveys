@@ -37,7 +37,9 @@ public class SuperAdminAnalyticsController : ControllerBase
             var startOfPreviousMonth = startOfCurrentMonth.AddMonths(-1);
 
             // Get companies count (tenants with companies)
-            var totalCompanies = await _context.Companies.CountAsync();
+            var totalCompanies = await _context.Companies
+                .Where(c => c.Tenant.IsActive)
+                .CountAsync();
             var companiesLastMonth = await _context.Companies
                 .Where(c => c.CreatedAt < startOfCurrentMonth)
                 .Where(c => c.Tenant.IsActive)
@@ -53,6 +55,7 @@ public class SuperAdminAnalyticsController : ControllerBase
             // Get completed surveys count
             var completedSurveys = await _context.SurveySubmissions
                 .Where(s => s.Status == "Completed")
+                .Where(s => s.Tenant.IsActive)
                 .CountAsync();
             var completedSurveysLastMonth = await _context.SurveySubmissions
                 .Where(s => s.Status == "Completed" && s.CompletedAt < startOfCurrentMonth)
