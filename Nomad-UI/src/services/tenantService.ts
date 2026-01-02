@@ -8,7 +8,7 @@ export interface CreateTenantData {
   Description: string;
   Company: {
     Name: string;
-    NumberOfEmployees: number | null;
+    NumberOfEmployees: string | null;
     Location: string;
     Industry: string;
     ContactPersonName: string;
@@ -48,7 +48,7 @@ export interface TenantResponse {
   Company?: {
     Id: string;
     Name: string;
-    NumberOfEmployees?: number;
+    NumberOfEmployees?: string;
     Location: string;
     Industry: string;
     ContactPersonName: string;
@@ -97,7 +97,7 @@ export interface UpdateTenantData {
   Description: string;
   Company: {
     Name: string;
-    NumberOfEmployees: number | null;
+    NumberOfEmployees: string | null;
     Location: string;
     Industry: string;
     ContactPersonName: string;
@@ -111,7 +111,8 @@ export interface UpdateTenantData {
     FirstName: string | null;
     LastName: string | null;
     Email: string | null;
-    // Password and PhoneNumber are NOT included in updates
+    PhoneNumber: string | null;
+    Password?: string | null;
   } | null;
 }
 
@@ -217,7 +218,7 @@ class TenantService {
   /**
    * Validate tenant data before submission
    */
-  validateTenantData(data: CreateTenantData): { isValid: boolean; errors: string[] } {
+  validateTenantData(data: CreateTenantData, isEditMode: boolean = false): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
 
     // Validate tenant info
@@ -242,12 +243,34 @@ class TenantService {
       errors.push('Contact person email format is invalid');
     }
 
+    // Validate TenantAdmin with "All or Nothing" rule
     if (data.TenantAdmin) {
-      if (data.TenantAdmin.Email && data.TenantAdmin.Email.trim() !== '' && !emailRegex.test(data.TenantAdmin.Email)) {
-        errors.push('Tenant admin email format is invalid');
+      const admin = data.TenantAdmin;
+      const hasFirstName = !!admin.FirstName?.trim();
+      const hasLastName = !!admin.LastName?.trim();
+      const hasEmail = !!admin.Email?.trim();
+      const hasPhoneNumber = !!admin.PhoneNumber?.trim();
+      const hasPassword = !!admin.Password && admin.Password.length > 0;
+
+      const filledFields = [hasFirstName, hasLastName, hasEmail, hasPhoneNumber];
+      const filledCount = filledFields.filter(Boolean).length;
+      
+      // "All or Nothing" rule
+      const allEmpty = filledCount === 0 && !hasPassword;
+      const allFilled = filledCount === 4 && (isEditMode || hasPassword);
+
+      if (!allEmpty && !allFilled) {
+        errors.push('Admin fields are all-or-nothing: provide all admin fields or leave them all empty');
       }
-      if (data.TenantAdmin.Password && data.TenantAdmin.Password.trim() !== '' && data.TenantAdmin.Password.length < 6) {
-        errors.push('Tenant admin password must be at least 6 characters');
+
+      // If admin is being added/updated, validate formats
+      if (!allEmpty) {
+        if (hasEmail && !emailRegex.test(admin.Email!)) {
+          errors.push('Tenant admin email format is invalid');
+        }
+        if (hasPassword && admin.Password!.length < 8) {
+          errors.push('Tenant admin password must be at least 8 characters');
+        }
       }
     }
 

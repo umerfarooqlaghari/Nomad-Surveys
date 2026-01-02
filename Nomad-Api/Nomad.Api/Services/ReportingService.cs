@@ -450,12 +450,12 @@ public class ReportingService : IReportingService
     {
         foreach (var questionElement in questionsArray.EnumerateArray())
         {
-            // Check if it's a rating question
+            // Check if it's a rating question OR single-choice OR dropdown (mapped to scoring)
             var questionType = questionElement.TryGetProperty("type", out var typeElement)
                 ? typeElement.GetString()
                 : null;
 
-            if (questionType != "rating")
+            if (questionType != "rating" && questionType != "single-choice" && questionType != "dropdown")
                 continue;
 
             // Get question identifier (name or id)
@@ -479,34 +479,76 @@ public class ReportingService : IReportingService
                 QuestionId = questionId,
                 QuestionName = questionElement.TryGetProperty("name", out var nElement) ? nElement.GetString() ?? questionId : questionId,
                 QuestionText = questionText,
-                Options = new List<string>()
+                Options = new List<RatingOptionInfo>()
             };
 
-            // Check for custom ratingOptions array
-            if (questionElement.TryGetProperty("config", out var configElement))
+            // Check for custom ratingOptions array (for rating type) or options array (for choice types)
+            var optionsProperty = "ratingOptions";
+            if (questionType == "single-choice" || questionType == "dropdown")
             {
-                if (configElement.TryGetProperty("ratingOptions", out var ratingOptionsElement)
-                    && ratingOptionsElement.ValueKind == JsonValueKind.Array)
+                optionsProperty = "options";
+            }
+
+            JsonElement configElement = questionElement; // Default to root
+            if (questionElement.TryGetProperty("config", out var cfg))
+            {
+                configElement = cfg;
+            }
+            
+            // Try to find options in config or root
+            if ((configElement.TryGetProperty(optionsProperty, out var optionsElement) || 
+                 questionElement.TryGetProperty(optionsProperty, out optionsElement))
+                && optionsElement.ValueKind == JsonValueKind.Array)
+            {
+                int defaultScore = 1;
+                foreach (var option in optionsElement.EnumerateArray())
                 {
-                    // Custom rating options (e.g., "Unsatisfactory", "Okay", "Satisfactory")
-                    foreach (var option in ratingOptionsElement.EnumerateArray())
+                    string text = string.Empty;
+                    double score = defaultScore;
+                    bool hasScore = false;
+
+                    // Text property
+                    if (option.TryGetProperty("text", out var textElem))
                     {
-                        if (option.TryGetProperty("text", out var textElement))
+                        text = textElem.GetString() ?? string.Empty;
+                    }
+                    else if (option.ValueKind == JsonValueKind.String)
+                    {
+                        text = option.GetString() ?? string.Empty;
+                    }
+
+                    // Score property
+                    if (option.TryGetProperty("score", out var scoreElem))
+                    {
+                        if (scoreElem.ValueKind == JsonValueKind.Number)
                         {
-                            var text = textElement.GetString();
-                            if (!string.IsNullOrEmpty(text))
-                            {
-                                ratingInfo.Options.Add(text);
-                            }
+                            score = scoreElem.GetDouble();
+                            hasScore = true;
                         }
+                    } else if (option.TryGetProperty("Score", out var scoreElemCap))
+                    {
+                         if (scoreElemCap.ValueKind == JsonValueKind.Number)
+                        {
+                            score = scoreElemCap.GetDouble();
+                            hasScore = true;
+                        }
+                    }
+
+                    // Retrieve value property if text is empty? usually text is display text.
+                    // Assuming text is the unique key for now or value? Code usually uses text matching.
+                    
+                    if (!string.IsNullOrEmpty(text))
+                    {
+                        ratingInfo.Options.Add(new RatingOptionInfo { Text = text, Score = score });
+                        if (!hasScore) defaultScore++; 
                     }
                 }
             }
 
-            // If no custom options, use numeric rating scale (min, max, step)
-            if (ratingInfo.Options.Count == 0)
+            // Fallback for numeric rating scale logic (only for strict 'rating' type with no options)
+            if (ratingInfo.Options.Count == 0 && questionType == "rating")
             {
-                var config = questionElement.TryGetProperty("config", out var cfg) ? cfg : questionElement;
+                var config = questionElement.TryGetProperty("config", out var cfgEst) ? cfgEst : questionElement;
                 var min = config.TryGetProperty("ratingMin", out var minElement)
                     ? minElement.GetInt32()
                     : config.TryGetProperty("rateMin", out var rateMinElement)
@@ -526,7 +568,7 @@ public class ReportingService : IReportingService
                 // Generate numeric options
                 for (int i = min; i <= max; i += step)
                 {
-                    ratingInfo.Options.Add(i.ToString());
+                    ratingInfo.Options.Add(new RatingOptionInfo { Text = i.ToString(), Score = i });
                 }
             }
 
@@ -579,15 +621,23 @@ public class ReportingService : IReportingService
                 if (string.IsNullOrEmpty(answerValue))
                     continue;
 
-                // Find position of answer in options
-                var position = questionInfo.Options.IndexOf(answerValue);
-                if (position < 0)
-                    continue; // Answer not found in options
-
-                // Calculate score: position / (totalOptions - 1) * 100
-                // Position 0 = 0%, Position (n-1) = 100%
-                var totalOptions = questionInfo.Options.Count;
-                var score = totalOptions > 1 ? (double)position / (totalOptions - 1) * 100 : 0;
+            // Calculate score using the explicit score from the option if available
+                double score = 0;
+                
+                // Try to find the selected option and its score
+                var selectedOption = questionInfo.Options.FirstOrDefault(o => o.Text == answerValue);
+                if (selectedOption != null)
+                {
+                    score = selectedOption.Score;
+                }
+                else
+                {
+                    // Fallback to numeric parsing if the answer itself is a number
+                    if (double.TryParse(answerValue, out var parsedScore))
+                    {
+                        score = parsedScore;
+                    }
+                }
 
                 questionScores.Add(new QuestionScoreDto
                 {
@@ -595,14 +645,14 @@ public class ReportingService : IReportingService
                     QuestionName = questionInfo.QuestionName,
                     QuestionText = questionInfo.QuestionText,
                     Score = Math.Round(score, 2),
-                    Position = position,
-                    TotalOptions = totalOptions,
+                    Position = 0, // Position is less relevant with explicit scoring
+                    TotalOptions = questionInfo.Options.Count,
                     SelectedOption = answerValue
                 });
             }
 
-            var overallScore = questionScores.Any() 
-                ? Math.Round(questionScores.Average(q => q.Score), 2)
+            var overallScore = questionScores.Any(q => q.Score > 0) 
+                ? Math.Round(questionScores.Where(q => q.Score > 0).Average(q => q.Score), 2)
                 : 0;
 
             return new ScoreSummaryDto
@@ -683,7 +733,11 @@ public class ReportingService : IReportingService
 
             if (questionScoresDict.ContainsKey(questionId) && questionScoresDict[questionId].Any())
             {
-                var avgScore = Math.Round(questionScoresDict[questionId].Average(), 2);
+                // Exclude 0 scores (N/A) from average calculation
+                var validScores = questionScoresDict[questionId].Where(s => s > 0).ToList();
+                if (!validScores.Any()) continue;
+
+                var avgScore = Math.Round(validScores.Average(), 2);
                 
                 // Get representative question details from first response that has this question
                 var firstQuestionScore = allScores
@@ -703,8 +757,8 @@ public class ReportingService : IReportingService
             }
         }
 
-        var overallScore = averageQuestionScores.Any()
-            ? Math.Round(averageQuestionScores.Average(q => q.Score), 2)
+        var overallScore = averageQuestionScores.Any(q => q.Score > 0)
+            ? Math.Round(averageQuestionScores.Where(q => q.Score > 0).Average(q => q.Score), 2)
             : 0;
 
         return new ScoreSummaryDto
@@ -725,7 +779,13 @@ public class ReportingService : IReportingService
         public string QuestionId { get; set; } = string.Empty;
         public string QuestionName { get; set; } = string.Empty;
         public string QuestionText { get; set; } = string.Empty;
-        public List<string> Options { get; set; } = new();
+        public List<RatingOptionInfo> Options { get; set; } = new();
+    }
+
+    private class RatingOptionInfo
+    {
+        public string Text { get; set; } = string.Empty;
+        public double Score { get; set; }
     }
 
     #endregion

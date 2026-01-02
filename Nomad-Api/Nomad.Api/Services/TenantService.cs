@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Nomad.Api.Data;
 using Nomad.Api.DTOs.Request;
@@ -13,17 +14,20 @@ public class TenantService : ITenantService
     private readonly NomadSurveysDbContext _context;
     private readonly IMapper _mapper;
     private readonly IAuthenticationService _authenticationService;
+    private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<TenantService> _logger;
 
     public TenantService(
         NomadSurveysDbContext context,
         IMapper mapper,
         IAuthenticationService authenticationService,
+        UserManager<ApplicationUser> userManager,
         ILogger<TenantService> logger)
     {
         _context = context;
         _mapper = mapper;
         _authenticationService = authenticationService;
+        _userManager = userManager;
         _logger = logger;
     }
 
@@ -297,10 +301,27 @@ public class TenantService : ITenantService
                     tenantAdminUser.LastName = request.TenantAdmin.LastName;
                     tenantAdminUser.Email = request.TenantAdmin.Email;
                     tenantAdminUser.UserName = request.TenantAdmin.Email; // Keep username in sync with email
+                    tenantAdminUser.PhoneNumber = request.TenantAdmin.PhoneNumber;
                     tenantAdminUser.UpdatedAt = DateTime.UtcNow;
 
-                    // Password and phone number are NOT updated here
-                    // They should be updated through separate user management endpoints
+                    if (!string.IsNullOrWhiteSpace(request.TenantAdmin.Password))
+                    {
+                        var removeResult = await _userManager.RemovePasswordAsync(tenantAdminUser);
+                        if (removeResult.Succeeded)
+                        {
+                            var addResult = await _userManager.AddPasswordAsync(tenantAdminUser, request.TenantAdmin.Password);
+                            if (!addResult.Succeeded)
+                            {
+                                _logger.LogWarning("Failed to set new password for user {UserId}: {Errors}", 
+                                    tenantAdminUser.Id, string.Join(", ", addResult.Errors.Select(e => e.Description)));
+                            }
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Failed to remove password for user {UserId}: {Errors}", 
+                                tenantAdminUser.Id, string.Join(", ", removeResult.Errors.Select(e => e.Description)));
+                        }
+                    }
                 }
             }
 

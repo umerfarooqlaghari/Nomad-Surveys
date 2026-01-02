@@ -654,16 +654,16 @@ export default function AssignSurveyModal({
             >
               Close
             </button>
-            {/* <button
+            <button
               onClick={handleSaveChanges}
-              disabled={isLoading}
+              disabled={isLoading || (selectedAvailable.size === 0 && selectedAssigned.size === assignedRelationships.length)}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
             >
               {isLoading && (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               )}
               Save Changes
-            </button> */}
+            </button>
           </div>
         </div>
       </div>

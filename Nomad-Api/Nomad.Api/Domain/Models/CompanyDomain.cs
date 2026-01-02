@@ -4,7 +4,7 @@ public class CompanyDomain
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = string.Empty;
-    public int? NumberOfEmployees { get; set; }
+    public string? NumberOfEmployees { get; set; }
     public string Location { get; set; } = string.Empty;
     public string Industry { get; set; } = string.Empty;
     public string ContactPersonName { get; set; } = string.Empty;

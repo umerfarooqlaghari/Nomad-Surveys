@@ -103,7 +103,7 @@ export default function ProjectEvaluatorsTab({ projectSlug }: ProjectEvaluatorsT
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (selectedEmployeeIds.length === 0) {
       toast.error('Please select at least one employee');
       return;
@@ -250,20 +250,20 @@ EMP002,EMP004,Peer`;
 
   // Filter evaluators based on search and status
   const filteredEvaluators = evaluators.filter(evaluator => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       evaluator.FullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       evaluator.Email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       evaluator.EmployeeIdString.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = filterStatus === 'all' || 
+
+    const matchesStatus = filterStatus === 'all' ||
       (filterStatus === 'active' && evaluator.IsActive) ||
       (filterStatus === 'inactive' && !evaluator.IsActive);
-    
+
     return matchesSearch && matchesStatus;
   });
 
   // Filter available employees for multi-select
-  const filteredAvailableEmployees = getAvailableEmployees().filter(emp => 
+  const filteredAvailableEmployees = getAvailableEmployees().filter(emp =>
     searchTerm === '' ||
     emp.FullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.Email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -329,7 +329,7 @@ EMP002,EMP004,Peer`;
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white"
                 />
               </div>
-              
+
               {/* <div className="mb-4 flex items-center gap-4">
                 <label className="flex items-center">
                   <input
@@ -355,7 +355,7 @@ EMP002,EMP004,Peer`;
                     <div
                       key={employee.Id}
                       className="flex items-center p-3 hover:bg-gray-50 border-b border-gray-200 cursor-pointer"
-                                            onClick={() => handleEmployeeSelect(employee.EmployeeId)}
+                      onClick={() => handleEmployeeSelect(employee.EmployeeId)}
 
                     >
                       <input
@@ -364,9 +364,9 @@ EMP002,EMP004,Peer`;
                         onChange={() => handleEmployeeSelect(employee.EmployeeId)}
                         className="mr-3 relative z-10 cursor-pointer"
                         // onClick={(e) => e.stopPropagation()}
-                                                onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
 
-                        // onClick={() => handleEmployeeSelect(employee.EmployeeId)}
+                      // onClick={() => handleEmployeeSelect(employee.EmployeeId)}
 
                       />
                       <div className="flex-1">
@@ -483,11 +483,10 @@ EMP002,EMP004,Peer`;
                       {evaluator.SubjectCount || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        evaluator.IsActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${evaluator.IsActive
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
                         {evaluator.IsActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -534,7 +533,7 @@ EMP002,EMP004,Peer`;
         projectSlug={projectSlug}
         onRelationshipsUpdated={loadEvaluators}
       />
-    </div>
+    </div >
   );
 }
 

@@ -38,11 +38,10 @@ export default function QuestionRenderer({
                 key={option.id}
                 onClick={() => onChange(option.text)}
                 disabled={isPreview}
-                className={`py-3 px-6 border-2 rounded-lg font-medium transition-colors ${
-                  value === option.text
+                className={`py-3 px-6 border-2 rounded-lg font-medium transition-colors ${value === option.text
                     ? 'border-blue-600 bg-blue-50 text-blue-700'
                     : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
-                } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
+                  } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
               >
                 {option.text}
               </button>
@@ -70,11 +69,10 @@ export default function QuestionRenderer({
                 key={option}
                 onClick={() => onChange(option)}
                 disabled={isPreview}
-                className={`flex-1 py-3 px-4 border-2 rounded-lg font-medium transition-colors ${
-                  value === option
+                className={`flex-1 py-3 px-4 border-2 rounded-lg font-medium transition-colors ${value === option
                     ? 'border-blue-600 bg-blue-50 text-blue-700'
                     : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
-                } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
+                  } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
               >
                 {option}
               </button>
@@ -101,14 +99,13 @@ export default function QuestionRenderer({
           <label
             key={option.id}
             htmlFor={`q-${question.id}-opt-${option.id}`}
-            className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-              value === option.id
+            className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${value === option.id
                 ? 'border-blue-600 bg-blue-50'
                 : 'border-gray-300 bg-white hover:border-blue-400'
-            } ${isPreview ? 'cursor-default' : ''}`}
+              } ${isPreview ? 'cursor-default' : ''}`}
           >
             <input
-                id={`q-${question.id}-opt-${option.id}`}
+              id={`q-${question.id}-opt-${option.id}`}
               type="radio"
               name={question.id}
               value={option.id}
@@ -143,11 +140,10 @@ export default function QuestionRenderer({
           <label
             key={option.id}
             onClick={() => handleToggle(option.id)}
-            className={`flex items-center gap-3 p-3 border-2 rounded-lg transition-colors ${
-              selectedValues.includes(option.id)
+            className={`flex items-center gap-3 p-3 border-2 rounded-lg transition-colors ${selectedValues.includes(option.id)
                 ? 'border-blue-600 bg-blue-50'
                 : 'border-gray-300 bg-white hover:border-blue-400'
-            } ${isPreview ? 'cursor-default' : ''}`}
+              } ${isPreview ? 'cursor-default' : ''}`}
           >
             <input
               type="checkbox"
@@ -231,64 +227,6 @@ export default function QuestionRenderer({
     );
   };
 
-  // Yes/No Renderer
-  const renderYesNo = () => {
-    return (
-      <div className="flex gap-4">
-        <button
-          onClick={() => onChange('yes')}
-          disabled={isPreview}
-          className={`flex-1 py-3 px-6 border-2 rounded-lg font-medium transition-colors ${
-            value === 'yes'
-              ? 'border-green-600 bg-green-50 text-green-700'
-              : 'border-gray-300 bg-white text-gray-700 hover:border-green-400'
-          } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
-        >
-          Yes
-        </button>
-        <button
-          onClick={() => onChange('no')}
-          disabled={isPreview}
-          className={`flex-1 py-3 px-6 border-2 rounded-lg font-medium transition-colors ${
-            value === 'no'
-              ? 'border-red-600 bg-red-50 text-red-700'
-              : 'border-gray-300 bg-white text-gray-700 hover:border-red-400'
-          } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
-        >
-          No
-        </button>
-      </div>
-    );
-  };
-
-  // Date Renderer
-  const renderDate = () => {
-    return (
-      <input
-        type="date"
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={isPreview}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-    );
-  };
-
-  // Number Renderer
-  const renderNumber = () => {
-    return (
-      <input
-        type="number"
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        min={question.config.numberMin}
-        max={question.config.numberMax}
-        disabled={isPreview}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
-    );
-  };
-
   // Render appropriate input based on question type
   const renderInput = () => {
     switch (question.type) {
@@ -304,12 +242,6 @@ export default function QuestionRenderer({
         return renderTextarea();
       case 'dropdown':
         return renderDropdown();
-      case 'yes-no':
-        return renderYesNo();
-      case 'date':
-        return renderDate();
-      case 'number':
-        return renderNumber();
       default:
         return <p className="text-gray-500">Unsupported question type</p>;
     }

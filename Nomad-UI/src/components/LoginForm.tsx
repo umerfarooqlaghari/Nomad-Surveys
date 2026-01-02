@@ -130,14 +130,12 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
 
             {/* Tagline */}
             <h1 className={styles.tagline}>
-              Stepping into the future
+Insight-driven decisions for people and organizations
             </h1>
 
             {/* Description */}
             <p className={styles.description}>
-              Nomad is all about creating a hemisphere of boundless opportunities that connect fresh talent
-              from across cultures and regions with top companies, to develop leadership and transform
-              visions into reality.
+              Nomad is a people insights platform that helps organizations gather structured, confidential input to support leadership development, engagement, and talent decisions. Built to deliver clarity, accuracy, and trust at every stage.
             </p>
           </div>
         </div>

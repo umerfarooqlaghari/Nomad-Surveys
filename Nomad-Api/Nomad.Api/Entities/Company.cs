@@ -10,8 +10,7 @@ public class Company
     [MaxLength(200)]
     public string Name { get; set; } = string.Empty;
     
-    [Range(1, int.MaxValue)]
-    public int? NumberOfEmployees { get; set; }
+    public string? NumberOfEmployees { get; set; }
     
     [Required]
     [MaxLength(200)]

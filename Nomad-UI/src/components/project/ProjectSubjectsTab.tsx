@@ -250,20 +250,20 @@ EMP002,EMP004,Peer`;
 
   // Filter subjects based on search and status
   const filteredSubjects = subjects.filter(subject => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       subject.FullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       subject.Email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       subject.EmployeeIdString.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = filterStatus === 'all' || 
+
+    const matchesStatus = filterStatus === 'all' ||
       (filterStatus === 'active' && subject.IsActive) ||
       (filterStatus === 'inactive' && !subject.IsActive);
-    
+
     return matchesSearch && matchesStatus;
   });
 
   // Filter available employees for multi-select
-  const filteredAvailableEmployees = getAvailableEmployees().filter(emp => 
+  const filteredAvailableEmployees = getAvailableEmployees().filter(emp =>
     searchTerm === '' ||
     emp.FullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.Email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -328,7 +328,7 @@ EMP002,EMP004,Peer`;
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-gray-900 bg-white"
                 />
               </div>
-              
+
               <div className="mb-4 flex items-center gap-4">
                 <label className="flex items-center">
                   <input
@@ -359,7 +359,7 @@ EMP002,EMP004,Peer`;
                       <input
                         type="checkbox"
                         checked={selectedEmployeeIds.includes(employee.EmployeeId)}
-                        onChange={() => {}}
+                        onChange={() => { }}
                         className="mr-3 cursor-pointer"
                         onClick={(e) => e.stopPropagation()}
                       />
@@ -477,11 +477,10 @@ EMP002,EMP004,Peer`;
                       {subject.EvaluatorCount || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        subject.IsActive
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${subject.IsActive
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                        }`}>
                         {subject.IsActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -528,7 +527,7 @@ EMP002,EMP004,Peer`;
         projectSlug={projectSlug}
         onRelationshipsUpdated={loadSubjects}
       />
-    </div>
+    </div >
   );
 }
 

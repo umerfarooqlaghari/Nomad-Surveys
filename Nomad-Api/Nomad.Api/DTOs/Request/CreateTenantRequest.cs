@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Nomad.Api.DTOs.Request;
 
@@ -28,8 +30,7 @@ public class CreateCompanyRequest
     [StringLength(200, MinimumLength = 2)]
     public string Name { get; set; } = string.Empty;
     
-    [Range(1, int.MaxValue)]
-    public int? NumberOfEmployees { get; set; }
+    public string? NumberOfEmployees { get; set; }
     
     [Required]
     [StringLength(200, MinimumLength = 2)]
@@ -79,7 +80,7 @@ public class CreateTenantAdminRequest
     public string? Password { get; set; }
 }
 
-public class UpdateTenantAdminRequest
+public class UpdateTenantAdminRequest : IValidatableObject
 {
     [StringLength(100)]
     public string? FirstName { get; set; }
@@ -91,9 +92,27 @@ public class UpdateTenantAdminRequest
     [StringLength(255)]
     public string? Email { get; set; }
 
-    // Phone number and password are NOT included in updates
-    // They should be updated through separate endpoints
-    // All fields are nullable since tenant admin details are not editable in the UI
+    [Phone]
+    [StringLength(20)]
+    public string? PhoneNumber { get; set; }
+
+    [StringLength(100, MinimumLength = 8)]
+    public string? Password { get; set; }
+
+    public System.Collections.Generic.IEnumerable<System.ComponentModel.DataAnnotations.ValidationResult> Validate(System.ComponentModel.DataAnnotations.ValidationContext validationContext)
+    {
+        var fields = new[] { FirstName, LastName, Email, PhoneNumber, Password };
+        var anySet = fields.Any(f => !string.IsNullOrWhiteSpace(f));
+        var allSet = fields.All(f => !string.IsNullOrWhiteSpace(f));
+
+        if (anySet && !allSet)
+        {
+            yield return new System.ComponentModel.DataAnnotations.ValidationResult(
+                "If any admin field is provided, all admin fields (First Name, Last Name, Email, Phone Number, Password) must be provided.",
+                new[] { nameof(FirstName), nameof(LastName), nameof(Email), nameof(PhoneNumber), nameof(Password) }
+            );
+        }
+    }
 }
 
 public class UpdateTenantRequest

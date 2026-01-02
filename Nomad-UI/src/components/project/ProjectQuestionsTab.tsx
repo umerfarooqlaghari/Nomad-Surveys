@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { questionService } from '@/services/questionService';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import {
   ClusterListResponse,
   CompetencyListResponse,
@@ -415,28 +415,7 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
 
   return (
     <>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            duration: 3000,
-            style: {
-              background: '#10B981',
-            },
-          },
-          error: {
-            duration: 5000,
-            style: {
-              background: '#EF4444',
-            },
-          },
-        }}
-      />
+
       <div className={styles.container}>
         <div className={styles.header}>
           <h1 className={styles.title}>Question Management</h1>
@@ -447,327 +426,327 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
           + Add Cluster
         </button>
 
-      {/* Adding New Cluster Form */}
-      {isAddingCluster && (
-        <div className={styles.clusterCard}>
-          <div className={styles.clusterEditForm}>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Cluster Name *</label>
-              <input
-                type="text"
-                className={styles.input}
-                value={clusterForm.ClusterName}
-                onChange={(e) => setClusterForm({ ...clusterForm, ClusterName: e.target.value })}
-                placeholder="Enter cluster name"
-                autoFocus
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Description</label>
-              <textarea
-                className={styles.textarea}
-                value={clusterForm.Description}
-                onChange={(e) => setClusterForm({ ...clusterForm, Description: e.target.value })}
-                placeholder="Enter description (optional)"
-                rows={2}
-              />
-            </div>
-            <div className={styles.formActions}>
-              <button onClick={handleSaveCluster} className={styles.saveButton}>Save</button>
-              <button onClick={handleCancelCluster} className={styles.cancelButton}>Cancel</button>
+        {/* Adding New Cluster Form */}
+        {isAddingCluster && (
+          <div className={styles.clusterCard}>
+            <div className={styles.clusterEditForm}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Cluster Name *</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  value={clusterForm.ClusterName}
+                  onChange={(e) => setClusterForm({ ...clusterForm, ClusterName: e.target.value })}
+                  placeholder="Enter cluster name"
+                  autoFocus
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Description</label>
+                <textarea
+                  className={styles.textarea}
+                  value={clusterForm.Description}
+                  onChange={(e) => setClusterForm({ ...clusterForm, Description: e.target.value })}
+                  placeholder="Enter description (optional)"
+                  rows={2}
+                />
+              </div>
+              <div className={styles.formActions}>
+                <button onClick={handleSaveCluster} className={styles.saveButton}>Save</button>
+                <button onClick={handleCancelCluster} className={styles.cancelButton}>Cancel</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Clusters List */}
-      {clusters.length === 0 && !isAddingCluster ? (
-        <div className={styles.emptyState}>
-          <h3>No Clusters Yet</h3>
-          <p>Get started by creating your first cluster</p>
-        </div>
-      ) : (
-        <div className={styles.clustersList}>
-          {clusters.map((cluster) => {
-            const isExpanded = expanded.clusters.has(cluster.Id);
-            const isEditing = editingClusterId === cluster.Id;
-            const clusterCompetencies = getCompetenciesForCluster(cluster.Id);
+        {/* Clusters List */}
+        {clusters.length === 0 && !isAddingCluster ? (
+          <div className={styles.emptyState}>
+            <h3>No Clusters Yet</h3>
+            <p>Get started by creating your first cluster</p>
+          </div>
+        ) : (
+          <div className={styles.clustersList}>
+            {clusters.map((cluster) => {
+              const isExpanded = expanded.clusters.has(cluster.Id);
+              const isEditing = editingClusterId === cluster.Id;
+              const clusterCompetencies = getCompetenciesForCluster(cluster.Id);
 
-            return (
-              <div key={cluster.Id} className={styles.clusterCard}>
-                {/* Cluster Header */}
-                {!isEditing ? (
-                  <div className={styles.clusterHeader} onClick={() => toggleCluster(cluster.Id)}>
-                    <svg className={`${styles.expandIcon} ${isExpanded ? styles.expanded : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                    <div className={styles.clusterInfo}>
-                      <h3 className={styles.clusterName}>{cluster.ClusterName}</h3>
-                      <p className={styles.clusterMeta}>{cluster.CompetencyCount} competenc{cluster.CompetencyCount === 1 ? 'y' : 'ies'}</p>
+              return (
+                <div key={cluster.Id} className={styles.clusterCard}>
+                  {/* Cluster Header */}
+                  {!isEditing ? (
+                    <div className={styles.clusterHeader} onClick={() => toggleCluster(cluster.Id)}>
+                      <svg className={`${styles.expandIcon} ${isExpanded ? styles.expanded : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <div className={styles.clusterInfo}>
+                        <h3 className={styles.clusterName}>{cluster.ClusterName}</h3>
+                        <p className={styles.clusterMeta}>{cluster.CompetencyCount} competenc{cluster.CompetencyCount === 1 ? 'y' : 'ies'}</p>
+                      </div>
+                      <div className={styles.clusterActions} onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => handleEditCluster(cluster)} className={styles.iconButton} title="Edit">
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button onClick={() => handleDeleteCluster(cluster.Id)} className={`${styles.iconButton} ${styles.delete}`} title="Delete">
+                          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                    <div className={styles.clusterActions} onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => handleEditCluster(cluster)} className={styles.iconButton} title="Edit">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button onClick={() => handleDeleteCluster(cluster.Id)} className={`${styles.iconButton} ${styles.delete}`} title="Delete">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+                  ) : (
+                    <div className={styles.clusterEditForm}>
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Cluster Name *</label>
+                        <input
+                          type="text"
+                          className={styles.input}
+                          value={clusterForm.ClusterName}
+                          onChange={(e) => setClusterForm({ ...clusterForm, ClusterName: e.target.value })}
+                          autoFocus
+                        />
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label className={styles.label}>Description</label>
+                        <textarea
+                          className={styles.textarea}
+                          value={clusterForm.Description}
+                          onChange={(e) => setClusterForm({ ...clusterForm, Description: e.target.value })}
+                          rows={2}
+                        />
+                      </div>
+                      <div className={styles.formActions}>
+                        <button onClick={handleSaveCluster} className={styles.saveButton}>Save</button>
+                        <button onClick={handleCancelCluster} className={styles.cancelButton}>Cancel</button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <div className={styles.clusterEditForm}>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Cluster Name *</label>
-                      <input
-                        type="text"
-                        className={styles.input}
-                        value={clusterForm.ClusterName}
-                        onChange={(e) => setClusterForm({ ...clusterForm, ClusterName: e.target.value })}
-                        autoFocus
-                      />
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Description</label>
-                      <textarea
-                        className={styles.textarea}
-                        value={clusterForm.Description}
-                        onChange={(e) => setClusterForm({ ...clusterForm, Description: e.target.value })}
-                        rows={2}
-                      />
-                    </div>
-                    <div className={styles.formActions}>
-                      <button onClick={handleSaveCluster} className={styles.saveButton}>Save</button>
-                      <button onClick={handleCancelCluster} className={styles.cancelButton}>Cancel</button>
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Cluster Content - Competencies */}
-                {isExpanded && !isEditing && (
-                  <div className={styles.clusterContent}>
-                    {/* Adding New Competency Form */}
-                    {addingCompetencyToCluster === cluster.Id && (
-                      <div className={styles.competencyCard}>
-                        <div className={styles.clusterEditForm}>
-                          <div className={styles.formGroup}>
-                            <label className={styles.label}>Competency Name *</label>
-                            <input
-                              type="text"
-                              className={styles.input}
-                              value={competencyForm.Name}
-                              onChange={(e) => setCompetencyForm({ ...competencyForm, Name: e.target.value })}
-                              placeholder="Enter competency name"
-                              autoFocus
-                            />
-                          </div>
-                          <div className={styles.formGroup}>
-                            <label className={styles.label}>Description</label>
-                            <textarea
-                              className={styles.textarea}
-                              value={competencyForm.Description}
-                              onChange={(e) => setCompetencyForm({ ...competencyForm, Description: e.target.value })}
-                              placeholder="Enter description (optional)"
-                              rows={2}
-                            />
-                          </div>
-                          <div className={styles.formActions}>
-                            <button onClick={handleSaveCompetency} className={styles.saveButton}>Save</button>
-                            <button onClick={handleCancelCompetency} className={styles.cancelButton}>Cancel</button>
+                  {/* Cluster Content - Competencies */}
+                  {isExpanded && !isEditing && (
+                    <div className={styles.clusterContent}>
+                      {/* Adding New Competency Form */}
+                      {addingCompetencyToCluster === cluster.Id && (
+                        <div className={styles.competencyCard}>
+                          <div className={styles.clusterEditForm}>
+                            <div className={styles.formGroup}>
+                              <label className={styles.label}>Competency Name *</label>
+                              <input
+                                type="text"
+                                className={styles.input}
+                                value={competencyForm.Name}
+                                onChange={(e) => setCompetencyForm({ ...competencyForm, Name: e.target.value })}
+                                placeholder="Enter competency name"
+                                autoFocus
+                              />
+                            </div>
+                            <div className={styles.formGroup}>
+                              <label className={styles.label}>Description</label>
+                              <textarea
+                                className={styles.textarea}
+                                value={competencyForm.Description}
+                                onChange={(e) => setCompetencyForm({ ...competencyForm, Description: e.target.value })}
+                                placeholder="Enter description (optional)"
+                                rows={2}
+                              />
+                            </div>
+                            <div className={styles.formActions}>
+                              <button onClick={handleSaveCompetency} className={styles.saveButton}>Save</button>
+                              <button onClick={handleCancelCompetency} className={styles.cancelButton}>Cancel</button>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
 
-                    {/* Competencies List */}
-                    <div className={styles.competenciesList}>
-                      {clusterCompetencies.map((competency) => {
-                        const isCompExpanded = expanded.competencies.has(competency.Id);
-                        const isCompEditing = editingCompetencyId === competency.Id;
-                        const competencyQuestions = getQuestionsForCompetency(competency.Id);
+                      {/* Competencies List */}
+                      <div className={styles.competenciesList}>
+                        {clusterCompetencies.map((competency) => {
+                          const isCompExpanded = expanded.competencies.has(competency.Id);
+                          const isCompEditing = editingCompetencyId === competency.Id;
+                          const competencyQuestions = getQuestionsForCompetency(competency.Id);
 
-                        return (
-                          <div key={competency.Id} className={styles.competencyCard}>
-                            {/* Competency Header */}
-                            {!isCompEditing ? (
-                              <div className={styles.competencyHeader} onClick={() => toggleCompetency(competency.Id)}>
-                                <svg className={`${styles.expandIcon} ${isCompExpanded ? styles.expanded : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                                <div className={styles.competencyInfo}>
-                                  <h4 className={styles.competencyName}>{competency.Name}</h4>
-                                  <p className={styles.competencyMeta}>{competency.QuestionCount} question{competency.QuestionCount === 1 ? '' : 's'}</p>
-                                </div>
-                                <div className={styles.clusterActions} onClick={(e) => e.stopPropagation()}>
-                                  <button onClick={() => handleEditCompetency(competency)} className={styles.iconButton} title="Edit">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                  </button>
-                                  <button onClick={() => handleDeleteCompetency(competency.Id)} className={`${styles.iconButton} ${styles.delete}`} title="Delete">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className={styles.clusterEditForm}>
-                                <div className={styles.formGroup}>
-                                  <label className={styles.label}>Competency Name *</label>
-                                  <input
-                                    type="text"
-                                    className={styles.input}
-                                    value={competencyForm.Name}
-                                    onChange={(e) => setCompetencyForm({ ...competencyForm, Name: e.target.value })}
-                                    autoFocus
-                                  />
-                                </div>
-                                <div className={styles.formGroup}>
-                                  <label className={styles.label}>Description</label>
-                                  <textarea
-                                    className={styles.textarea}
-                                    value={competencyForm.Description}
-                                    onChange={(e) => setCompetencyForm({ ...competencyForm, Description: e.target.value })}
-                                    rows={2}
-                                  />
-                                </div>
-                                <div className={styles.formActions}>
-                                  <button onClick={handleSaveCompetency} className={styles.saveButton}>Save</button>
-                                  <button onClick={handleCancelCompetency} className={styles.cancelButton}>Cancel</button>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Competency Content - Questions */}
-                            {isCompExpanded && !isCompEditing && (
-                              <div className={styles.competencyContent}>
-                                {/* Adding New Question Form */}
-                                {addingQuestionToCompetency === competency.Id && (
-                                  <div className={styles.questionCard}>
-                                    <div className={styles.formGroup}>
-                                      <label className={styles.label}>Self Question *</label>
-                                      <textarea
-                                        className={styles.textarea}
-                                        value={questionForm.SelfQuestion}
-                                        onChange={(e) => setQuestionForm({ ...questionForm, SelfQuestion: e.target.value })}
-                                        placeholder="Enter the question for self-evaluation"
-                                        rows={2}
-                                        autoFocus
-                                      />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                      <label className={styles.label}>Others Question *</label>
-                                      <textarea
-                                        className={styles.textarea}
-                                        value={questionForm.OthersQuestion}
-                                        onChange={(e) => setQuestionForm({ ...questionForm, OthersQuestion: e.target.value })}
-                                        placeholder="Enter the question for peer/manager evaluation"
-                                        rows={2}
-                                      />
-                                    </div>
-                                    <div className={styles.formActions}>
-                                      <button onClick={handleSaveQuestion} className={styles.saveButton}>Save</button>
-                                      <button onClick={handleCancelQuestion} className={styles.cancelButton}>Cancel</button>
-                                    </div>
+                          return (
+                            <div key={competency.Id} className={styles.competencyCard}>
+                              {/* Competency Header */}
+                              {!isCompEditing ? (
+                                <div className={styles.competencyHeader} onClick={() => toggleCompetency(competency.Id)}>
+                                  <svg className={`${styles.expandIcon} ${isCompExpanded ? styles.expanded : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                  <div className={styles.competencyInfo}>
+                                    <h4 className={styles.competencyName}>{competency.Name}</h4>
+                                    <p className={styles.competencyMeta}>{competency.QuestionCount} question{competency.QuestionCount === 1 ? '' : 's'}</p>
                                   </div>
-                                )}
+                                  <div className={styles.clusterActions} onClick={(e) => e.stopPropagation()}>
+                                    <button onClick={() => handleEditCompetency(competency)} className={styles.iconButton} title="Edit">
+                                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                      </svg>
+                                    </button>
+                                    <button onClick={() => handleDeleteCompetency(competency.Id)} className={`${styles.iconButton} ${styles.delete}`} title="Delete">
+                                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className={styles.clusterEditForm}>
+                                  <div className={styles.formGroup}>
+                                    <label className={styles.label}>Competency Name *</label>
+                                    <input
+                                      type="text"
+                                      className={styles.input}
+                                      value={competencyForm.Name}
+                                      onChange={(e) => setCompetencyForm({ ...competencyForm, Name: e.target.value })}
+                                      autoFocus
+                                    />
+                                  </div>
+                                  <div className={styles.formGroup}>
+                                    <label className={styles.label}>Description</label>
+                                    <textarea
+                                      className={styles.textarea}
+                                      value={competencyForm.Description}
+                                      onChange={(e) => setCompetencyForm({ ...competencyForm, Description: e.target.value })}
+                                      rows={2}
+                                    />
+                                  </div>
+                                  <div className={styles.formActions}>
+                                    <button onClick={handleSaveCompetency} className={styles.saveButton}>Save</button>
+                                    <button onClick={handleCancelCompetency} className={styles.cancelButton}>Cancel</button>
+                                  </div>
+                                </div>
+                              )}
 
-                                {/* Questions List */}
-                                <div className={styles.questionsList}>
-                                  {competencyQuestions.map((question) => {
-                                    const isQEditing = editingQuestionId === question.Id;
+                              {/* Competency Content - Questions */}
+                              {isCompExpanded && !isCompEditing && (
+                                <div className={styles.competencyContent}>
+                                  {/* Adding New Question Form */}
+                                  {addingQuestionToCompetency === competency.Id && (
+                                    <div className={styles.questionCard}>
+                                      <div className={styles.formGroup}>
+                                        <label className={styles.label}>Self Question *</label>
+                                        <textarea
+                                          className={styles.textarea}
+                                          value={questionForm.SelfQuestion}
+                                          onChange={(e) => setQuestionForm({ ...questionForm, SelfQuestion: e.target.value })}
+                                          placeholder="Enter the question for self-evaluation"
+                                          rows={2}
+                                          autoFocus
+                                        />
+                                      </div>
+                                      <div className={styles.formGroup}>
+                                        <label className={styles.label}>Others Question *</label>
+                                        <textarea
+                                          className={styles.textarea}
+                                          value={questionForm.OthersQuestion}
+                                          onChange={(e) => setQuestionForm({ ...questionForm, OthersQuestion: e.target.value })}
+                                          placeholder="Enter the question for peer/manager evaluation"
+                                          rows={2}
+                                        />
+                                      </div>
+                                      <div className={styles.formActions}>
+                                        <button onClick={handleSaveQuestion} className={styles.saveButton}>Save</button>
+                                        <button onClick={handleCancelQuestion} className={styles.cancelButton}>Cancel</button>
+                                      </div>
+                                    </div>
+                                  )}
 
-                                    return (
-                                      <div key={question.Id} className={styles.questionCard}>
-                                        {!isQEditing ? (
-                                          <div className={styles.questionHeader}>
-                                            <div className={styles.questionContent}>
-                                              <div className={styles.questionGrid}>
-                                                <div>
-                                                  <p className={styles.questionLabel}>Self Question</p>
-                                                  <p className={styles.questionText}>{question.SelfQuestion}</p>
-                                                </div>
-                                                <div>
-                                                  <p className={styles.questionLabel}>Others Question</p>
-                                                  <p className={styles.questionText}>{question.OthersQuestion}</p>
+                                  {/* Questions List */}
+                                  <div className={styles.questionsList}>
+                                    {competencyQuestions.map((question) => {
+                                      const isQEditing = editingQuestionId === question.Id;
+
+                                      return (
+                                        <div key={question.Id} className={styles.questionCard}>
+                                          {!isQEditing ? (
+                                            <div className={styles.questionHeader}>
+                                              <div className={styles.questionContent}>
+                                                <div className={styles.questionGrid}>
+                                                  <div>
+                                                    <p className={styles.questionLabel}>Self Question</p>
+                                                    <p className={styles.questionText}>{question.SelfQuestion}</p>
+                                                  </div>
+                                                  <div>
+                                                    <p className={styles.questionLabel}>Others Question</p>
+                                                    <p className={styles.questionText}>{question.OthersQuestion}</p>
+                                                  </div>
                                                 </div>
                                               </div>
+                                              <div className={styles.clusterActions}>
+                                                <button onClick={() => handleEditQuestion(question)} className={styles.iconButton} title="Edit">
+                                                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                  </svg>
+                                                </button>
+                                                <button onClick={() => handleDeleteQuestion(question.Id)} className={`${styles.iconButton} ${styles.delete}`} title="Delete">
+                                                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                  </svg>
+                                                </button>
+                                              </div>
                                             </div>
-                                            <div className={styles.clusterActions}>
-                                              <button onClick={() => handleEditQuestion(question)} className={styles.iconButton} title="Edit">
-                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
-                                              </button>
-                                              <button onClick={() => handleDeleteQuestion(question.Id)} className={`${styles.iconButton} ${styles.delete}`} title="Delete">
-                                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                </svg>
-                                              </button>
+                                          ) : (
+                                            <div>
+                                              <div className={styles.formGroup}>
+                                                <label className={styles.label}>Self Question *</label>
+                                                <textarea
+                                                  className={styles.textarea}
+                                                  value={questionForm.SelfQuestion}
+                                                  onChange={(e) => setQuestionForm({ ...questionForm, SelfQuestion: e.target.value })}
+                                                  rows={2}
+                                                  autoFocus
+                                                />
+                                              </div>
+                                              <div className={styles.formGroup}>
+                                                <label className={styles.label}>Others Question *</label>
+                                                <textarea
+                                                  className={styles.textarea}
+                                                  value={questionForm.OthersQuestion}
+                                                  onChange={(e) => setQuestionForm({ ...questionForm, OthersQuestion: e.target.value })}
+                                                  rows={2}
+                                                />
+                                              </div>
+                                              <div className={styles.formActions}>
+                                                <button onClick={handleSaveQuestion} className={styles.saveButton}>Save</button>
+                                                <button onClick={handleCancelQuestion} className={styles.cancelButton}>Cancel</button>
+                                              </div>
                                             </div>
-                                          </div>
-                                        ) : (
-                                          <div>
-                                            <div className={styles.formGroup}>
-                                              <label className={styles.label}>Self Question *</label>
-                                              <textarea
-                                                className={styles.textarea}
-                                                value={questionForm.SelfQuestion}
-                                                onChange={(e) => setQuestionForm({ ...questionForm, SelfQuestion: e.target.value })}
-                                                rows={2}
-                                                autoFocus
-                                              />
-                                            </div>
-                                            <div className={styles.formGroup}>
-                                              <label className={styles.label}>Others Question *</label>
-                                              <textarea
-                                                className={styles.textarea}
-                                                value={questionForm.OthersQuestion}
-                                                onChange={(e) => setQuestionForm({ ...questionForm, OthersQuestion: e.target.value })}
-                                                rows={2}
-                                              />
-                                            </div>
-                                            <div className={styles.formActions}>
-                                              <button onClick={handleSaveQuestion} className={styles.saveButton}>Save</button>
-                                              <button onClick={handleCancelQuestion} className={styles.cancelButton}>Cancel</button>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+
+                                  {/* Add Question Button */}
+                                  {!addingQuestionToCompetency && (
+                                    <button onClick={() => handleAddQuestion(competency.Id)} className={styles.addQuestionButton}>
+                                      + Add Question
+                                    </button>
+                                  )}
                                 </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
 
-                                {/* Add Question Button */}
-                                {!addingQuestionToCompetency && (
-                                  <button onClick={() => handleAddQuestion(competency.Id)} className={styles.addQuestionButton}>
-                                    + Add Question
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                      {/* Add Competency Button */}
+                      {!addingCompetencyToCluster && (
+                        <button onClick={() => handleAddCompetency(cluster.Id)} className={styles.addCompetencyButton}>
+                          + Add Competency
+                        </button>
+                      )}
                     </div>
-
-                    {/* Add Competency Button */}
-                    {!addingCompetencyToCluster && (
-                      <button onClick={() => handleAddCompetency(cluster.Id)} className={styles.addCompetencyButton}>
-                        + Add Competency
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </>
   );

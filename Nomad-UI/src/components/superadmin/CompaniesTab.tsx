@@ -17,6 +17,90 @@ export default function CompaniesTab() {
   const [formData, setFormData] = useState<CreateTenantData>(tenantService.getDefaultFormData());
   const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [adminToastShown, setAdminToastShown] = useState(false);
+  const [expandedSections, setExpandedSections] = useState({
+    company: true,
+    contact: false,
+    admin: false
+  });
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section as keyof typeof prev]
+    }));
+  };
+
+  // Real-time validation for Admin Fields "All or Nothing" rule
+  useEffect(() => {
+    const errors: Record<string, string> = {};
+
+    // Validate Slug first (always required)
+    if (!formData.Slug) {
+      errors['Slug'] = 'Slug is required';
+    } else if (formData.Slug.length < 2) {
+      errors['Slug'] = 'Slug must be at least 2 characters';
+    } else if (!/^[a-z0-9-]+$/.test(formData.Slug)) {
+      errors['Slug'] = 'Slug can only contain lowercase letters, numbers, and hyphens';
+    }
+
+    // Admin fields validation: "All or Nothing" rule
+    // If TenantAdmin doesn't exist, no admin validation needed
+    if (formData.TenantAdmin) {
+      const admin = formData.TenantAdmin;
+
+      // Check which fields have values (treating empty strings as no value)
+      const hasFirstName = !!admin.FirstName?.trim();
+      const hasLastName = !!admin.LastName?.trim();
+      const hasEmail = !!admin.Email?.trim();
+      const hasPhoneNumber = !!admin.PhoneNumber?.trim();
+      const hasPassword = !!admin.Password && admin.Password.length > 0;
+
+      // Count filled fields (excluding password in edit mode since it's optional to keep current)
+      const filledFields = [hasFirstName, hasLastName, hasEmail, hasPhoneNumber];
+      const filledCount = filledFields.filter(Boolean).length;
+
+      // In create mode, password is also required if any other field is filled
+      // In edit mode, password is optional (leave blank to keep current)
+      const hasAnyValue = filledCount > 0 || (!isEditMode && hasPassword);
+      const allFieldsFilled = filledCount === 4 && (isEditMode || hasPassword);
+      const noFieldsFilled = filledCount === 0 && !hasPassword;
+
+      // "All or Nothing" rule: either all fields filled or none
+      if (hasAnyValue && !allFieldsFilled && !noFieldsFilled) {
+        // Some fields are filled but not all - show validation errors for missing fields
+        if (!hasFirstName) errors['FirstName'] = 'First Name is required when adding an admin';
+        if (!hasLastName) errors['LastName'] = 'Last Name is required when adding an admin';
+
+        if (!hasEmail) {
+          errors['Email'] = 'Email is required when adding an admin';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin.Email!)) {
+          errors['Email'] = 'Invalid email format';
+        }
+
+        if (!hasPhoneNumber) errors['PhoneNumber'] = 'Phone Number is required when adding an admin';
+
+        // Password required only in create mode
+        if (!isEditMode && !hasPassword) {
+          errors['Password'] = 'Password is required when adding an admin';
+        }
+      }
+
+      // Validate email format if provided
+      if (hasEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin.Email!)) {
+        errors['Email'] = 'Invalid email format';
+      }
+
+      // Validate password length if provided
+      if (hasPassword && admin.Password!.length < 8) {
+        errors['Password'] = 'Password must be at least 8 characters';
+      }
+    }
+
+    setValidationErrors(errors);
+
+  }, [formData.TenantAdmin, formData.Slug, isEditMode]);
 
   // Load tenants on component mount
   useEffect(() => {
@@ -34,6 +118,7 @@ export default function CompaniesTab() {
 
       if (error) {
         setError(error);
+        toast.error(error);
         console.error('Error loading tenants:', error);
       } else if (data) {
         setTenants(data);
@@ -41,6 +126,7 @@ export default function CompaniesTab() {
     } catch (err) {
       const errorMessage = 'Failed to load companies';
       setError(errorMessage);
+      toast.error(errorMessage);
       console.error('Error loading tenants:', err);
     } finally {
       setIsLoading(false);
@@ -56,7 +142,7 @@ export default function CompaniesTab() {
         ...prev,
         Company: {
           ...prev.Company,
-          [fieldName]: fieldName === 'NumberOfEmployees' ? (value ? parseInt(value) : null) : value,
+          [fieldName]: value,
         },
       }));
     } else if (name.startsWith('TenantAdmin.')) {
@@ -121,6 +207,66 @@ export default function CompaniesTab() {
     });
   };
 
+  // Helper function to check if all admin fields are empty
+  const isAdminEmpty = (admin: CreateTenantData['TenantAdmin']): boolean => {
+    if (!admin) return true;
+    return !admin.FirstName?.trim() &&
+      !admin.LastName?.trim() &&
+      !admin.Email?.trim() &&
+      !admin.PhoneNumber?.trim() &&
+      (!admin.Password || admin.Password.length === 0);
+  };
+
+  // Helper to check if there are admin-related validation errors (for "all-or-nothing" rule)
+  const hasAdminValidationErrors = (): boolean => {
+    const adminFields = ['FirstName', 'LastName', 'Email', 'PhoneNumber', 'Password'];
+    return adminFields.some(field => validationErrors[field]);
+  };
+
+  // Auto-scroll to form top when admin "all-or-nothing" validation kicks in
+  useEffect(() => {
+    if (hasAdminValidationErrors()) {
+      scrollToForm();
+    }
+  }, [validationErrors]); // keep focused on current validation state
+
+  // Show toast instead of inline banner for admin all-or-nothing rule
+  useEffect(() => {
+    const hasAdminErrors = hasAdminValidationErrors();
+    if (hasAdminErrors && !adminToastShown) {
+      toast.error('Admin fields are all-or-nothing: fill all admin fields or leave them all empty');
+      setAdminToastShown(true);
+    }
+    if (!hasAdminErrors && adminToastShown) {
+      setAdminToastShown(false);
+    }
+  }, [validationErrors, adminToastShown]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const hasBlockingValidation = Object.keys(validationErrors).length > 0 || hasAdminValidationErrors();
+  const isSubmitVisuallyDisabled = hasBlockingValidation || isLoading;
+
+  // 2. Create the reference
+  const formTopRef = React.useRef<HTMLDivElement>(null);
+
+  // 3. Create a helper function to scroll
+  // const scrollToForm = () => {
+  //   if (formTopRef.current) {
+  //     window.scrollTo({ top: 0, behavior: 'smooth' });
+  //   }
+  // };
+  const scrollToForm = () => {
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      formTopRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  };
+
+
+
+
   const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e) e.preventDefault();
 
@@ -129,11 +275,25 @@ export default function CompaniesTab() {
       return;
     }
 
+    // Check for validation errors before submitting
+    if (hasBlockingValidation) {
+      toast.error('Please fix validation errors before creating');
+      scrollToForm();
+      return;
+    }
+
+    // Prepare data - set TenantAdmin to null if all fields are empty
+    const submitData: CreateTenantData = {
+      ...formData,
+      TenantAdmin: isAdminEmpty(formData.TenantAdmin) ? null : formData.TenantAdmin,
+    };
+
     // Validate form data
-    const validation = tenantService.validateTenantData(formData);
+    const validation = tenantService.validateTenantData(submitData);
     if (!validation.isValid) {
       setError(validation.errors.join(', '));
       toast.error('Please fix the form errors');
+      scrollToForm();
       return;
     }
 
@@ -141,11 +301,12 @@ export default function CompaniesTab() {
     setIsLoading(true);
 
     try {
-      const { data, error } = await tenantService.createTenant(formData, token);
+      const { data, error } = await tenantService.createTenant(submitData, token);
 
       if (error) {
         setError(error);
         toast.error(error);
+        scrollToForm();
       } else if (data) {
         toast.success('Company created successfully!');
         setShowForm(false);
@@ -156,6 +317,7 @@ export default function CompaniesTab() {
       const errorMessage = err.message || 'Failed to create company';
       setError(errorMessage);
       toast.error(errorMessage);
+      scrollToForm();
     } finally {
       setIsLoading(false);
     }
@@ -191,7 +353,7 @@ export default function CompaniesTab() {
         Description: data.Description || '',
         Company: {
           Name: data.Company?.Name || '',
-          NumberOfEmployees: data.Company?.NumberOfEmployees ?? null,
+          NumberOfEmployees: data.Company?.NumberOfEmployees?.toString() ?? null,
           Location: data.Company?.Location || '',
           Industry: data.Company?.Industry || '',
           ContactPersonName: data.Company?.ContactPersonName || '',
@@ -212,6 +374,7 @@ export default function CompaniesTab() {
       setEditingTenantId(tenantId);
       setIsEditMode(true);
       setShowForm(true);
+      setTimeout(scrollToForm, 100); // Scroll to form when opening edit
     } catch (err) {
       toast.error('Failed to load tenant details');
       console.error('Error loading tenant:', err);
@@ -232,9 +395,19 @@ export default function CompaniesTab() {
 
     if (!token || !editingTenantId) return;
 
+    // Check for validation errors before submitting
+    if (hasBlockingValidation) {
+      toast.error('Please fix validation errors before updating');
+      scrollToForm();
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError('');
+
+      // Determine if admin should be included - use "all or nothing" rule
+      const adminIsEmpty = isAdminEmpty(formData.TenantAdmin);
 
       const updateData = {
         Name: formData.Name,
@@ -251,8 +424,15 @@ export default function CompaniesTab() {
           ContactPersonPhone: formData.Company.ContactPersonPhone,
           LogoUrl: formData.Company.LogoUrl,
         },
-        // TenantAdmin is not sent during updates since admin details are not editable in the UI
-        TenantAdmin: null,
+        // If all admin fields are empty, set to null (no admin update)
+        // Otherwise, include admin data (password can be null to keep current)
+        TenantAdmin: adminIsEmpty ? null : (formData.TenantAdmin ? {
+          FirstName: formData.TenantAdmin.FirstName,
+          LastName: formData.TenantAdmin.LastName,
+          Email: formData.TenantAdmin.Email,
+          PhoneNumber: formData.TenantAdmin.PhoneNumber,
+          Password: formData.TenantAdmin.Password || null
+        } : null),
       };
 
       const { error } = await tenantService.updateTenant(editingTenantId, updateData, token);
@@ -260,6 +440,7 @@ export default function CompaniesTab() {
       if (error) {
         setError(error);
         toast.error(error);
+        scrollToForm();
         return;
       }
 
@@ -270,6 +451,7 @@ export default function CompaniesTab() {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update company';
       setError(errorMessage);
       toast.error(errorMessage);
+      scrollToForm();
     } finally {
       setIsLoading(false);
     }
@@ -278,7 +460,7 @@ export default function CompaniesTab() {
   return (
     <div className={styles.container}>
       {/* Header */}
-      <div className={styles.header}>
+      <div className={styles.header} ref={formTopRef}>
         <div className={styles.headerContent}>
           <h2>Companies</h2>
           <p>Manage organization onboarding and information (Updated)</p>
@@ -289,6 +471,7 @@ export default function CompaniesTab() {
               handleCancelEdit();
             } else {
               setShowForm(true);
+              setTimeout(scrollToForm, 100); // Scroll to form when adding
             }
           }}
           className={styles.addButton}
@@ -312,266 +495,352 @@ export default function CompaniesTab() {
             {isEditMode ? 'Edit Company' : 'Organization Onboarding'}
           </h3>
           <form className={styles.form}>
-            <div className={styles.formGrid}>
-              {/* Tenant Information */}
-              <div className={styles.formSection}>
-
-                <div className={styles.fieldGroup}>
-                  <label className={`${styles.label} ${styles.required}`}>
-                    Organization Name
-                  </label>
-                  <input
-                    type="text"
-                    name="Name"
-                    value={formData.Name}
-                    onChange={handleNameChange}
-                    required
-                    className={styles.input}
-                    placeholder="Enter organization name"
-                  />
+            {/* Section 1: Company Information */}
+            <div className={styles.collapsibleSection} style={{ borderColor: (validationErrors['Slug'] || validationErrors['Name']) ? '#fecaca' : undefined }}>
+              <div
+                className={`${styles.collapsibleHeader} ${expandedSections.company ? styles.collapsibleHeaderExpanded : ''}`}
+                onClick={() => toggleSection('company')}
+              >
+                <div className={styles.collapsibleTitle}>
+                  <div className={styles.sectionIcon}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 21h18M5 21V7l8-4 8 4v14M8 21v-8h8v8" />
+                    </svg>
+                  </div>
+                  Company Information
                 </div>
-
-                <div className={styles.fieldGroup}>
-                  <label className={`${styles.label} ${styles.required}`}>
-                    Tenant Slug
-                  </label>
-                  <input
-                    type="text"
-                    name="Slug"
-                    value={formData.Slug}
-                    onChange={handleInputChange}
-                    required
-                    className={styles.input}
-                    placeholder="organization-slug"
-                  />
-                </div>
-
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>
-                    Description
-                  </label>
-                  <textarea
-                    name="Description"
-                    value={formData.Description}
-                    onChange={handleInputChange}
-                    className={styles.textarea}
-                    placeholder="Brief description of the organization"
-                  />
-                </div>
+                <svg
+                  className={`${styles.chevron} ${expandedSections.company ? styles.chevronOpen : ''}`}
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
               </div>
 
-              {/* Company Information */}
-              <div className={styles.formSection}>
+              {expandedSections.company && (
+                <div className={styles.collapsibleContent}>
+                  <div className={styles.formGrid}>
+                    <div className={styles.fieldGroup}>
+                      <label className={`${styles.label} ${styles.required}`}>
+                        Organization Name
+                      </label>
+                      <input
+                        type="text"
+                        name="Name"
+                        value={formData.Name}
+                        onChange={handleNameChange}
+                        required
+                        className={styles.input}
+                        placeholder="Enter organization name"
+                      />
+                    </div>
 
-                {/* Company Name is auto-synced with Organization Name - hidden from UI */}
+                    <div className={styles.fieldGroup}>
+                      <label className={`${styles.label} ${styles.required}`}>
+                        Tenant Slug
+                      </label>
+                      <input
+                        type="text"
+                        name="Slug"
+                        value={formData.Slug}
+                        onChange={handleInputChange}
+                        required
+                        className={styles.input}
+                        placeholder="organization-slug"
+                      />
+                      {validationErrors['Slug'] && <span className={styles.errorText}>{validationErrors['Slug']}</span>}
+                    </div>
 
-                <div className={styles.fieldGroup}>
-                  <label className={styles.label}>
-                    Number of Employees
-                  </label>
-                  <input
-                    type="number"
-                    name="Company.NumberOfEmployees"
-                    value={formData.Company.NumberOfEmployees ?? ''}
-                    onChange={handleInputChange}
-                    className={styles.input}
-                    placeholder="Number of employees"
-                  />
-                </div>
-
-                <div className={styles.fieldGroup}>
-                  <label className={`${styles.label} ${styles.required}`}>
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    name="Company.Location"
-                    value={formData.Company.Location}
-                    onChange={handleInputChange}
-                    required
-                    className={styles.input}
-                    placeholder="Company location"
-                  />
-                </div>
-
-                <div className={styles.fieldGroup}>
-                  <label className={`${styles.label} ${styles.required}`}>
-                    Industry
-                  </label>
-                  <select
-                    name="Company.Industry"
-                    value={formData.Company.Industry}
-                    onChange={handleInputChange}
-                    required
-                    className={styles.select}
-                  >
-                    <option value="">Select Industry</option>
-                    <option value="Technology">Technology</option>
-                    <option value="Healthcare">Healthcare</option>
-                    <option value="Finance">Finance</option>
-                    <option value="Education">Education</option>
-                    <option value="Manufacturing">Manufacturing</option>
-                    <option value="Retail">Retail</option>
-                    <option value="Consulting">Consulting</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-
-              </div>
-            </div>
-
-            {/* Contact Person Information - Display in edit mode, auto-synced in create mode */}
-            <div className={styles.formSection}>
-              <h4 className={styles.sectionTitle}>Contact Person Information</h4>
-              <div className={styles.formGrid}>
-                {isEditMode ? (
-                  <>
-                    {/* In edit mode, only show contact person phone and role */}
                     <div className={styles.fieldGroup}>
                       <label className={styles.label}>
-                        Contact Person Phone
+                        Description
+                      </label>
+                      <textarea
+                        name="Description"
+                        value={formData.Description}
+                        onChange={handleInputChange}
+                        className={styles.textarea}
+                        placeholder="Brief description of the organization"
+                      />
+                    </div>
+
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Number of Employees
+                      </label>
+                      <select
+                        name="Company.NumberOfEmployees"
+                        value={formData.Company.NumberOfEmployees ?? ''}
+                        onChange={handleInputChange}
+                        className={styles.select}
+                      >
+                        <option value="">Select Range</option>
+                        <option value="0-100">0-100</option>
+                        <option value="101-250">101-250</option>
+                        <option value="251-500">251-500</option>
+                        <option value="501-1000">501-1000</option>
+                        <option value="1000+">1000+</option>
+                      </select>
+                    </div>
+
+                    <div className={styles.fieldGroup}>
+                      <label className={`${styles.label} ${styles.required}`}>
+                        Location
+                      </label>
+                      <input
+                        type="text"
+                        name="Company.Location"
+                        value={formData.Company.Location}
+                        onChange={handleInputChange}
+                        required
+                        className={styles.input}
+                        placeholder="Company location"
+                      />
+                    </div>
+
+                    <div className={styles.fieldGroup}>
+                      <label className={`${styles.label} ${styles.required}`}>
+                        Industry
+                      </label>
+                      <select
+                        name="Company.Industry"
+                        value={formData.Company.Industry}
+                        onChange={handleInputChange}
+                        required
+                        className={styles.select}
+                      >
+                        <option value="">Select Industry</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Healthcare">Healthcare</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Education">Education</option>
+                        <option value="Manufacturing">Manufacturing</option>
+                        <option value="Retail">Retail</option>
+                        <option value="Consulting">Consulting</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Section 2: Contact Person Information */}
+            <div className={styles.collapsibleSection}>
+              <div
+                className={`${styles.collapsibleHeader} ${expandedSections.contact ? styles.collapsibleHeaderExpanded : ''}`}
+                onClick={() => toggleSection('contact')}
+              >
+                <div className={styles.collapsibleTitle}>
+                  <div className={styles.sectionIcon}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </div>
+                  Contact Person Information
+                </div>
+                <svg
+                  className={`${styles.chevron} ${expandedSections.contact ? styles.chevronOpen : ''}`}
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+
+              {expandedSections.contact && (
+                <div className={styles.collapsibleContent}>
+                  <div className={styles.formGrid}>
+                    {isEditMode ? (
+                      <>
+                        <div className={styles.fieldGroup}>
+                          <label className={styles.label}>
+                            Contact Person Phone
+                          </label>
+                          <input
+                            type="tel"
+                            value={formData.Company.ContactPersonPhone || 'Not provided'}
+                            readOnly
+                            className={`${styles.input} ${styles.readOnly}`}
+                            style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
+                          />
+                        </div>
+
+                        <div className={styles.fieldGroup}>
+                          <label className={styles.label}>
+                            Contact Person Role
+                          </label>
+                          <input
+                            type="text"
+                            name="Company.ContactPersonRole"
+                            value={formData.Company.ContactPersonRole ?? ''}
+                            onChange={handleInputChange}
+                            className={styles.input}
+                            placeholder="e.g., HR Manager, CEO"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className={styles.fieldGroup}>
+                          <label className={styles.label}>
+                            Contact Person Role
+                          </label>
+                          <input
+                            type="text"
+                            name="Company.ContactPersonRole"
+                            value={formData.Company.ContactPersonRole ?? ''}
+                            onChange={handleInputChange}
+                            className={styles.input}
+                            placeholder="e.g., HR Manager, CEO"
+                          />
+                        </div>
+                        <div className={styles.fieldGroup} style={{ opacity: 0.7 }}>
+                          <label className={styles.label}>
+                            Note
+                          </label>
+                          <div style={{ fontSize: '0.875rem', color: '#6b7280', paddingTop: '0.5rem' }}>
+                            Name, Email, and Phone will be automatically synced from the Admin account details below.
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Section 3: Admin Information */}
+            <div className={styles.collapsibleSection} style={{ borderColor: hasAdminValidationErrors() ? '#fecaca' : undefined }}>
+              <div
+                className={`${styles.collapsibleHeader} ${expandedSections.admin ? styles.collapsibleHeaderExpanded : ''}`}
+                onClick={() => toggleSection('admin')}
+              >
+                <div className={styles.collapsibleTitle}>
+                  <div className={styles.sectionIcon}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                  </div>
+                  Admin Information
+                </div>
+                <svg
+                  className={`${styles.chevron} ${expandedSections.admin ? styles.chevronOpen : ''}`}
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+
+              {expandedSections.admin && (
+                <div className={styles.collapsibleContent}>
+                  <div className={styles.formGrid}>
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        First Name
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.TenantAdmin?.FirstName ?? ''}
+                        onChange={(e) => handleTenantAdminChange('FirstName', e.target.value)}
+                        className={`${styles.input} ${validationErrors['FirstName'] ? styles.inputError : ''}`}
+                        placeholder="First name"
+                      />
+                      {validationErrors['FirstName'] && <span className={styles.errorText}>{validationErrors['FirstName']}</span>}
+                    </div>
+
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Last Name
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.TenantAdmin?.LastName ?? ''}
+                        onChange={(e) => handleTenantAdminChange('LastName', e.target.value)}
+                        className={`${styles.input} ${validationErrors['LastName'] ? styles.inputError : ''}`}
+                        placeholder="Last name"
+                      />
+                      {validationErrors['LastName'] && <span className={styles.errorText}>{validationErrors['LastName']}</span>}
+                    </div>
+
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.TenantAdmin?.Email ?? ''}
+                        onChange={(e) => handleTenantAdminChange('Email', e.target.value)}
+                        className={`${styles.input} ${validationErrors['Email'] ? styles.inputError : ''}`}
+                        placeholder="admin@company.com"
+                      />
+                      {validationErrors['Email'] && <span className={styles.errorText}>{validationErrors['Email']}</span>}
+                    </div>
+
+                    <div className={styles.fieldGroup}>
+                      <label className={styles.label}>
+                        Phone Number
                       </label>
                       <input
                         type="tel"
-                        value={formData.Company.ContactPersonPhone || 'Not provided'}
-                        readOnly
-                        className={`${styles.input} ${styles.readOnly}`}
-                        style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
+                        value={formData.TenantAdmin?.PhoneNumber ?? ''}
+                        onChange={(e) => handleTenantAdminChange('PhoneNumber', e.target.value)}
+                        className={`${styles.input} ${validationErrors['PhoneNumber'] ? styles.inputError : ''}`}
+                        placeholder="+1 (555) 123-4567"
                       />
+                      {validationErrors['PhoneNumber'] && <span className={styles.errorText}>{validationErrors['PhoneNumber']}</span>}
                     </div>
 
                     <div className={styles.fieldGroup}>
-                      <label className={styles.label}>
-                        Contact Person Role
+                      <label className={`${styles.label} ${isEditMode ? '' : styles.required}`}>
+                        Password
                       </label>
-                      <input
-                        type="text"
-                        name="Company.ContactPersonRole"
-                        value={formData.Company.ContactPersonRole ?? ''}
-                        onChange={handleInputChange}
-                        className={styles.input}
-                        placeholder="e.g., HR Manager, CEO"
-                      />
+                      <div className={styles.passwordContainer}>
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={formData.TenantAdmin?.Password ?? ''}
+                          onChange={(e) => handleTenantAdminChange('Password', e.target.value)}
+                          minLength={6}
+                          className={`${styles.input} ${validationErrors['Password'] ? styles.inputError : ''}`}
+                          placeholder={isEditMode ? "Leave blank to keep current" : "Minimum 6 characters"}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className={styles.passwordToggle}
+                        >
+                          {showPassword ? 'HIDE' : 'SHOW'}
+                        </button>
+                      </div>
+                      {validationErrors['Password'] && <span className={styles.errorText}>{validationErrors['Password']}</span>}
                     </div>
-                  </>
-                ) : (
-                  <>
-                    {/* In create mode, only show role - name, email, phone are auto-synced from Tenant Admin */}
-                    <div className={styles.fieldGroup}>
-                      <label className={styles.label}>
-                        Contact Person Role
-                      </label>
-                      <input
-                        type="text"
-                        name="Company.ContactPersonRole"
-                        value={formData.Company.ContactPersonRole ?? ''}
-                        onChange={handleInputChange}
-                        className={styles.input}
-                        placeholder="e.g., HR Manager, CEO"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Tenant Admin Information - Auto-syncs with Contact Person */}
-            {!isEditMode && (
-              <div className={styles.formSection}>
-                <h4 className={styles.sectionTitle}>Tenant Admin Account</h4>
-                <div className={styles.formGrid}>
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.label}>
-                      First Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.TenantAdmin?.FirstName ?? ''}
-                      onChange={(e) => handleTenantAdminChange('FirstName', e.target.value)}
-                      className={styles.input}
-                      placeholder="First name"
-                    />
-                  </div>
-
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.label}>
-                      Last Name
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.TenantAdmin?.LastName ?? ''}
-                      onChange={(e) => handleTenantAdminChange('LastName', e.target.value)}
-                      className={styles.input}
-                      placeholder="Last name"
-                    />
-                  </div>
-
-                  <div className={styles.fieldGroup}>
-                    <label className={styles.label}>
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.TenantAdmin?.Email ?? ''}
-                      onChange={(e) => handleTenantAdminChange('Email', e.target.value)}
-                      className={styles.input}
-                      placeholder="admin@company.com"
-                    />
-                  </div>
-
-                  {/* Phone Number and Password - Only show in create mode */}
-                  {!isEditMode && (
-                    <>
-                      <div className={styles.fieldGroup}>
-                        <label className={styles.label}>
-                          Phone Number
-                        </label>
-                        <input
-                          type="tel"
-                          value={formData.TenantAdmin?.PhoneNumber ?? ''}
-                          onChange={(e) => handleTenantAdminChange('PhoneNumber', e.target.value)}
-                          className={styles.input}
-                          placeholder="+1 (555) 123-4567"
-                        />
-                      </div>
-
-                      <div className={styles.fieldGroup}>
-                        <label className={`${styles.label} ${styles.required}`}>
-                          Password
-                        </label>
-                        <div className={styles.passwordContainer}>
-                          <input
-                            type={showPassword ? "text" : "password"}
-                            value={formData.TenantAdmin?.Password ?? ''}
-                            onChange={(e) => handleTenantAdminChange('Password', e.target.value)}
-                            minLength={6}
-                            className={styles.input}
-                            placeholder="Minimum 6 characters"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className={styles.passwordToggle}
-                          >
-                            {showPassword ? 'HIDE' : 'SHOW'}
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
           </form>
 
           {/* Action buttons outside form */}
           <div className={styles.formActions}>
             <button
               type="button"
-              onClick={isEditMode ? handleUpdateSubmit : handleSubmit}
-              className={styles.submitButton}
-              disabled={isLoading}
+              onClick={(evt) => {
+                if (isLoading) return;
+                if (hasBlockingValidation) {
+                  toast.error('Please fix validation errors before submitting');
+                  scrollToForm();
+                  return;
+                }
+                if (isEditMode) {
+                  handleUpdateSubmit(evt);
+                } else {
+                  handleSubmit(evt);
+                }
+              }}
+              className={`${styles.submitButton} ${isSubmitVisuallyDisabled ? styles.submitButtonDisabled : ''}`}
+              aria-disabled={isSubmitVisuallyDisabled}
+              title={hasAdminValidationErrors() ? 'Please fill all admin fields or leave them all empty' : ''}
             >
               {isLoading
                 ? (isEditMode ? 'Updating...' : 'Creating...')
@@ -587,6 +856,7 @@ export default function CompaniesTab() {
               Cancel
             </button>
           </div>
+
         </div>
       )}
 

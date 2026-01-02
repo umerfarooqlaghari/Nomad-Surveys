@@ -18,9 +18,8 @@ public class Question
     /// Question text for self-evaluation
     /// Can be longer textual content
     /// </summary>
-    [Required]
     [MaxLength(2000)]
-    public string SelfQuestion { get; set; } = string.Empty;
+    public string? SelfQuestion { get; set; } = string.Empty;
 
     /// <summary>
     /// Question text for evaluation by others
