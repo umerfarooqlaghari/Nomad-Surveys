@@ -248,7 +248,7 @@ public class SeedDataService
                 Id = Guid.NewGuid(),
                 TenantId = tenant.Id,
                 Name = "Acme Corporation",
-                NumberOfEmployees = 500,
+                NumberOfEmployees = "500",
                 Location = "New York, USA",
                 Industry = "Technology",
                 ContactPersonName = "John Doe",
