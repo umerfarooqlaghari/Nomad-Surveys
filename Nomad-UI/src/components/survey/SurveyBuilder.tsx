@@ -214,6 +214,39 @@ export default function SurveyBuilder({
       setIsSaving(true);
 
       const surveyJSON = creator.JSON;
+
+      // CRITICAL: Ensure all options have their value set to their score
+      if (surveyJSON.pages) {
+        surveyJSON.pages.forEach((page: any) => {
+          if (page.elements) {
+            page.elements.forEach((element: any) => {
+              // Handle rating options - SurveyJS uses 'rateValues'
+              if (element.type === 'rating' && element.rateValues) {
+                element.rateValues.forEach((opt: any) => {
+                  // Ensure value matches score if score exists
+                  if (opt.score !== undefined) {
+                    opt.value = opt.score;
+                  }
+                });
+              }
+              // Handle 'ratingOptions' fallback? (In case custom property was used incorrectly)
+              // But standard SurveyJS won't save it unless added to serializer. 
+              // We'll trust rateValues is the one.
+
+              // Handle choice options (checkbox, radiogroup, dropdown)
+              if (['checkbox', 'radiogroup', 'dropdown'].includes(element.type) && element.choices) {
+                element.choices.forEach((choice: any) => {
+                  // Choice might be a simple string or an object
+                  if (typeof choice === 'object' && choice.score !== undefined) {
+                    choice.value = choice.score;
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
+
       const surveyTitle = surveyJSON.title || 'Untitled Survey';
       const surveyDescription = surveyJSON.description || '';
 

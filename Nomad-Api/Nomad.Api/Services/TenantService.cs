@@ -16,19 +16,22 @@ public class TenantService : ITenantService
     private readonly IAuthenticationService _authenticationService;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ILogger<TenantService> _logger;
+    private readonly IClusterSeedingService _clusterSeedingService;
 
     public TenantService(
         NomadSurveysDbContext context,
         IMapper mapper,
         IAuthenticationService authenticationService,
         UserManager<ApplicationUser> userManager,
-        ILogger<TenantService> logger)
+        ILogger<TenantService> logger,
+        IClusterSeedingService clusterSeedingService)
     {
         _context = context;
         _mapper = mapper;
         _authenticationService = authenticationService;
         _userManager = userManager;
         _logger = logger;
+        _clusterSeedingService = clusterSeedingService;
     }
 
     public async Task<TenantResponse> CreateTenantAsync(CreateTenantRequest request)
@@ -105,6 +108,17 @@ public class TenantService : ITenantService
             }
 
             await transaction.CommitAsync();
+
+            // Seed clusters for the new tenant (fire and forget / non-blocking)
+            try
+            {
+                await _clusterSeedingService.SeedClustersAsync(tenant.Id);
+            }
+            catch (Exception ex)
+            {
+                // Log but don't fail the tenant creation
+                _logger.LogError(ex, "Failed to seed clusters for tenant {TenantId}", tenant.Id);
+            }
 
             // Load tenant with company for response
             var createdTenant = await _context.Tenants

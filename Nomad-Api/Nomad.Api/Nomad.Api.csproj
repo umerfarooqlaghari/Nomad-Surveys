@@ -30,6 +30,9 @@
   <Content Include="Templates/**/*">
     <CopyToOutputDirectory>Always</CopyToOutputDirectory>
   </Content>
+  <Content Include="Scripts/**/*">
+    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+  </Content>
 </ItemGroup>
 
 

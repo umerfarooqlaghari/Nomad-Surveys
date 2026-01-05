@@ -19,7 +19,7 @@ export class AuthService {
         const error = JSON.parse(errorText);
         throw new Error(error.message || error.title || 'Login failed');
       } catch {
-        throw new Error(`Login failed: ${response.status} ${response.statusText}`);
+        throw new Error(`Login failed: Invalid credentials or tenant access`);
       }
     }
 

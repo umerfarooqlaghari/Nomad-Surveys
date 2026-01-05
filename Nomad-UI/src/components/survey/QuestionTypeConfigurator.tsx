@@ -28,6 +28,7 @@ export default function QuestionTypeConfigurator({
       const newOption: ChoiceOption = {
         id: generateOptionId(),
         text: '',
+        value: ratingOptions.length > 0 ? (ratingOptions[ratingOptions.length - 1].score ?? ratingOptions.length) + 1 : 1, // Use score as value
         order: ratingOptions.length,
         score: ratingOptions.length > 0 ? (ratingOptions[ratingOptions.length - 1].score ?? ratingOptions.length) + 1 : 1,
       };
@@ -110,7 +111,8 @@ export default function QuestionTypeConfigurator({
                     value={option.score ?? index + 1}
                     onChange={(e) => {
                       const updated = [...ratingOptions];
-                      updated[index] = { ...updated[index], score: parseInt(e.target.value) || 0 };
+                      const newScore = parseInt(e.target.value) || 0;
+                      updated[index] = { ...updated[index], score: newScore, value: newScore }; // Sync value with score
                       updateConfig({ ratingOptions: updated });
                     }}
                     className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black text-center"
@@ -161,6 +163,7 @@ export default function QuestionTypeConfigurator({
       const newOption: ChoiceOption = {
         id: generateOptionId(),
         text: `Option ${options.length + 1}`,
+        value: options.length > 0 ? (options[options.length - 1].score ?? options.length) + 1 : 1, // Use score as value
         order: options.length,
         score: options.length > 0 ? (options[options.length - 1].score ?? options.length) + 1 : 1,
       };
@@ -256,7 +259,7 @@ export default function QuestionTypeConfigurator({
                   const newScore = parseInt(e.target.value) || 0;
                   updateConfig({
                     options: options.map((opt) =>
-                      opt.id === option.id ? { ...opt, score: newScore } : opt
+                      opt.id === option.id ? { ...opt, score: newScore, value: newScore } : opt // Sync value with score
                     ),
                   });
                 }}

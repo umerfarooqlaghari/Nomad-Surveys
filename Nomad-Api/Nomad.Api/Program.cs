@@ -10,6 +10,7 @@ using Nomad.Api.Mappings;
 using Nomad.Api.Middleware;
 using Nomad.Api.Services;
 using Nomad.Api.Services.Interfaces;
+using Nomad.Api.Services.Background; // Added for background service
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -115,6 +116,7 @@ builder.Services.AddScoped<ISurveyAssignmentService, SurveyAssignmentService>();
 builder.Services.AddScoped<ITenantSettingsService, TenantSettingsService>();
 builder.Services.AddScoped<IClusterService, ClusterService>();
 builder.Services.AddScoped<ICompetencyService, CompetencyService>();
+builder.Services.AddScoped<IClusterSeedingService, ClusterSeedingService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IParticipantService, ParticipantService>();
@@ -123,6 +125,7 @@ builder.Services.AddScoped<IReportTemplateService, ReportTemplateService>();
 builder.Services.AddScoped<IReportTemplateSettingsService, ReportTemplateSettingsService>();
 builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<Nomad.Api.Repository.ReportAnalyticsRepository>();
+builder.Services.AddHostedService<ReminderBackgroundService>();
 
 // Add CORS
 builder.Services.AddCors(options =>

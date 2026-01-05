@@ -12,21 +12,26 @@ public interface IEmailService
     /// <summary>
     /// Send a form assignment notification email to an evaluator
     /// </summary>
-    Task<bool> SendFormAssignmentEmailAsync(string toEmail, string evaluatorName, string subjectName, string formTitle, string formLink, string tenantName);
+    Task<bool> SendFormAssignmentEmailAsync(string toEmail, string evaluatorName, string subjectName, string formTitle, string formLink, string tenantName, string tenantSlug, string passwordDisplay);
 
     /// <summary>
     /// Send a reminder email for a pending/in-progress form
     /// </summary>
-    Task<bool> SendFormReminderEmailAsync(string toEmail, string evaluatorName, string subjectName, string formTitle, string formLink, string dueDate, string tenantName);
+    Task<bool> SendFormReminderEmailAsync(string toEmail, string evaluatorName, string subjectName, string formTitle, string formLink, string dueDate, string tenantName, string tenantSlug, string passwordDisplay);
 
     /// <summary>
     /// Send a bulk form assignment notification email to an evaluator
     /// </summary>
-    Task<bool> SendBulkFormAssignmentEmailAsync(string toEmail, string evaluatorName, int formCount, string formTitle, string dashboardLink, string tenantName);
+    Task<bool> SendBulkFormAssignmentEmailAsync(string toEmail, string evaluatorName, int formCount, string formTitle, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay);
 
     /// <summary>
     /// Send a generic email with HTML content
     /// </summary>
     Task<bool> SendEmailAsync(string toEmail, string subject, string htmlBody, string? toName = null);
+
+    /// <summary>
+    /// Send a consolidated reminder email for multiple pending evaluations
+    /// </summary>
+    Task<bool> SendConsolidatedReminderEmailAsync(string toEmail, string evaluatorName, int pendingCount, List<(string FormTitle, string SubjectName, string Link)> pendingItems, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay);
 }
 

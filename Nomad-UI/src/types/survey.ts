@@ -18,6 +18,7 @@ export interface ChoiceOption {
   text: string;
   order: number;
   score: number;
+  value?: number | string; // Value stored in the response (usually score for backend)
 }
 
 export interface QuestionConfig {

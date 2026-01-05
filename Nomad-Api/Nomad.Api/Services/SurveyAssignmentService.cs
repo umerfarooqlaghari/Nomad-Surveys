@@ -51,7 +51,7 @@ public class SurveyAssignmentService : ISurveyAssignmentService
             var tenantSlug = tenant?.Slug ?? "";
 
             var assignedCount = 0;
-            var pendingNotifications = new Dictionary<string, (string Name, string LastSubject, int Count, Guid LastId)>();
+            var pendingNotifications = new Dictionary<string, (string Name, string LastSubject, int Count, Guid LastId, string PasswordHash)>();
 
             foreach (var subjectEvaluatorId in request.SubjectEvaluatorIds)
             {
@@ -121,14 +121,16 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                     finalAssignmentId = assignment.Id;
                 }
 
+                var evaluatorPasswordHash = relationship.Evaluator.PasswordHash;
+
                 // Collect notification data
                 if (pendingNotifications.TryGetValue(evaluatorEmail, out var data))
                 {
-                    pendingNotifications[evaluatorEmail] = (data.Name, subjectName, data.Count + 1, finalAssignmentId);
+                    pendingNotifications[evaluatorEmail] = (data.Name, subjectName, data.Count + 1, finalAssignmentId, data.PasswordHash);
                 }
                 else
                 {
-                    pendingNotifications[evaluatorEmail] = (evaluatorName, subjectName, 1, finalAssignmentId);
+                    pendingNotifications[evaluatorEmail] = (evaluatorName, subjectName, 1, finalAssignmentId, evaluatorPasswordHash);
                 }
             }
 
@@ -181,7 +183,7 @@ public class SurveyAssignmentService : ISurveyAssignmentService
             var now = DateTime.UtcNow;
             var relationshipsProcessed = 0;
             var assignmentsCreatedOrReactivated = 0;
-            var pendingNotifications = new Dictionary<string, (string Name, string LastSubject, int Count, Guid LastId)>();
+            var pendingNotifications = new Dictionary<string, (string Name, string LastSubject, int Count, Guid LastId, string PasswordHash)>();
 
             // 1. Pre-fetch Analysis: Extract all unique IDs
             var allSubjectIds = request.Rows
@@ -408,13 +410,14 @@ public class SurveyAssignmentService : ISurveyAssignmentService
 
                     if (notificationNeeded)
                     {
+                        var evaluatorPasswordHash = evaluator.PasswordHash;
                         if (pendingNotifications.TryGetValue(evaluatorEmployee.Email, out var data))
                         {
-                            pendingNotifications[evaluatorEmployee.Email] = (data.Name, subjectEmployee.FullName, data.Count + 1, finalAssignmentId);
+                            pendingNotifications[evaluatorEmployee.Email] = (data.Name, subjectEmployee.FullName, data.Count + 1, finalAssignmentId, data.PasswordHash);
                         }
                         else
                         {
-                            pendingNotifications[evaluatorEmployee.Email] = (evaluatorEmployee.FullName, subjectEmployee.FullName, 1, finalAssignmentId);
+                            pendingNotifications[evaluatorEmployee.Email] = (evaluatorEmployee.FullName, subjectEmployee.FullName, 1, finalAssignmentId, evaluatorPasswordHash);
                         }
                     }
 
@@ -663,7 +666,7 @@ public class SurveyAssignmentService : ISurveyAssignmentService
         return null;
     }
 
-    private void NotifyEvaluators(Dictionary<string, (string Name, string LastSubject, int Count, Guid LastId)> notifications, string formTitle, string tenantSlug, string tenantName)
+    private void NotifyEvaluators(Dictionary<string, (string Name, string LastSubject, int Count, Guid LastId, string PasswordHash)> notifications, string formTitle, string tenantSlug, string tenantName)
     {
         foreach (var entry in notifications)
         {
@@ -675,16 +678,18 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                 try
                 {
                     var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:3000";
+                    var isDefaultPassword = BCrypt.Net.BCrypt.Verify(DefaultPassword, data.PasswordHash);
+                    var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
                     
                     if (data.Count == 1)
                     {
                         var formLink = $"{frontendUrl}/{tenantSlug}/participant/forms/{data.LastId}";
-                        await _emailService.SendFormAssignmentEmailAsync(email, data.Name, data.LastSubject, formTitle, formLink, tenantName);
+                        await _emailService.SendFormAssignmentEmailAsync(email, data.Name, data.LastSubject, formTitle, formLink, tenantName, tenantSlug, passwordDisplay);
                     }
                     else
                     {
                         var dashboardLink = $"{frontendUrl}/{tenantSlug}/participant/forms";
-                        await _emailService.SendBulkFormAssignmentEmailAsync(email, data.Name, data.Count, formTitle, dashboardLink, tenantName);
+                        await _emailService.SendBulkFormAssignmentEmailAsync(email, data.Name, data.Count, formTitle, dashboardLink, tenantName, tenantSlug, passwordDisplay);
                     }
                 }
                 catch (Exception ex)
