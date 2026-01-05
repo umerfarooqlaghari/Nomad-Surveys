@@ -16,6 +16,11 @@ public class SubjectEvaluatorSurvey
     
     public bool IsActive { get; set; } = true;
     
+    /// <summary>
+    /// Tracks when the last automated reminder was sent
+    /// </summary>
+    public DateTime? LastReminderSentAt { get; set; }
+    
     // Tenant isolation
     public Guid TenantId { get; set; }
     

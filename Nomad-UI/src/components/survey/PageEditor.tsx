@@ -69,6 +69,7 @@ export default function PageEditor({
       newQuestion.config = {
         ratingOptions: tenantSettings.defaultRatingOptions.map(opt => ({
           id: opt.id,
+          value: opt.score ?? opt.order + 1, // Explicitly use score as value
           text: opt.text,
           order: opt.order,
           score: opt.score ?? opt.order + 1,
@@ -110,6 +111,7 @@ export default function PageEditor({
       questionConfig = {
         ratingOptions: tenantSettings.defaultRatingOptions.map(opt => ({
           id: opt.id,
+          value: opt.score ?? opt.order + 1, // Explicitly use score as value
           text: opt.text,
           order: opt.order,
           score: opt.score ?? opt.order + 1,
@@ -203,11 +205,11 @@ export default function PageEditor({
   const getDefaultConfigForType = (type: Question['type']) => {
     const defaults: Record<Question['type'], any> = {
       'rating': { ratingMin: 1, ratingMax: 5, ratingStep: 1, ratingLabels: { min: 'Never', max: 'Always' } },
-      'single-choice': { options: [{ id: 'opt1', text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', text: 'Option 2', order: 1, score: 2 }] },
-      'multiple-choice': { options: [{ id: 'opt1', text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', text: 'Option 2', order: 1, score: 2 }], minSelections: 0 },
+      'single-choice': { options: [{ id: 'opt1', value: 1, text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', value: 2, text: 'Option 2', order: 1, score: 2 }] },
+      'multiple-choice': { options: [{ id: 'opt1', value: 1, text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', value: 2, text: 'Option 2', order: 1, score: 2 }], minSelections: 0 },
       'text': { maxLength: 500, placeholder: 'Enter your answer...' },
       'textarea': { maxLength: 2000, placeholder: 'Enter your answer...' },
-      'dropdown': { options: [{ id: 'opt1', text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', text: 'Option 2', order: 1, score: 2 }] },
+      'dropdown': { options: [{ id: 'opt1', value: 1, text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', value: 2, text: 'Option 2', order: 1, score: 2 }] },
     };
     return defaults[type] || {};
   };

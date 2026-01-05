@@ -33,19 +33,22 @@ export default function QuestionRenderer({
       return (
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            {customOptions.map((option) => (
-              <button
-                key={option.id}
-                onClick={() => onChange(option.text)}
-                disabled={isPreview}
-                className={`py-3 px-6 border-2 rounded-lg font-medium transition-colors ${value === option.text
+            {customOptions.map((option) => {
+              const optionValue = option.value ?? option.score ?? option.text;
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => onChange(optionValue)}
+                  disabled={isPreview}
+                  className={`py-3 px-6 border-2 rounded-lg font-medium transition-colors ${value === optionValue
                     ? 'border-blue-600 bg-blue-50 text-blue-700'
                     : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
-                  } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
-              >
-                {option.text}
-              </button>
-            ))}
+                    } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
+                >
+                  {option.text}
+                </button>
+              );
+            })}
           </div>
         </div>
       );
@@ -70,8 +73,8 @@ export default function QuestionRenderer({
                 onClick={() => onChange(option)}
                 disabled={isPreview}
                 className={`flex-1 py-3 px-4 border-2 rounded-lg font-medium transition-colors ${value === option
-                    ? 'border-blue-600 bg-blue-50 text-blue-700'
-                    : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
+                  ? 'border-blue-600 bg-blue-50 text-blue-700'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
                   } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
               >
                 {option}
@@ -95,28 +98,31 @@ export default function QuestionRenderer({
 
     return (
       <div className="space-y-2">
-        {options.map((option) => (
-          <label
-            key={option.id}
-            htmlFor={`q-${question.id}-opt-${option.id}`}
-            className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${value === option.id
+        {options.map((option) => {
+          const optionValue = option.value ?? option.score ?? option.id;
+          return (
+            <label
+              key={option.id}
+              htmlFor={`q-${question.id}-opt-${option.id}`}
+              className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${value === optionValue
                 ? 'border-blue-600 bg-blue-50'
                 : 'border-gray-300 bg-white hover:border-blue-400'
-              } ${isPreview ? 'cursor-default' : ''}`}
-          >
-            <input
-              id={`q-${question.id}-opt-${option.id}`}
-              type="radio"
-              name={question.id}
-              value={option.id}
-              checked={value === option.id}
-              onChange={() => onChange(option.id)}
-              disabled={isPreview}
-              className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-            />
-            <span className="text-gray-900">{option.text}</span>
-          </label>
-        ))}
+                } ${isPreview ? 'cursor-default' : ''}`}
+            >
+              <input
+                id={`q-${question.id}-opt-${option.id}`}
+                type="radio"
+                name={question.id}
+                value={String(optionValue)}
+                checked={value === optionValue}
+                onChange={() => onChange(optionValue)}
+                disabled={isPreview}
+                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+              />
+              <span className="text-gray-900">{option.text}</span>
+            </label>
+          );
+        })}
       </div>
     );
   };
@@ -126,35 +132,38 @@ export default function QuestionRenderer({
     const options = question.config.options || [];
     const selectedValues = Array.isArray(value) ? value : [];
 
-    const handleToggle = (optionId: string) => {
-      if (selectedValues.includes(optionId)) {
-        onChange(selectedValues.filter((id: string) => id !== optionId));
+    const handleToggle = (val: any) => {
+      if (selectedValues.includes(val)) {
+        onChange(selectedValues.filter((v: any) => v !== val));
       } else {
-        onChange([...selectedValues, optionId]);
+        onChange([...selectedValues, val]);
       }
     };
 
     return (
       <div className="space-y-2">
-        {options.map((option) => (
-          <label
-            key={option.id}
-            onClick={() => handleToggle(option.id)}
-            className={`flex items-center gap-3 p-3 border-2 rounded-lg transition-colors ${selectedValues.includes(option.id)
+        {options.map((option) => {
+          const optionValue = option.value ?? option.score ?? option.id;
+          return (
+            <label
+              key={option.id}
+              onClick={() => handleToggle(optionValue)}
+              className={`flex items-center gap-3 p-3 border-2 rounded-lg transition-colors ${selectedValues.includes(optionValue)
                 ? 'border-blue-600 bg-blue-50'
                 : 'border-gray-300 bg-white hover:border-blue-400'
-              } ${isPreview ? 'cursor-default' : ''}`}
-          >
-            <input
-              type="checkbox"
-              checked={selectedValues.includes(option.id)}
-              onChange={() => handleToggle(option.id)}
-              disabled={isPreview}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-            />
-            <span className="text-gray-900">{option.text}</span>
-          </label>
-        ))}
+                } ${isPreview ? 'cursor-default' : ''}`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedValues.includes(optionValue)}
+                onChange={() => handleToggle(optionValue)}
+                disabled={isPreview}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+              />
+              <span className="text-gray-900">{option.text}</span>
+            </label>
+          );
+        })}
         {question.config.minSelections !== undefined && question.config.minSelections > 0 && (
           <p className="text-sm text-gray-600 mt-2">
             Select at least {question.config.minSelections} option(s)
@@ -213,13 +222,21 @@ export default function QuestionRenderer({
     return (
       <select
         value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          // Find the option to get its correct value type (number vs string)
+          const selectedOption = options.find(o => String(o.value ?? o.score ?? o.id) === e.target.value);
+          if (selectedOption) {
+            onChange(selectedOption.value ?? selectedOption.score ?? selectedOption.id);
+          } else {
+            onChange(e.target.value);
+          }
+        }}
         disabled={isPreview}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">-- Select an option --</option>
         {options.map((option) => (
-          <option key={option.id} value={option.id}>
+          <option key={option.id} value={String(option.value ?? option.score ?? option.id)}>
             {option.text}
           </option>
         ))}

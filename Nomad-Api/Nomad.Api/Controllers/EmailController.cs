@@ -14,6 +14,7 @@ public class EmailController : ControllerBase
     private readonly IEmailService _emailService;
     private readonly NomadSurveysDbContext _context;
     private readonly ILogger<EmailController> _logger;
+    private const string DefaultPassword = "Password@123";
 
     public EmailController(
         IEmailService emailService,
@@ -235,6 +236,9 @@ public class EmailController : ControllerBase
             // Determine due date (if available)
             var dueDate =  "No specific deadline";
 
+            var isDefaultPassword = BCrypt.Net.BCrypt.Verify(DefaultPassword, assignment.SubjectEvaluator.Evaluator.PasswordHash);
+            var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
+
             // Send reminder email
             var success = await _emailService.SendFormReminderEmailAsync(
                 assignment.SubjectEvaluator.Evaluator.Employee.Email,
@@ -243,7 +247,9 @@ public class EmailController : ControllerBase
                 assignment.Survey.Title,
                 formLink,
                 dueDate,
-                tenant.Name
+                tenant.Name,
+                tenantSlug,
+                passwordDisplay
             );
 
             if (!success)
@@ -258,6 +264,44 @@ public class EmailController : ControllerBase
         {
             _logger.LogError(ex, "Error sending form reminder email");
             return StatusCode(500, new { message = "An error occurred while processing your request" });
+        }
+    }
+
+    [HttpPost("trigger-reminders")]
+    [AllowAnonymous] // For testing purposes only
+    public async Task<ActionResult> TriggerReminders()
+    {
+        try
+        {
+            var backgroundService = HttpContext.RequestServices.GetServices<IHostedService>()
+                .OfType<Nomad.Api.Services.Background.ReminderBackgroundService>()
+                .FirstOrDefault();
+
+            if (backgroundService == null)
+            {
+                return NotFound(new { message = "Background service not found" });
+            }
+
+            // We can't directly call the protected/private methods easily without reflection or exposing them.
+            // For a quick verification, we'll use reflection to invoke 'ProcessRemindersAsync'.
+            
+            var methodInfo = typeof(Nomad.Api.Services.Background.ReminderBackgroundService)
+                .GetMethod("ProcessRemindersAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            if (methodInfo == null)
+            {
+                 return StatusCode(500, new { message = "Method not found" });
+            }
+
+            var task = (Task)methodInfo.Invoke(backgroundService, new object[] { CancellationToken.None })!;
+            await task;
+
+            return Ok(new { message = "Reminders triggered successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error triggering reminders");
+            return StatusCode(500, new { message = $"Error: {ex.Message}" });
         }
     }
 }
