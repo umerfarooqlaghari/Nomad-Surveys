@@ -239,6 +239,28 @@ export default function AssignSurveyModal({
     Relationship: string;
   }
 
+  const VALID_RELATIONSHIPS = new Set([
+    'Self',
+    'Peer',
+    'Manager',
+    'Direct Report',
+    'Stakeholder',
+    'Skipline'
+  ]);
+
+  const normalizeRelationship = (str: string): string => {
+    // First convert to Title Case
+    const titleCased = str.replace(
+      /\w\S*/g,
+      (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+    );
+
+    // Handle specific mappings
+    if (titleCased === 'Direct') return 'Direct Report';
+
+    return titleCased;
+  };
+
   const parseCsv = (content: string): AssignmentCsvRow[] => {
     const sanitizedContent = content.replace(/\r\n/g, '\n').trim();
 
@@ -268,6 +290,7 @@ export default function AssignSurveyModal({
         throw new Error(`Row ${index + 2} is missing values. Each row requires EvaluatorId, SubjectId, Relationship.`);
       }
 
+      // Store raw relationship here, normalize later
       const [EvaluatorId, SubjectId, Relationship] = columns;
 
       rows.push({
@@ -298,7 +321,23 @@ export default function AssignSurveyModal({
 
     try {
       const text = await file.text();
-      const rows = parseCsv(text);
+      const allRows = parseCsv(text);
+
+      const validRows: AssignmentCsvRow[] = [];
+      const skippedRows: AssignmentCsvRow[] = [];
+
+      allRows.forEach(row => {
+        const normalizedRel = normalizeRelationship(row.Relationship);
+        if (VALID_RELATIONSHIPS.has(normalizedRel)) {
+          validRows.push({ ...row, Relationship: normalizedRel });
+        } else {
+          skippedRows.push(row);
+        }
+      });
+
+      if (validRows.length === 0) {
+        throw new Error(`No valid relationships found. Allowed values: ${Array.from(VALID_RELATIONSHIPS).join(', ')}`);
+      }
 
       const response = await fetch(
         `/api/${projectSlug}/surveys/${surveyId}/assign-csv`,
@@ -308,7 +347,7 @@ export default function AssignSurveyModal({
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ Rows: rows })
+          body: JSON.stringify({ Rows: validRows })
         }
       );
 
@@ -318,7 +357,26 @@ export default function AssignSurveyModal({
         throw new Error(data?.error || data?.message || 'Failed to process CSV assignments.');
       }
 
-      toast.success(data?.message || `Successfully uploaded ${rows.length} CSV relationships.`);
+      let successMessage = `Successfully uploaded ${validRows.length} assignments.`;
+      if (skippedRows.length > 0) {
+        successMessage += ` Skipped ${skippedRows.length} invalid rows.`;
+        // Optional: console table for debugging skipped rows
+        console.warn('Skipped invalid relationships:', skippedRows);
+      }
+
+      toast.success(successMessage);
+
+      if (skippedRows.length > 0) {
+        const distinctInvalidTypes = Array.from(new Set(skippedRows.map(r => r.Relationship)));
+        const examples = distinctInvalidTypes.slice(0, 3).join(', ');
+        const allowed = Array.from(VALID_RELATIONSHIPS).join(', ');
+
+        toast.error(
+          `Skipped ${skippedRows.length} rows. Reason: Invalid relationship "${examples}"${distinctInvalidTypes.length > 3 ? '...' : ''}. Allowed: ${allowed}.`,
+          { duration: 8000 }
+        );
+      }
+
       await loadRelationships();
       onAssignmentUpdated();
     } catch (error) {
@@ -332,7 +390,7 @@ export default function AssignSurveyModal({
 
   const getFilteredAvailable = () => {
     return availableRelationships.filter(r => {
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         r.SubjectFullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.EvaluatorFullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.SubjectEmployeeIdString.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -340,8 +398,8 @@ export default function AssignSurveyModal({
         (r.SubjectDesignation?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
         (r.EvaluatorDesignation?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
 
-      const matchesDesignation = !selectedDesignation || 
-        r.SubjectDesignation === selectedDesignation || 
+      const matchesDesignation = !selectedDesignation ||
+        r.SubjectDesignation === selectedDesignation ||
         r.EvaluatorDesignation === selectedDesignation;
 
       return matchesSearch && matchesDesignation;
@@ -350,7 +408,7 @@ export default function AssignSurveyModal({
 
   const getFilteredAssigned = () => {
     return assignedRelationships.filter(r => {
-      const matchesSearch = !searchTerm || 
+      const matchesSearch = !searchTerm ||
         r.SubjectFullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.EvaluatorFullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.SubjectEmployeeIdString.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -358,8 +416,8 @@ export default function AssignSurveyModal({
         (r.SubjectDesignation?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false) ||
         (r.EvaluatorDesignation?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
 
-      const matchesDesignation = !selectedDesignation || 
-        r.SubjectDesignation === selectedDesignation || 
+      const matchesDesignation = !selectedDesignation ||
+        r.SubjectDesignation === selectedDesignation ||
         r.EvaluatorDesignation === selectedDesignation;
 
       return matchesSearch && matchesDesignation;
@@ -469,25 +527,23 @@ export default function AssignSurveyModal({
           <div className="flex gap-4">
             <button
               onClick={() => setActiveTab('assigned')}
-              className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-                activeTab === 'assigned'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-4 py-3 font-medium border-b-2 transition-colors ${activeTab === 'assigned'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
             >
               Already Assigned ({filteredAssigned.length})
             </button>
             <button
               onClick={() => setActiveTab('available')}
-              className={`px-4 py-3 font-medium border-b-2 transition-colors ${
-                activeTab === 'available'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-4 py-3 font-medium border-b-2 transition-colors ${activeTab === 'available'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
             >
               Available ({filteredAvailable.length})
             </button>
-            
+
           </div>
         </div>
 
@@ -533,34 +589,34 @@ export default function AssignSurveyModal({
                     };
 
                     return (
-                    <div
-                      key={relationship.SubjectEvaluatorId}
-                      className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-                      onClick={toggleSelection}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {}} // Handled by parent div onClick
-                        onClick={(e) => e.stopPropagation()}
-                        className="mt-1 w-4 h-4 relative z-10 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                        style={{ pointerEvents: 'auto' }}
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">{relationship.SubjectFullName}</span>
-                          <span className="text-gray-400">is evaluated by</span>
-                          <span className="font-medium text-gray-900">{relationship.EvaluatorFullName}</span>
-                          <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                            {relationship.Relationship}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          {relationship.SubjectEmployeeIdString} • {relationship.SubjectEmail}
-                          {relationship.SubjectDesignation && ` • ${relationship.SubjectDesignation}`}
+                      <div
+                        key={relationship.SubjectEvaluatorId}
+                        className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                        onClick={toggleSelection}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => { }} // Handled by parent div onClick
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1 w-4 h-4 relative z-10 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                          style={{ pointerEvents: 'auto' }}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900">{relationship.SubjectFullName}</span>
+                            <span className="text-gray-400">is evaluated by</span>
+                            <span className="font-medium text-gray-900">{relationship.EvaluatorFullName}</span>
+                            <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
+                              {relationship.Relationship}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            {relationship.SubjectEmployeeIdString} • {relationship.SubjectEmail}
+                            {relationship.SubjectDesignation && ` • ${relationship.SubjectDesignation}`}
+                          </div>
                         </div>
                       </div>
-                    </div>
                     );
                   })}
                 </div>
@@ -602,34 +658,34 @@ export default function AssignSurveyModal({
                     };
 
                     return (
-                    <div
-                      key={relationship.SubjectEvaluatorId}
-                      className="flex items-start gap-3 p-4 border border-green-200 bg-green-50 rounded-lg hover:bg-green-100 cursor-pointer"
-                      onClick={toggleSelection}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => {}} // Handled by parent div onClick
-                        onClick={(e) => e.stopPropagation()}
-                        className="mt-1 w-4 h-4 relative z-10 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
-                        style={{ pointerEvents: 'auto' }}
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">{relationship.SubjectFullName}</span>
-                          <span className="text-gray-400">is evaluated by</span>
-                          <span className="font-medium text-gray-900">{relationship.EvaluatorFullName}</span>
-                          <span className="px-2 py-1 text-xs bg-green-600 text-white rounded-full">
-                            {relationship.Relationship}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          {relationship.SubjectEmployeeIdString} • {relationship.SubjectEmail}
-                          {relationship.SubjectDesignation && ` • ${relationship.SubjectDesignation}`}
+                      <div
+                        key={relationship.SubjectEvaluatorId}
+                        className="flex items-start gap-3 p-4 border border-green-200 bg-green-50 rounded-lg hover:bg-green-100 cursor-pointer"
+                        onClick={toggleSelection}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => { }} // Handled by parent div onClick
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1 w-4 h-4 relative z-10 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                          style={{ pointerEvents: 'auto' }}
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900">{relationship.SubjectFullName}</span>
+                            <span className="text-gray-400">is evaluated by</span>
+                            <span className="font-medium text-gray-900">{relationship.EvaluatorFullName}</span>
+                            <span className="px-2 py-1 text-xs bg-green-600 text-white rounded-full">
+                              {relationship.Relationship}
+                            </span>
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            {relationship.SubjectEmployeeIdString} • {relationship.SubjectEmail}
+                            {relationship.SubjectDesignation && ` • ${relationship.SubjectDesignation}`}
+                          </div>
                         </div>
                       </div>
-                    </div>
                     );
                   })}
                 </div>
@@ -641,7 +697,7 @@ export default function AssignSurveyModal({
         {/* Footer */}
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
           <div className="text-sm text-gray-600">
-            {activeTab === 'available' 
+            {activeTab === 'available'
               ? `${selectedAvailable.size} selected`
               : `${selectedAssigned.size} of ${assignedRelationships.length} selected`
             }

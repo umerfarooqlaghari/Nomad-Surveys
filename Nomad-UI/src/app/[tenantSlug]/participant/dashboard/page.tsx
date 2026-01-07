@@ -135,7 +135,7 @@ export default function ParticipantDashboard({ params }: ParticipantDashboardPro
                 </div>
               </div>
               <button
-                onClick={() => router.push('/participant/submissions')}
+                onClick={() => router.push(`/${tenantSlug}/participant/evaluations`)}
                 className="mt-4 text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center"
               >
                 View history

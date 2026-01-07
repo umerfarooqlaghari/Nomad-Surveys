@@ -289,10 +289,11 @@ export default function AssignedEvaluations({ params }: AssignedEvaluationsProps
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           {evaluation.Status === 'Completed' ? (
                             <button
-                              onClick={() => router.push(`/${tenantSlug}/participant/submissions/${evaluation.AssignmentId}`)}
+                              disabled
+                              // onClick={() => router.push(`/${tenantSlug}/participant/submissions/${evaluation.AssignmentId}`)}
                               className="px-4 py-2 border border-gray-300 text-black rounded-lg hover:bg-gray-50 transition-colors"
                             >
-                              View
+                              Completed
                             </button>
                           ) : (
                             <button

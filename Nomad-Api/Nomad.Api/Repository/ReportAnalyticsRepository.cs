@@ -134,6 +134,8 @@ public class ReportAnalyticsRepository
                 .Where(ses => ses.SubjectEvaluator.SubjectId == subjectId
                     && ses.SurveyId == surveyId
                     && ses.TenantId == tenantId
+                    && ses.IsActive
+                    && ses.SubjectEvaluator.IsActive
                     && ses.SubjectEvaluator.Relationship != null
                     && ses.SubjectEvaluator.Relationship.ToLower() != "self")
                 .ToListAsync();
@@ -235,6 +237,8 @@ public class ReportAnalyticsRepository
                     && ss.Status == SurveySubmissionStatus.Completed
                     && ss.ResponseData != null
                     && ss.SubjectEvaluatorSurvey != null
+                    && ss.SubjectEvaluatorSurvey.IsActive
+                    && ss.SubjectEvaluatorSurvey.SubjectEvaluator.IsActive
                     && !(
                         // Exclude self: relationship is "Self" OR evaluator's employee matches subject's employee
                         (ss.SubjectEvaluatorSurvey.SubjectEvaluator.Relationship != null
@@ -360,7 +364,10 @@ public class ReportAnalyticsRepository
                     && ss.TenantId == tenantId
                     && ss.Status == SurveySubmissionStatus.Completed
                     && ss.ResponseData != null
+                    && ss.ResponseData != null
                     && ss.SubjectEvaluatorSurvey != null
+                    && ss.SubjectEvaluatorSurvey.IsActive
+                    && ss.SubjectEvaluatorSurvey.SubjectEvaluator.IsActive
                     && (
                         // Check if relationship is "Self" (case-insensitive)
                         (ss.SubjectEvaluatorSurvey.SubjectEvaluator.Relationship != null
@@ -381,6 +388,8 @@ public class ReportAnalyticsRepository
                     && ss.Status == SurveySubmissionStatus.Completed
                     && ss.ResponseData != null
                     && ss.SubjectEvaluatorSurvey != null
+                    && ss.SubjectEvaluatorSurvey.IsActive
+                    && ss.SubjectEvaluatorSurvey.SubjectEvaluator.IsActive
                     && !(
                         // Exclude self: relationship is "Self" OR evaluator's employee matches subject's employee
                         (ss.SubjectEvaluatorSurvey.SubjectEvaluator.Relationship != null
@@ -531,6 +540,8 @@ public class ReportAnalyticsRepository
                     && ss.Status == SurveySubmissionStatus.Completed
                     && ss.ResponseData != null
                     && ss.SubjectEvaluatorSurvey != null
+                    && ss.SubjectEvaluatorSurvey.IsActive
+                    && ss.SubjectEvaluatorSurvey.SubjectEvaluator.IsActive
                     && !(
                         (ss.SubjectEvaluatorSurvey.SubjectEvaluator.Relationship != null
                          && ss.SubjectEvaluatorSurvey.SubjectEvaluator.Relationship.ToLower() == "self") ||
@@ -681,7 +692,10 @@ public class ReportAnalyticsRepository
                     && ss.TenantId == tenantId
                     && ss.Status == SurveySubmissionStatus.Completed
                     && ss.ResponseData != null
-                    && ss.SubjectEvaluatorSurvey != null)
+                    && ss.ResponseData != null
+                    && ss.SubjectEvaluatorSurvey != null
+                    && ss.SubjectEvaluatorSurvey.IsActive
+                    && ss.SubjectEvaluatorSurvey.SubjectEvaluator.IsActive)
                 .ToListAsync();
 
             // Separate self-assessment from others
