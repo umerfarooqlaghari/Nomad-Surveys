@@ -41,10 +41,8 @@ const relationshipTypes = [
   'Manager',
   'Direct Report',
   'Peer',
-  'Colleague',
-  'Team Lead',
-  'Supervisor',
-  'Other'
+  'Stakeholder',
+  'Skipline'
 ];
 
 export default function SubjectEvaluatorConnections() {

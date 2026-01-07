@@ -27,11 +27,10 @@ export default function SurveyRenderer({
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, any>>(initialData);
 
-  const currentPage = survey.pages[currentPageIndex];
   const isSelf = relationshipType === 'Self';
 
   // Filter questions based on showTo and relationship
-  const getVisibleQuestions = (questions: Question[]) => {
+  const getVisibleQuestionsForPage = (questions: Question[]) => {
     return questions.filter((q) => {
       // Hide from self-evaluator if selfText is empty (optional self question)
       if (isSelf && (!q.selfText || !q.selfText.trim())) {
@@ -45,7 +44,23 @@ export default function SurveyRenderer({
     });
   };
 
-  const visibleQuestions = getVisibleQuestions(currentPage.questions);
+  // Calculate active pages (pages with at least one visible question)
+  const activePages = React.useMemo(() => {
+    return survey.pages.filter(page => {
+      const visibleQs = getVisibleQuestionsForPage(page.questions);
+      return visibleQs.length > 0;
+    });
+  }, [survey.pages, isSelf]);
+
+  // Reset page index when active pages change to prevent out-of-bounds errors
+  React.useEffect(() => {
+    setCurrentPageIndex(0);
+  }, [activePages.length, relationshipType]);
+
+  const currentPage = activePages[currentPageIndex];
+
+  // Helper to get questions for the current page
+  const visibleQuestions = currentPage ? getVisibleQuestionsForPage(currentPage.questions) : [];
 
   // Handle answer change
   const handleAnswerChange = (questionId: string, value: any) => {
@@ -60,6 +75,7 @@ export default function SurveyRenderer({
   // Check if current page is complete (all required questions answered)
   const isPageComplete = () => {
     if (isPreview) return true;
+    if (!currentPage) return true;
 
     return visibleQuestions.every((q) => {
       if (!q.required) return true;
@@ -72,7 +88,7 @@ export default function SurveyRenderer({
 
   // Navigation handlers
   const handleNext = () => {
-    if (currentPageIndex < survey.pages.length - 1) {
+    if (currentPageIndex < activePages.length - 1) {
       setCurrentPageIndex(currentPageIndex + 1);
     }
   };
@@ -82,6 +98,19 @@ export default function SurveyRenderer({
       setCurrentPageIndex(currentPageIndex - 1);
     }
   };
+
+  if (activePages.length === 0) {
+    return (
+      <div className="max-w-3xl mx-auto p-6 bg-white rounded-lg border border-gray-200">
+        <p className="text-gray-600 text-center">No questions available for this survey.</p>
+      </div>
+    )
+  }
+
+  // Use the original page index from the full survey for display purposes if needed, 
+  // currently we just use 1-based index of active pages which is usually better for UX.
+  const displayPageIndex = currentPageIndex + 1;
+  const totalDisplayPages = activePages.length;
 
   return (
     <div className={showHeader ? "max-w-3xl mx-auto" : ""}>
@@ -111,12 +140,14 @@ export default function SurveyRenderer({
             <p className="text-gray-600 mt-2">{currentPage.description}</p>
           )}
           <div className="mt-3 text-sm text-gray-500">
-            Page {currentPageIndex + 1} of {survey.pages.length}
+            Page {displayPageIndex} of {totalDisplayPages}
           </div>
         </div>
 
         {/* Questions */}
         {visibleQuestions.length === 0 ? (
+          // This case should ideally not happen due to activePages filtering, 
+          // but keeping as safe fallback
           <div className="py-8 text-center text-black">
             <p>No questions to display on this page.</p>
           </div>
@@ -150,13 +181,13 @@ export default function SurveyRenderer({
 
           {/* Page Indicators */}
           <div className="flex gap-2">
-            {survey.pages.map((_, index) => (
+            {activePages.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentPageIndex(index)}
                 className={`w-8 h-8 rounded-full transition-colors ${index === currentPageIndex
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                   }`}
               >
                 {index + 1}
@@ -164,7 +195,7 @@ export default function SurveyRenderer({
             ))}
           </div>
 
-          {currentPageIndex < survey.pages.length - 1 ? (
+          {currentPageIndex < activePages.length - 1 ? (
             <button
               onClick={handleNext}
               disabled={!isPageComplete()}

@@ -47,7 +47,9 @@ public class ReportingService : IReportingService
                             .ThenInclude(e => e.Employee)
                 .Where(ss => ss.SubjectId == subjectId 
                           && ss.Status == SurveySubmissionStatus.Completed
-                          && ss.TenantId == tenantId);
+                          && ss.TenantId == tenantId
+                          && ss.SubjectEvaluatorSurvey.IsActive
+                          && ss.SubjectEvaluatorSurvey.SubjectEvaluator.IsActive);
 
             if (surveyId.HasValue)
             {
@@ -137,7 +139,9 @@ public class ReportingService : IReportingService
                         .ThenInclude(se => se.Evaluator)
                 .Where(ss => ss.SubjectId == subjectId 
                           && ss.Status == SurveySubmissionStatus.Completed
-                          && ss.TenantId == tenantId);
+                          && ss.TenantId == tenantId
+                          && ss.SubjectEvaluatorSurvey.IsActive
+                          && ss.SubjectEvaluatorSurvey.SubjectEvaluator.IsActive);
 
             if (surveyId.HasValue)
             {
@@ -224,7 +228,9 @@ public class ReportingService : IReportingService
                     .ThenInclude(s => s.Employee)
                 .Include(ss => ss.Survey)
                 .Where(ss => ss.Status == SurveySubmissionStatus.Completed
-                          && ss.TenantId == tenantId);
+                          && ss.TenantId == tenantId
+                          && ss.SubjectEvaluatorSurvey.IsActive
+                          && ss.SubjectEvaluatorSurvey.SubjectEvaluator.IsActive);
 
             if (surveyId.HasValue)
             {

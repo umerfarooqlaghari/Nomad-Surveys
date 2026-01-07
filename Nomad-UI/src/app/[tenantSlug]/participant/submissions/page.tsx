@@ -169,9 +169,9 @@ export default function MySubmissions({ params }: MySubmissionsProps) {
                       <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                         Submitted Date
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">
+                      {/* <th className="px-6 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">
                         Action
-                      </th>
+                      </th> */}
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -187,21 +187,21 @@ export default function MySubmissions({ params }: MySubmissionsProps) {
                           <div className="flex items-center text-sm text-black">
                             <CalendarIcon className="h-4 w-4 mr-2 text-gray-400" />
                             {submission.CompletedAt || submission.SubmittedAt
-                            ? new Date(submission.CompletedAt || submission.SubmittedAt).toLocaleDateString('en-US', {
+                              ? new Date(submission.CompletedAt || submission.SubmittedAt).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric'
                               })
-                            : 'N/A'}
+                              : 'N/A'}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
+                          {/* <button
                             onClick={() => router.push(`/${tenantSlug}/participant/submissions/${submission.SubmissionId}`)}
                             className="px-4 py-2 border border-gray-300 text-black rounded-lg hover:bg-gray-50 transition-colors"
                           >
                             View Summary
-                          </button>
+                          </button> */}
                         </td>
                       </tr>
                     ))}
