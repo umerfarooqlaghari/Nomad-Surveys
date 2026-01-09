@@ -14,7 +14,7 @@ export default function PreviewModal({ survey, onClose }: PreviewModalProps) {
   const [previewMode, setPreviewMode] = useState<'self' | 'others'>('self');
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-transparent backdrop-blur-md border-4 border-black rounded-lg">
       <div className="flex items-center justify-center min-h-screen px-4 py-8">
         <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
           {/* Header */}
@@ -35,21 +35,19 @@ export default function PreviewModal({ survey, onClose }: PreviewModalProps) {
             <div className="flex gap-2">
               <button
                 onClick={() => setPreviewMode('self')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  previewMode === 'self'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${previewMode === 'self'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 Self Evaluation View
               </button>
               <button
                 onClick={() => setPreviewMode('others')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  previewMode === 'others'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${previewMode === 'others'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 Others Evaluation View
               </button>

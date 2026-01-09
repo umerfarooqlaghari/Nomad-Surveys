@@ -181,18 +181,21 @@ export default function SurveyRenderer({
 
           {/* Page Indicators */}
           <div className="flex gap-2">
-            {activePages.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentPageIndex(index)}
-                className={`w-8 h-8 rounded-full transition-colors ${index === currentPageIndex
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                  }`}
-              >
-                {index + 1}
-              </button>
-            ))}
+            {activePages.map((_, index) => {
+              if (index < currentPageIndex - 2 || index > currentPageIndex + 2) return null;
+              return (
+                <button
+                  key={index}
+                  onClick={() => setCurrentPageIndex(index)}
+                  className={`w-8 h-8 rounded-full transition-colors ${index === currentPageIndex
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                >
+                  {index + 1}
+                </button>
+              );
+            })}
           </div>
 
           {currentPageIndex < activePages.length - 1 ? (
