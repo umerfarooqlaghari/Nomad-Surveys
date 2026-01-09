@@ -706,17 +706,62 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                         Download PDF
                       </button>
                       <button
-                        onClick={() => {
-                          console.log('Download Excel 1');
-                          setShowDownloadMenu(false);
-                          toast.success('Downloading Analytics Sheet 1...');
+                        onClick={async () => {
+                          if (!selectedSurveyId) {
+                            toast.error('Please select a survey first');
+                            return;
+                          }
+
+                          try {
+                            setShowDownloadMenu(false);
+                            const toastId = toast.loading('Generating Ratee Average Excel Report...');
+
+                            const response = await fetch(`/api/${projectSlug}/reports/generate/excel/ratee-average`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                surveyId: selectedSurveyId,
+                              }),
+                            });
+
+                            if (!response.ok) {
+                              throw new Error('Failed to generate Excel report');
+                            }
+
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+
+                            // Get filename from header or use default
+                            const contentDisposition = response.headers.get('Content-Disposition');
+                            let fileName = 'Ratee Average Report.xlsx';
+                            if (contentDisposition) {
+                              const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                              if (match && match[1]) fileName = match[1];
+                            }
+
+                            a.download = fileName;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+
+                            toast.success('Excel Report Downloaded successfully', { id: toastId });
+                          } catch (error) {
+                            console.error('Error downloading Excel report:', error);
+                            toast.error('Failed to download Excel report');
+                          }
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                       >
                         <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        Analytics Sheet 1
+                        Ratee Average Report
                       </button>
                       <button
                         onClick={() => {
