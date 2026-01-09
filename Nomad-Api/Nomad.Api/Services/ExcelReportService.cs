@@ -39,6 +39,7 @@ public class ExcelReportService : IExcelReportService
             // 3. Setup Headers
             int row = 1;
             int col = 5; // Starting column for Clusters/Competencies (A-D are fixed)
+            int clusterIndex = 0;
 
             // Fixed Headers (A-D)
             worksheet.Cell(2, 1).Value = "Subject Employee ID";
@@ -73,13 +74,17 @@ public class ExcelReportService : IExcelReportService
                     range.Value = cluster.ClusterName;
                     range.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
                     range.Style.Font.Bold = true;
+                    // Alternating Cluster Colors: Light Pink and Peach
+                    range.Style.Fill.BackgroundColor = (clusterIndex % 2 == 0) ? XLColor.LightPink : XLColor.PeachPuff;
+                    
+                    clusterIndex++;
                 }
             }
 
             // Style Header Row (Row 2)
             var headerRange = worksheet.Range(2, 1, 2, col - 1);
             headerRange.Style.Font.Bold = true;
-            headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+            headerRange.Style.Fill.BackgroundColor = XLColor.FromHtml("#B4C6E7");
 
             // 4. Fill Data
             row = 3;
