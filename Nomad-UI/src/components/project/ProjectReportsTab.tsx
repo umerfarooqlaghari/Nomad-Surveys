@@ -53,7 +53,9 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
   const [imageLibraryType, setImageLibraryType] = useState<'logo' | 'cover' | 'general'>('general');
   const [showMenu, setShowMenu] = useState(false);
   const [showPageImagesModal, setShowPageImagesModal] = useState(false);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const downloadMenuRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLIFrameElement>(null);
 
   // Survey and Subject selection state
@@ -70,16 +72,19 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setShowMenu(false);
       }
+      if (downloadMenuRef.current && !downloadMenuRef.current.contains(event.target as Node)) {
+        setShowDownloadMenu(false);
+      }
     };
 
-    if (showMenu) {
+    if (showMenu || showDownloadMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showMenu]);
+  }, [showMenu, showDownloadMenu]);
 
   const handleLogoSelect = (imageUrl: string) => {
     console.log('Logo selected:', imageUrl);
@@ -119,7 +124,6 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
         subjectId: selectedSubjectId || null,
       };
 
-      console.log('Updating preview with data:', previewData);
 
       const response = await fetch(`/api/${projectSlug}/reports/preview`, {
         method: 'POST',
@@ -191,7 +195,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
           console.log('Mapped template settings:', loaded);
 
           setLoadedTemplate(loaded);
-          
+
           // Set current values from loaded template
           setCompanyName(loaded.companyName);
           setPrimaryColor(loaded.primaryColor);
@@ -245,7 +249,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
 
     if (!loadedTemplate) {
       // If no template was loaded, check against defaults
-      const hasDefaultChanges = 
+      const hasDefaultChanges =
         companyName !== 'Alpha Devs' ||
         primaryColor !== '#0455A4' ||
         secondaryColor !== '#1D8F6C' ||
@@ -262,7 +266,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
     const primaryColorChanged = primaryColor !== (loadedTemplate.primaryColor || '#0455A4');
     const secondaryColorChanged = secondaryColor !== (loadedTemplate.secondaryColor || '#1D8F6C');
     const tertiaryColorChanged = tertiaryColor !== (loadedTemplate.tertiaryColor || '#6C757D');
-    
+
     // Check if logo changed
     // - New file uploaded
     // - Preview URL changed (and it's not the same as loaded URL)
@@ -272,7 +276,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
       (logoPreview !== '' && logoPreview !== (loadedTemplate.companyLogoUrl || '')) || // URL changed
       (loadedTemplate.companyLogoUrl && logoPreview === '') // Logo removed
     );
-    
+
     // Check if cover image changed
     const coverImageChanged = Boolean(
       coverImage !== null || // New file uploaded
@@ -281,7 +285,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
     );
 
     return Boolean(
-      nameChanged || primaryColorChanged || secondaryColorChanged || 
+      nameChanged || primaryColorChanged || secondaryColorChanged ||
       tertiaryColorChanged || logoChanged || coverImageChanged
     );
   };
@@ -398,7 +402,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
       if (logoPreview) {
         formData.append('companyLogoUrl', logoPreview);
       }
-      
+
       if (coverImagePreview) {
         formData.append('coverImageUrl', coverImagePreview);
       }
@@ -424,12 +428,12 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
       }
 
       const result = await response.json();
-      
+
       // Handle response that may contain Template object or be the template directly
       const template = result.Template || result;
       const uploadErrors = result.UploadErrors || [];
       const message = result.Message;
-      
+
       // Show appropriate toast messages
       if (uploadErrors.length > 0) {
         // Show error for each failed upload
@@ -442,13 +446,13 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
       } else {
         toast.success('Template saved successfully!');
       }
-      
+
       console.log('Template saved response:', result);
       console.log('Image URLs in response:', {
         companyLogoUrl: template.CompanyLogoUrl || template.companyLogoUrl,
         coverImageUrl: template.CoverImageUrl || template.coverImageUrl,
       });
-      
+
       // API returns PascalCase, handle both cases
       const savedCompanyName = template.CompanyName || template.companyName;
       const savedPrimaryColor = template.PrimaryColor || template.primaryColor;
@@ -456,7 +460,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
       const savedTertiaryColor = template.TertiaryColor || template.tertiaryColor;
       const savedCompanyLogoUrl = template.CompanyLogoUrl || template.companyLogoUrl;
       const savedCoverImageUrl = template.CoverImageUrl || template.coverImageUrl;
-      
+
       // Update all state values from the API response to ensure UI matches saved data
       if (savedCompanyName) {
         setCompanyName(savedCompanyName);
@@ -470,7 +474,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
       if (savedTertiaryColor) {
         setTertiaryColor(savedTertiaryColor);
       }
-      
+
       // Update image previews from Cloudinary URLs
       if (savedCompanyLogoUrl) {
         setLogoPreview(savedCompanyLogoUrl);
@@ -478,14 +482,14 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
         // If logo was removed, clear preview
         setLogoPreview('');
       }
-      
+
       if (savedCoverImageUrl) {
         setCoverImagePreview(savedCoverImageUrl);
       } else {
         // If cover image was removed, clear preview
         setCoverImagePreview('');
       }
-      
+
       // Update loaded template to reflect saved state (for change detection)
       const updatedLoaded: LoadedTemplateSettings = {
         companyName: savedCompanyName || companyName,
@@ -496,7 +500,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
         tertiaryColor: savedTertiaryColor || tertiaryColor,
       };
       setLoadedTemplate(updatedLoaded);
-      
+
       // Show success message for successful uploads
       if (uploadErrors.length === 0) {
         if (savedCompanyLogoUrl || savedCoverImageUrl) {
@@ -506,11 +510,11 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
           toast.success(`Successfully uploaded ${uploadedImages.join(' and ')} to Cloudinary!`, { duration: 3000 });
         }
       }
-      
+
       // Clear file references since they're now saved
       setCompanyLogo(null);
       setCoverImage(null);
-      
+
       // Reload template settings to ensure everything is in sync
       // This ensures we have the latest data from the database
       await loadTemplateSettings();
@@ -596,14 +600,290 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                 )}
               </button>
               <p className="mt-2 text-xs text-gray-500 text-center">
-                {isLoadingTemplate 
-                  ? 'Loading saved template...' 
-                  : hasChanges() 
-                    ? 'You have unsaved changes' 
+                {isLoadingTemplate
+                  ? 'Loading saved template...'
+                  : hasChanges()
+                    ? 'You have unsaved changes'
                     : 'All changes saved'}
               </p>
             </div>
 
+
+
+            {/* Download Dropdown */}
+            <div className="relative pt-4 border-t border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Download Report Data
+              </label>
+              <div className="relative">
+                <button
+                  onClick={() => setShowDownloadMenu(!showDownloadMenu)}
+                  className="w-full bg-gray-100 hover:bg-gray-200 text-gray-900 border border-gray-300 px-3 py-2 rounded-md font-medium transition-colors flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    <span>Download Options</span>
+                  </div>
+                  <svg className={`w-5 h-5 text-gray-500 transition-transform ${showDownloadMenu ? 'transform rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showDownloadMenu && (
+                  <div ref={downloadMenuRef} className="absolute z-20 mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden">
+                    <div className="py-1">
+                      <button
+                        onClick={async () => {
+                          if (!selectedSubjectId) {
+                            toast.error('Please select a subject first');
+                            return;
+                          }
+
+                          try {
+                            // Close menu immediately
+                            setShowDownloadMenu(false);
+
+                            const toastId = toast.loading('Generating PDF, It may take upto a 2 minutes to generate one');
+
+                            const reportData = {
+                              subjectId: selectedSubjectId,
+                              surveyId: selectedSurveyId || null,
+                              companyName,
+                              companyLogoUrl: logoPreview || null,
+                              coverImageUrl: coverImagePreview || null,
+                              primaryColor,
+                              secondaryColor,
+                              tertiaryColor,
+                            };
+
+                            const response = await fetch(`/api/${projectSlug}/reports/generate/pdf`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify(reportData),
+                            });
+
+                            if (!response.ok) {
+                              throw new Error('Failed to generate PDF');
+                            }
+
+                            // Create a blob from the response and trigger download
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            // Try to get filename from Content-Disposition header
+                            const contentDisposition = response.headers.get('Content-Disposition');
+                            let fileName = `report-${selectedSubjectId}.pdf`;
+                            if (contentDisposition) {
+                              const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                              if (match && match[1]) {
+                                fileName = match[1];
+                              }
+                            }
+
+                            a.download = fileName;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+
+                            toast.success('PDF Downloaded successfully', { id: toastId });
+                          } catch (error) {
+                            console.error('Error downloading PDF:', error);
+                            toast.error('Failed to download PDF');
+                          }
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        Download PDF
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!selectedSurveyId) {
+                            toast.error('Please select a survey first');
+                            return;
+                          }
+
+                          try {
+                            setShowDownloadMenu(false);
+                            const toastId = toast.loading('Generating Ratee Average Excel Report...');
+
+                            const response = await fetch(`/api/${projectSlug}/reports/generate/excel/ratee-average`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                surveyId: selectedSurveyId,
+                              }),
+                            });
+
+                            if (!response.ok) {
+                              throw new Error('Failed to generate Excel report');
+                            }
+
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+
+                            // Get filename from header or use default
+                            const contentDisposition = response.headers.get('Content-Disposition');
+                            let fileName = 'Ratee Average Report.xlsx';
+                            if (contentDisposition) {
+                              const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                              if (match && match[1]) fileName = match[1];
+                            }
+
+                            a.download = fileName;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+
+                            toast.success('Excel Report Downloaded successfully', { id: toastId });
+                          } catch (error) {
+                            console.error('Error downloading Excel report:', error);
+                            toast.error('Failed to download Excel report');
+                          }
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Ratee Average Report
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!selectedSurveyId) {
+                            toast.error('Please select a survey first');
+                            return;
+                          }
+
+                          try {
+                            setShowDownloadMenu(false);
+                            const toastId = toast.loading('Generating Subject Wise Heat Map...');
+
+                            const response = await fetch(`/api/${projectSlug}/reports/generate/excel/subject-heatmap`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                surveyId: selectedSurveyId,
+                              }),
+                            });
+
+                            if (!response.ok) {
+                              throw new Error('Failed to generate Heat Map report');
+                            }
+
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+
+                            // Get filename from header or use default
+                            const contentDisposition = response.headers.get('Content-Disposition');
+                            let fileName = 'Subject Wise Heat Map.xlsx';
+                            if (contentDisposition) {
+                              const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                              if (match && match[1]) fileName = match[1];
+                            }
+
+                            a.download = fileName;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+
+                            toast.success('Heat Map Downloaded successfully', { id: toastId });
+                          } catch (error) {
+                            console.error('Error downloading Heat Map:', error);
+                            toast.error('Failed to download Heat Map');
+                          }
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Subject Wise Heat Map
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!selectedSurveyId) {
+                            toast.error('Please select a survey first');
+                            return;
+                          }
+
+                          try {
+                            setShowDownloadMenu(false);
+                            const toastId = toast.loading('Generating 360 Survey Results...');
+
+                            const response = await fetch(`/api/${projectSlug}/reports/generate/excel/subject-consolidated`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                surveyId: selectedSurveyId,
+                              }),
+                            });
+
+                            if (!response.ok) {
+                              throw new Error('Failed to generate 360 Survey Results report');
+                            }
+
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+
+                            // Get filename from header or use default
+                            const contentDisposition = response.headers.get('Content-Disposition');
+                            let fileName = '360 Survey Results.xlsx';
+                            if (contentDisposition) {
+                              const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                              if (match && match[1]) fileName = match[1];
+                            }
+
+                            a.download = fileName;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+
+                            toast.success('360 Survey Results Downloaded successfully', { id: toastId });
+                          } catch (error) {
+                            console.error('Error downloading 360 Survey Results report:', error);
+                            toast.error('Failed to download 360 Survey Results report');
+                          }
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>
+                        360 Survey Results
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Survey Selection Dropdown */}
             <div className="pt-4 border-t border-gray-200">
@@ -657,7 +937,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                 ))}
               </select>
             </div>
-            
+
             {/* Company Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -696,7 +976,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                   </svg>
                 </button>
               </div>
-              
+
               {/* Hamburger Menu */}
               {showMenu && (
                 <div ref={menuRef} className="absolute z-50 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200">

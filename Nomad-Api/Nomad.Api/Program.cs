@@ -12,6 +12,7 @@ using Nomad.Api.Services;
 using Nomad.Api.Services.Interfaces;
 using Nomad.Api.Services.Background; // Added for background service
 using System.Text;
+using Nomad.Api.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -125,6 +126,8 @@ builder.Services.AddScoped<IReportTemplateService, ReportTemplateService>();
 builder.Services.AddScoped<IReportTemplateSettingsService, ReportTemplateSettingsService>();
 builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<Nomad.Api.Repository.ReportAnalyticsRepository>();
+builder.Services.AddScoped<IExcelReportService, ExcelReportService>();
+builder.Services.AddScoped<IExcelReportRepository, ExcelReportRepository>(); // Added registration for ExcelReportRepository
 builder.Services.AddHostedService<ReminderBackgroundService>();
 
 // Add CORS
