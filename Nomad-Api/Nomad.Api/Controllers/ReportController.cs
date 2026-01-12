@@ -159,6 +159,62 @@ public class ReportController : ControllerBase
             return StatusCode(500, new { message = "An error occurred while generating the report" });
         }
     }
+
+    /// <summary>
+    /// Generate Subject Wise Heat Map Excel report
+    /// </summary>
+    [HttpPost("generate/excel/subject-heatmap")]
+    public async Task<ActionResult> GenerateSubjectWiseHeatMapReportExcel(
+        [FromBody] RateeAverageReportRequest request)
+    {
+        try
+        {
+            var tenantId = GetCurrentTenantId();
+            if (!tenantId.HasValue)
+            {
+                return Unauthorized("Tenant ID not found");
+            }
+
+            var (fileContent, fileName) = await _excelReportService.GenerateSubjectWiseHeatMapExcelAsync(
+                request.SurveyId,
+                tenantId.Value);
+
+            return File(fileContent, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating Subject Wise Heat Map Excel report for Survey {SurveyId}", request.SurveyId);
+            return StatusCode(500, new { message = "An error occurred while generating the report" });
+        }
+    }
+
+    /// <summary>
+    /// Generate Subject Wise Consolidated Excel report
+    /// </summary>
+    [HttpPost("generate/excel/subject-consolidated")]
+    public async Task<ActionResult> GenerateSubjectWiseConsolidatedReportExcel(
+        [FromBody] RateeAverageReportRequest request)
+    {
+        try
+        {
+            var tenantId = GetCurrentTenantId();
+            if (!tenantId.HasValue)
+            {
+                return Unauthorized("Tenant ID not found");
+            }
+
+            var (fileContent, fileName) = await _excelReportService.GenerateSubjectWiseConsolidatedExcelAsync(
+                request.SurveyId,
+                tenantId.Value);
+
+            return File(fileContent, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating Subject Wise Consolidated Excel report for Survey {SurveyId}", request.SurveyId);
+            return StatusCode(500, new { message = "An error occurred while generating the report" });
+        }
+    }
 }
 
 public class PreviewReportRequest

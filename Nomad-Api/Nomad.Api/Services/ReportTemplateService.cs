@@ -596,6 +596,23 @@ public class ReportTemplateService : IReportTemplateService
                     subjectName = subject.Employee.FullName ?? "Report";
                 }
             }
+            
+            // Fallback: Try to get subject name from reporting service if not found yet
+            if (subjectName == "Report")
+            {
+                try 
+                {
+                    var subjectReport = await _reportingService.GetSubjectReportAsync(subjectId, surveyId, tenantId);
+                    if (!string.IsNullOrEmpty(subjectReport?.SubjectName))
+                    {
+                        subjectName = subjectReport.SubjectName;
+                    }
+                }
+                catch
+                {
+                    // Ignore error, keep using default
+                }
+            }
 
             // Generate HTML first
             var html = await GenerateReportHtmlAsync(

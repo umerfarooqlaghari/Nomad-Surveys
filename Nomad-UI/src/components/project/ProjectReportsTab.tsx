@@ -764,30 +764,120 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                         Ratee Average Report
                       </button>
                       <button
-                        onClick={() => {
-                          console.log('Download Excel 2');
-                          setShowDownloadMenu(false);
-                          toast.success('Downloading Analytics Sheet 2...');
+                        onClick={async () => {
+                          if (!selectedSurveyId) {
+                            toast.error('Please select a survey first');
+                            return;
+                          }
+
+                          try {
+                            setShowDownloadMenu(false);
+                            const toastId = toast.loading('Generating Subject Wise Heat Map...');
+
+                            const response = await fetch(`/api/${projectSlug}/reports/generate/excel/subject-heatmap`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                surveyId: selectedSurveyId,
+                              }),
+                            });
+
+                            if (!response.ok) {
+                              throw new Error('Failed to generate Heat Map report');
+                            }
+
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+
+                            // Get filename from header or use default
+                            const contentDisposition = response.headers.get('Content-Disposition');
+                            let fileName = 'Subject Wise Heat Map.xlsx';
+                            if (contentDisposition) {
+                              const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                              if (match && match[1]) fileName = match[1];
+                            }
+
+                            a.download = fileName;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+
+                            toast.success('Heat Map Downloaded successfully', { id: toastId });
+                          } catch (error) {
+                            console.error('Error downloading Heat Map:', error);
+                            toast.error('Failed to download Heat Map');
+                          }
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                       >
-                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        Analytics Sheet 2
+                        Subject Wise Heat Map
                       </button>
                       <button
-                        onClick={() => {
-                          console.log('Download Excel 3');
-                          setShowDownloadMenu(false);
-                          toast.success('Downloading Analytics Sheet 3...');
+                        onClick={async () => {
+                          if (!selectedSurveyId) {
+                            toast.error('Please select a survey first');
+                            return;
+                          }
+
+                          try {
+                            setShowDownloadMenu(false);
+                            const toastId = toast.loading('Generating 360 Survey Results...');
+
+                            const response = await fetch(`/api/${projectSlug}/reports/generate/excel/subject-consolidated`, {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${token}`,
+                              },
+                              body: JSON.stringify({
+                                surveyId: selectedSurveyId,
+                              }),
+                            });
+
+                            if (!response.ok) {
+                              throw new Error('Failed to generate 360 Survey Results report');
+                            }
+
+                            const blob = await response.blob();
+                            const url = window.URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+
+                            // Get filename from header or use default
+                            const contentDisposition = response.headers.get('Content-Disposition');
+                            let fileName = '360 Survey Results.xlsx';
+                            if (contentDisposition) {
+                              const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                              if (match && match[1]) fileName = match[1];
+                            }
+
+                            a.download = fileName;
+                            document.body.appendChild(a);
+                            a.click();
+                            window.URL.revokeObjectURL(url);
+                            document.body.removeChild(a);
+
+                            toast.success('360 Survey Results Downloaded successfully', { id: toastId });
+                          } catch (error) {
+                            console.error('Error downloading 360 Survey Results report:', error);
+                            toast.error('Failed to download 360 Survey Results report');
+                          }
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                       >
-                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                         </svg>
-                        Analytics Sheet 3
+                        360 Survey Results
                       </button>
                     </div>
                   </div>
