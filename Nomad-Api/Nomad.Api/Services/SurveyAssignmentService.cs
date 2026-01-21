@@ -683,7 +683,8 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                     
                     if (data.Count == 1)
                     {
-                        var formLink = $"{frontendUrl}/{tenantSlug}/participant/forms/{data.LastId}";
+                        // var formLink = $"{frontendUrl}/{tenantSlug}/participant/forms/{data.LastId}";
+                                                var formLink = $"{frontendUrl}";
                         await _emailService.SendFormAssignmentEmailAsync(email, data.Name, data.LastSubject, formTitle, formLink, tenantName, tenantSlug, passwordDisplay);
                     }
                     else

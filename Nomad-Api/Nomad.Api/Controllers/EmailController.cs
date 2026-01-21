@@ -230,8 +230,10 @@ public class EmailController : ControllerBase
 
             // Get frontend URL from configuration
             var frontendUrl = HttpContext.RequestServices
-                .GetRequiredService<IConfiguration>()["FrontendUrl"] ?? "http://localhost:3000";
-            var formLink = $"{frontendUrl}/{tenantSlug}/participant/forms/{assignment.Id}";
+                .GetRequiredService<IConfiguration>()["FrontendUrl"];
+            var formLink = $"{frontendUrl}";
+            // var formLink = $"{frontendUrl}/{tenantSlug}/participant/forms/{assignment.Id}";
+
 
             // Determine due date (if available)
             var dueDate =  "No specific deadline";

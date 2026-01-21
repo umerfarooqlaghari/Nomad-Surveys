@@ -130,7 +130,9 @@ public class ReminderBackgroundService : BackgroundService
                 var pendingItems = assignments.Select(a => (
                     FormTitle: a.Survey.Title,
                     SubjectName: a.SubjectEvaluator.Subject.Employee.FullName,
-                    Link: $"{frontendUrl}/{tenantSlug}/participant/forms/{a.Id}"
+                    // Link: $"{frontendUrl}/{tenantSlug}/participant/forms/{a.Id}"
+                                        Link: $"{frontendUrl}"
+
                 )).ToList();
 
                 // Send Email
