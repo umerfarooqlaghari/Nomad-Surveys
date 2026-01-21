@@ -45,6 +45,19 @@ export default function CompaniesTab() {
       errors['Slug'] = 'Slug can only contain lowercase letters, numbers, and hyphens';
     }
 
+    // Validate other required fields
+    if (!formData.Name?.trim()) {
+      errors['Name'] = 'Organization Name is required';
+    }
+
+    if (!formData.Company.Location?.trim()) {
+      errors['Location'] = 'Location is required';
+    }
+
+    if (!formData.Company.Industry) {
+      errors['Industry'] = 'Industry is required';
+    }
+
     // Admin fields validation: "All or Nothing" rule
     // If TenantAdmin doesn't exist, no admin validation needed
     if (formData.TenantAdmin) {
@@ -100,7 +113,7 @@ export default function CompaniesTab() {
 
     setValidationErrors(errors);
 
-  }, [formData.TenantAdmin, formData.Slug, isEditMode]);
+  }, [formData.TenantAdmin, formData.Slug, formData.Name, formData.Company.Location, formData.Company.Industry, isEditMode]);
 
   // Load tenants on component mount
   useEffect(() => {
@@ -530,9 +543,10 @@ export default function CompaniesTab() {
                         value={formData.Name}
                         onChange={handleNameChange}
                         required
-                        className={styles.input}
+                        className={`${styles.input} ${validationErrors['Name'] ? styles.inputError : ''}`}
                         placeholder="Enter organization name"
                       />
+                      {validationErrors['Name'] && <span className={styles.errorText}>{validationErrors['Name']}</span>}
                     </div>
 
                     <div className={styles.fieldGroup}>
@@ -593,9 +607,10 @@ export default function CompaniesTab() {
                         value={formData.Company.Location}
                         onChange={handleInputChange}
                         required
-                        className={styles.input}
+                        className={`${styles.input} ${validationErrors['Location'] ? styles.inputError : ''}`}
                         placeholder="Company location"
                       />
+                      {validationErrors['Location'] && <span className={styles.errorText}>{validationErrors['Location']}</span>}
                     </div>
 
                     <div className={styles.fieldGroup}>
@@ -607,7 +622,7 @@ export default function CompaniesTab() {
                         value={formData.Company.Industry}
                         onChange={handleInputChange}
                         required
-                        className={styles.select}
+                        className={`${styles.select} ${validationErrors['Industry'] ? styles.inputError : ''}`}
                       >
                         <option value="">Select Industry</option>
                         <option value="Technology">Technology</option>
@@ -619,6 +634,7 @@ export default function CompaniesTab() {
                         <option value="Consulting">Consulting</option>
                         <option value="Other">Other</option>
                       </select>
+                      {validationErrors['Industry'] && <span className={styles.errorText}>{validationErrors['Industry']}</span>}
                     </div>
                   </div>
                 </div>

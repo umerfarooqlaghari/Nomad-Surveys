@@ -14,6 +14,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
   const { token } = useAuth();
   const [employees, setEmployees] = useState<EmployeeListResponse[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [formData, setFormData] = useState({
@@ -49,7 +50,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
     setIsLoading(true);
     try {
       const { data, error } = await employeeService.getEmployees(projectSlug, token);
-      
+
       if (error) {
         toast.error(error);
         return;
@@ -96,12 +97,13 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!token) {
       toast.error('Authentication required');
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const employeeData: CreateEmployeeRequest | UpdateEmployeeRequest = {
         FirstName: formData.FirstName,
@@ -160,6 +162,8 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
     } catch (error) {
       console.error('Error saving employee:', error);
       toast.error('Failed to save employee');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -237,7 +241,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
 
   const handleBulkImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     console.log('🔵 [EMPLOYEES] handleBulkImport TRIGGERED');
-    
+
     const file = event.target.files?.[0];
     console.log('📁 [EMPLOYEES] File object:', file);
 
@@ -640,9 +644,16 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {editingEmployee ? 'Update Employee' : 'Add Employee'}
+                {isSubmitting && (
+                  <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
+                {isSubmitting ? 'Processing...' : (editingEmployee ? 'Update Employee' : 'Add Employee')}
               </button>
             </div>
           </form>
@@ -766,11 +777,10 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
                           <div className="text-sm text-gray-900">{employee.Number || '-'}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            employee.IsActive
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
-                          }`}>
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${employee.IsActive
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                            }`}>
                             {employee.IsActive ? 'Active' : 'Inactive'}
                           </span>
                         </td>

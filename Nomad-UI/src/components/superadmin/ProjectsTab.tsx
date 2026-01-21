@@ -469,6 +469,12 @@ export default function ProjectsTab() {
         } : null,
       });
 
+      if (data.Company?.LogoUrl) {
+        setLogoPreview(data.Company.LogoUrl);
+      } else {
+        setLogoPreview('');
+      }
+
       setEditingTenantId(tenantId);
       setIsEditMode(true);
       setShowForm(true);
@@ -724,14 +730,16 @@ export default function ProjectsTab() {
                     <div className={styles.fieldGroup}>
                       <label className={styles.label}>Company Logo</label>
                       <div className={styles.logoUploadContainer}>
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          accept="image/*"
-                          onChange={handleLogoUpload}
-                          className={styles.input}
-                          disabled={isUploadingLogo || isLoading}
-                        />
+                        {!logoPreview && (
+                          <input
+                            type="file"
+                            ref={fileInputRef}
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            className={styles.input}
+                            disabled={isUploadingLogo || isLoading}
+                          />
+                        )}
                         {isUploadingLogo && (
                           <p style={{ marginTop: '8px', color: '#7c3aed', fontSize: '0.875rem' }}>Uploading logo...</p>
                         )}
@@ -741,6 +749,10 @@ export default function ProjectsTab() {
                               src={logoPreview}
                               alt="Logo preview"
                               className={styles.logoPreviewImg}
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                                // Optional: show placeholder or error text
+                              }}
                             />
                             <button
                               type="button"
@@ -997,14 +1009,14 @@ export default function ProjectsTab() {
                     : (isEditMode ? 'Update Company' : 'Add Company')
                 }
               </button>
-              <button
+              {/* <button
                 type="button"
                 onClick={handleCancelEdit}
                 className={styles.cancelButton}
                 disabled={isLoading || isUploadingLogo}
               >
                 Cancel
-              </button>
+              </button> */}
             </div>
           </form>
         </div>
