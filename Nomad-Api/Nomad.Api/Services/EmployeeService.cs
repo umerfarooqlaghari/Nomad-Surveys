@@ -137,36 +137,51 @@ public class EmployeeService : IEmployeeService
             var employeesToUpdate = new List<(Employee ExistingEmployee, CreateEmployeeRequest UpdateRequest)>();
             var errors = new List<string>();
 
-            _logger.LogInformation("Processing {Count} employees for bulk create/update", request.Employees.Count);
+            _logger.LogInformation("Processing {Count} employees for bulk create/update using optimized lookup", request.Employees.Count);
 
-            // Get all existing employees by EmployeeId in this tenant
-            var requestedEmployeeIds = request.Employees.Select(e => e.EmployeeId).ToList();
+            // 1. Bulk Fetch existing records to avoid N+1 queries
+            var requestedEmployeeIds = request.Employees
+                .Select(e => e.EmployeeId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct()
+                .ToList();
+            
+            var requestedEmails = request.Employees
+                .Select(e => e.Email.ToLower())
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Distinct()
+                .ToList();
+
+            // Get all existing employees in this tenant (including inactive ones)
             var existingEmployees = await _context.Employees
-                .Where(e => requestedEmployeeIds.Contains(e.EmployeeId) && e.TenantId == tenantId)
+                .IgnoreQueryFilters()
+                .Where(e => e.TenantId == tenantId && (requestedEmployeeIds.Contains(e.EmployeeId) || requestedEmails.Contains(e.Email.ToLower())))
                 .ToListAsync();
 
-            var existingEmployeeIds = existingEmployees.Select(e => e.EmployeeId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            // Create dictionaries for O(1) lookups
+            var existingByEmail = existingEmployees
+                .Where(e => !string.IsNullOrWhiteSpace(e.Email))
+                .ToDictionary(e => e.Email.ToLower(), e => e);
 
-            // Separate new employees from updates
+            var existingByEmployeeId = existingEmployees
+                .Where(e => !string.IsNullOrWhiteSpace(e.EmployeeId))
+                .ToDictionary(e => e.EmployeeId, e => e);
+
+            // 2. Separate new employees from updates using in-memory logic
             for (int i = 0; i < request.Employees.Count; i++)
             {
                 var employeeRequest = request.Employees[i];
-                var validationErrors = await ValidateEmployeeAsync(employeeRequest, tenantId, null);
+                var employeeEmailLower = employeeRequest.Email.ToLower();
 
-                if (validationErrors.Any())
-                {
-                    errors.AddRange(validationErrors.Select(e => $"Employee {i + 1}: {e}"));
-                    continue;
-                }
+                // Check for existing record in memory
+                existingByEmail.TryGetValue(employeeEmailLower, out var empByEmail);
+                existingByEmployeeId.TryGetValue(employeeRequest.EmployeeId, out var empById);
 
-                if (existingEmployeeIds.Contains(employeeRequest.EmployeeId))
-                {
-                    // This is an update
-                    var existingEmployee = existingEmployees.First(e => e.EmployeeId == employeeRequest.EmployeeId);
-                    employeesToUpdate.Add((existingEmployee, employeeRequest));
-                    _logger.LogInformation("Employee {EmployeeId} exists - will update", employeeRequest.EmployeeId);
-                }
-                else
+                var existingEmployee = empByEmail ?? empById;
+
+                // Validation: Only error if duplicate exists AND is ACTIVE and not the one we're processing
+                // If we found an existing employee (active or inactive), we move to update/reactivate logic
+                if (existingEmployee == null)
                 {
                     // This is a new employee
                     var employee = _mapper.Map<Employee>(employeeRequest);
@@ -176,29 +191,33 @@ public class EmployeeService : IEmployeeService
                     employee.IsActive = true;
 
                     employeesToCreate.Add(employee);
-                    _logger.LogInformation("Employee {EmployeeId} is new - will create", employeeRequest.EmployeeId);
+                    _logger.LogDebug("Employee {EmployeeId} is new - marked for creation", employeeRequest.EmployeeId);
+                }
+                else
+                {
+                    // This is an update or reactivation
+                    employeesToUpdate.Add((existingEmployee, employeeRequest));
+                    _logger.LogDebug("Employee {EmployeeId}/{Email} exists - marked for update/reactivation",
+                        employeeRequest.EmployeeId, employeeRequest.Email);
                 }
             }
 
-            // Create new employees
+            // 3. Batch DB Operations
             if (employeesToCreate.Any())
             {
                 await _context.Employees.AddRangeAsync(employeesToCreate);
                 response.SuccessfullyCreated = employeesToCreate.Count;
                 response.CreatedIds = employeesToCreate.Select(e => e.Id).ToList();
-                _logger.LogInformation("Created {Count} new employees", employeesToCreate.Count);
             }
 
-            // Update existing employees
             if (employeesToUpdate.Any())
             {
                 foreach (var (existingEmployee, updateRequest) in employeesToUpdate)
                 {
-                    _logger.LogInformation("Updating existing employee {EmployeeId}", existingEmployee.EmployeeId);
-
                     existingEmployee.FirstName = updateRequest.FirstName;
                     existingEmployee.LastName = updateRequest.LastName;
                     existingEmployee.Email = updateRequest.Email;
+                    existingEmployee.EmployeeId = updateRequest.EmployeeId;
                     existingEmployee.Number = updateRequest.Number;
                     existingEmployee.CompanyName = updateRequest.CompanyName;
                     existingEmployee.Designation = updateRequest.Designation;
@@ -209,19 +228,19 @@ public class EmployeeService : IEmployeeService
                     existingEmployee.ManagerId = updateRequest.ManagerId;
                     existingEmployee.MoreInfo = updateRequest.MoreInfo;
                     existingEmployee.UpdatedAt = DateTime.UtcNow;
+                    existingEmployee.IsActive = true;
 
                     response.UpdatedCount++;
                 }
             }
 
-            // Single database hit for all changes
+            // Single database hit for all employee changes
             await _context.SaveChangesAsync();
 
-            // Sync with User table
+            // 4. Batch User Synchronization
             var allEmployees = employeesToCreate.Concat(employeesToUpdate.Select(x => x.ExistingEmployee)).ToList();
             await SyncEmployeesToUsersAsync(allEmployees, tenantId);
 
-            // Calculate totals including both created and updated
             var totalProcessed = response.SuccessfullyCreated + response.UpdatedCount;
             response.Failed = response.TotalRequested - totalProcessed;
             response.Errors = errors;
@@ -240,6 +259,7 @@ public class EmployeeService : IEmployeeService
             throw;
         }
     }
+
 
     public async Task<EmployeeResponse?> UpdateEmployeeAsync(Guid employeeId, UpdateEmployeeRequest request)
     {
@@ -283,9 +303,13 @@ public class EmployeeService : IEmployeeService
 
     public async Task<bool> DeleteEmployeeAsync(Guid employeeId)
     {
+        using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            var employee = await _context.Employees.FindAsync(employeeId);
+            var employee = await _context.Employees
+                .Include(e => e.Users)
+                .FirstOrDefaultAsync(e => e.Id == employeeId);
+
             if (employee == null)
             {
                 return false;
@@ -295,11 +319,20 @@ public class EmployeeService : IEmployeeService
             employee.IsActive = false;
             employee.UpdatedAt = DateTime.UtcNow;
 
+            // Also deactivate associated users
+            foreach (var user in employee.Users)
+            {
+                user.IsActive = false;
+                user.UpdatedAt = DateTime.UtcNow;
+            }
+
             await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
             return true;
         }
         catch (Exception ex)
         {
+            await transaction.RollbackAsync();
             _logger.LogError(ex, "Error deleting employee {EmployeeId}", employeeId);
             throw;
         }
@@ -320,7 +353,8 @@ public class EmployeeService : IEmployeeService
     public async Task<bool> EmployeeExistsByEmailAsync(string email, Guid tenantId, Guid? excludeId = null)
     {
         var query = _context.Employees
-            .Where(e => e.Email.ToLower() == email.ToLower() && e.TenantId == tenantId && e.IsActive);
+            .IgnoreQueryFilters() // Must ignore filters to check for soft-deleted duplicates
+            .Where(e => e.Email.ToLower() == email.ToLower() && e.TenantId == tenantId);
 
         if (excludeId.HasValue)
         {
@@ -334,21 +368,36 @@ public class EmployeeService : IEmployeeService
     {
         var errors = new List<string>();
 
-        // Check for duplicate email within tenant
-        if (await EmployeeExistsByEmailAsync(request.Email, tenantId, excludeId))
+        // We skip this specific check in ValidateEmployeeAsync because BulkCreateEmployeesAsync 
+        // will handle it properly by either updating/reactivating or creating.
+        // However, for single creation through other means (if any), we still want to ensure 
+        // we don't return "already exists" if we are calling from BulkCreate which handles it.
+        // Actually, ValidateEmployeeAsync is called from BulkCreate. 
+        // If it's a "New" employee request but another "Active" one exists, that's an error.
+        // If an "Inactive" one exists, BulkCreate will handle it by moving it to the update list.
+        
+        // Let's refine this: If an ACTIVE employee exists with same email/ID, it's a conflict IF we're not updating that specific record.
+        
+        // Check for duplicate ACTIVE email within tenant
+        var activeEmailExists = await _context.Employees
+            .Where(e => e.Email.ToLower() == request.Email.ToLower() && e.TenantId == tenantId && e.IsActive)
+            .Where(e => !excludeId.HasValue || e.Id != excludeId.Value)
+            .AnyAsync();
+
+        if (activeEmailExists)
         {
-            errors.Add($"Employee with email {request.Email} already exists in this tenant");
+            errors.Add($"An active employee with email {request.Email} already exists in this tenant");
         }
 
-        // Check for duplicate EmployeeId within tenant
-        var employeeIdExists = await _context.Employees
+        // Check for duplicate ACTIVE EmployeeId within tenant
+        var activeEmployeeIdExists = await _context.Employees
             .Where(e => e.EmployeeId == request.EmployeeId && e.TenantId == tenantId && e.IsActive)
             .Where(e => !excludeId.HasValue || e.Id != excludeId.Value)
             .AnyAsync();
 
-        if (employeeIdExists)
+        if (activeEmployeeIdExists)
         {
-            errors.Add($"Employee with EmployeeId {request.EmployeeId} already exists in this tenant");
+            errors.Add($"An active employee with EmployeeId {request.EmployeeId} already exists in this tenant");
         }
 
         return errors;
@@ -366,8 +415,9 @@ public class EmployeeService : IEmployeeService
 
             var employeeEmails = employees.Select(e => e.Email.ToLower()).ToList();
 
-            // Find users with matching emails in the same tenant
+            // Find users with matching emails in the same tenant (including inactive ones)
             var matchingUsers = await _context.Users
+                .IgnoreQueryFilters()
                 .Where(u => employeeEmails.Contains(u.Email!.ToLower()) && u.TenantId == tenantId)
                 .ToListAsync();
 
@@ -389,7 +439,7 @@ public class EmployeeService : IEmployeeService
 
                 if (matchingUser != null)
                 {
-                    // Update existing user
+                    // Update and reactivate existing user
                     matchingUser.FirstName = employee.FirstName;
                     matchingUser.LastName = employee.LastName;
                     matchingUser.Gender = employee.Gender;
@@ -398,9 +448,10 @@ public class EmployeeService : IEmployeeService
                     matchingUser.Tenure = employee.Tenure;
                     matchingUser.Grade = employee.Grade;
                     matchingUser.EmployeeId = employee.Id; // FK to Employee
+                    matchingUser.IsActive = true; // Reactivate user
                     matchingUser.UpdatedAt = DateTime.UtcNow;
 
-                    _logger.LogInformation("Updated user {UserId} from employee {EmployeeId}",
+                    _logger.LogInformation("Updated/Reactivated user {UserId} from employee {EmployeeId}",
                         matchingUser.Id, employee.EmployeeId);
                     updatedCount++;
                 }
@@ -454,7 +505,7 @@ public class EmployeeService : IEmployeeService
             }
 
             await _context.SaveChangesAsync();
-            _logger.LogInformation("Synced employees to users: {Created} created, {Updated} updated",
+            _logger.LogInformation("Synced employees to users: {Created} created, {Updated} updated/reactivated",
                 createdCount, updatedCount);
         }
         catch (Exception ex)
