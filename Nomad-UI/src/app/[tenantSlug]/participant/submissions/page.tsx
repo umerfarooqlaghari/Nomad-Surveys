@@ -9,6 +9,9 @@ import {
   MagnifyingGlassIcon,
   DocumentTextIcon,
   CalendarIcon,
+  UserIcon,
+  IdentificationIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 interface Submission {
@@ -93,7 +96,7 @@ export default function MySubmissions({ params }: MySubmissionsProps) {
     }
 
     // Sort by date (most recent first)
-    filtered.sort((a, b) => new Date(b.CompletedDate).getTime() - new Date(a.CompletedDate).getTime());
+    filtered.sort((a, b) => new Date(b.CompletedDate || b.CompletedAt || b.SubmittedAt).getTime() - new Date(a.CompletedDate || a.CompletedAt || a.SubmittedAt).getTime());
 
     setFilteredSubmissions(filtered);
   };
@@ -140,7 +143,7 @@ export default function MySubmissions({ params }: MySubmissionsProps) {
           </div>
 
           {/* Submissions List */}
-          <div className="bg-white rounded-lg border border-gray-200">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
             {isLoading ? (
               <div className="px-6 py-12 text-center">
                 <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
@@ -157,64 +160,98 @@ export default function MySubmissions({ params }: MySubmissionsProps) {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                        Subject Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                        Survey Title
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                        Relationship
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                        Submitted Date
-                      </th>
-                      {/* <th className="px-6 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">
-                        Action
-                      </th> */}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredSubmissions.map((submission) => (
-                      <tr key={submission.SubmissionId} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-black">{submission.SubjectName}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-black">{submission.SurveyTitle}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-black capitalize">{submission.RelationshipType}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center text-sm text-black">
-                            <CalendarIcon className="h-4 w-4 mr-2 text-gray-400" />
-                            {submission.CompletedAt || submission.SubmittedAt
-                              ? new Date(submission.CompletedAt || submission.SubmittedAt).toLocaleDateString('en-US', {
+              <>
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                          Subject Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                          Survey Title
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                          Relationship
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                          Submitted Date
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredSubmissions.map((submission) => (
+                        <tr key={submission.SubmissionId} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-black">{submission.SubjectName}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-black">{submission.SurveyTitle}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-black capitalize">{submission.RelationshipType}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center text-sm text-black">
+                              <CalendarIcon className="h-4 w-4 mr-2 text-gray-400" />
+                              {submission.CompletedAt || submission.SubmittedAt || submission.CompletedDate
+                                ? new Date(submission.CompletedAt || submission.SubmittedAt || submission.CompletedDate).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })
+                                : 'N/A'}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-gray-200">
+                  {filteredSubmissions.map((submission) => (
+                    <div key={submission.SubmissionId} className="p-4 space-y-3">
+                      <div>
+                        <h3 className="text-sm font-bold text-black">{submission.SurveyTitle}</h3>
+                        <div className="flex items-center text-xs text-gray-500 mt-1">
+                          <UserIcon className="h-3 w-3 mr-1" />
+                          <span>Subject: {submission.SubjectName}</span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center">
+                          <IdentificationIcon className="h-3 w-3 mr-1 text-gray-400" />
+                          <span className="text-gray-500 mr-1">Role:</span>
+                          <span className="text-black capitalize">{submission.RelationshipType}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <CalendarIcon className="h-3 w-3 mr-1 text-gray-400" />
+                          <span className="text-black">
+                            {submission.CompletedAt || submission.SubmittedAt || submission.CompletedDate
+                              ? new Date(submission.CompletedAt || submission.SubmittedAt || submission.CompletedDate).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
                                 day: 'numeric'
                               })
                               : 'N/A'}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {/* <button
-                            onClick={() => router.push(`/${tenantSlug}/participant/submissions/${submission.SubmissionId}`)}
-                            className="px-4 py-2 border border-gray-300 text-black rounded-lg hover:bg-gray-50 transition-colors"
-                          >
-                            View Summary
-                          </button> */}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="pt-1">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-green-100 text-green-800">
+                          <CheckCircleIcon className="h-3 w-3 mr-1" />
+                          Submitted
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -222,4 +259,3 @@ export default function MySubmissions({ params }: MySubmissionsProps) {
     </ProtectedRoute>
   );
 }
-
