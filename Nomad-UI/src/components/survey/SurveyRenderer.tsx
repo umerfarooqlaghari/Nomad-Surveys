@@ -211,24 +211,25 @@ export default function SurveyRenderer({
 
       {/* Navigation */}
       <div className={showHeader ? "bg-white rounded-lg border border-gray-200 p-4" : "p-4"}>
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-2">
           <button
             onClick={handlePrevious}
             disabled={currentPageIndex === 0}
-            className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 sm:px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base whitespace-nowrap"
           >
-            ← Previous
+            ← <span className="hidden sm:inline">Previous</span>
+            <span className="sm:hidden">Prev</span>
           </button>
 
-          {/* Page Indicators */}
-          <div className="flex gap-2">
+          {/* Page Indicators - Hidden on mobile, shown on desktop */}
+          <div className="hidden sm:flex gap-2">
             {activePages.map((_, index) => {
               if (index < currentPageIndex - 2 || index > currentPageIndex + 2) return null;
               return (
                 <button
                   key={index}
                   onClick={() => setCurrentPageIndex(index)}
-                  className={`w-8 h-8 rounded-full transition-colors ${index === currentPageIndex
+                  className={`w-8 h-8 rounded-full transition-colors text-sm ${index === currentPageIndex
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                     }`}
@@ -239,11 +240,16 @@ export default function SurveyRenderer({
             })}
           </div>
 
+          {/* Page Counter for Mobile */}
+          <div className="sm:hidden text-xs font-medium text-gray-500">
+            Page {displayPageIndex} of {totalDisplayPages}
+          </div>
+
           {currentPageIndex < activePages.length - 1 ? (
             <button
               onClick={handleNext}
               disabled={!isPageComplete()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base whitespace-nowrap"
             >
               Next →
             </button>
@@ -251,9 +257,9 @@ export default function SurveyRenderer({
             <button
               onClick={onSubmit}
               disabled={!isPageComplete() || isPreview}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 sm:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base whitespace-nowrap"
             >
-              {isPreview ? 'Preview Mode' : 'Submit'}
+              {isPreview ? 'Preview' : 'Submit'}
             </button>
           )}
         </div>
