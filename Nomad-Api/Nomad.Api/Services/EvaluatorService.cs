@@ -16,20 +16,22 @@ public class EvaluatorService : IEvaluatorService
     private readonly ILogger<EvaluatorService> _logger;
     private readonly IAuthenticationService _authenticationService;
     private readonly IRelationshipService _relationshipService;
-    private const string DefaultPassword = "Password@123";
+    private readonly IPasswordGenerator _passwordGenerator;
 
     public EvaluatorService(
         NomadSurveysDbContext context,
         IMapper mapper,
         ILogger<EvaluatorService> logger,
         IAuthenticationService authenticationService,
-        IRelationshipService relationshipService)
+        IRelationshipService relationshipService,
+        IPasswordGenerator passwordGenerator)
     {
         _context = context;
         _mapper = mapper;
         _logger = logger;
         _authenticationService = authenticationService;
         _relationshipService = relationshipService;
+        _passwordGenerator = passwordGenerator;
     }
 
     public async Task<List<EvaluatorListResponse>> GetEvaluatorsAsync(Guid? tenantId = null)
@@ -362,7 +364,7 @@ public class EvaluatorService : IEvaluatorService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = tenantId

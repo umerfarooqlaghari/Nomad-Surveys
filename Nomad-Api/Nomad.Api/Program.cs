@@ -128,6 +128,7 @@ builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
 builder.Services.AddScoped<Nomad.Api.Repository.ReportAnalyticsRepository>();
 builder.Services.AddScoped<IExcelReportService, ExcelReportService>();
 builder.Services.AddScoped<IExcelReportRepository, ExcelReportRepository>(); // Added registration for ExcelReportRepository
+builder.Services.AddScoped<IPasswordGenerator, PasswordGenerator>();
 builder.Services.AddHostedService<ReminderBackgroundService>();
 
 // Add CORS

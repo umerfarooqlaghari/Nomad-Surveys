@@ -57,6 +57,25 @@ export default function SurveyRenderer({
     setCurrentPageIndex(0);
   }, [activePages.length, relationshipType]);
 
+  // Calculate progress metrics
+  const progressMetrics = React.useMemo(() => {
+    // 1. Get all visible questions across all active pages
+    const allVisibleQuestions = activePages.flatMap(page => getVisibleQuestionsForPage(page.questions));
+    const total = allVisibleQuestions.length;
+
+    // 2. Count answered questions
+    const answered = allVisibleQuestions.filter(q => {
+      const answer = responses[q.id];
+      if (answer === undefined || answer === null || answer === '') return false;
+      if (Array.isArray(answer) && answer.length === 0) return false;
+      return true;
+    }).length;
+
+    const percentage = total > 0 ? Math.round((answered / total) * 100) : 0;
+
+    return { total, answered, percentage };
+  }, [activePages, responses]);
+
   const currentPage = activePages[currentPageIndex];
 
   // Helper to get questions for the current page
@@ -130,6 +149,28 @@ export default function SurveyRenderer({
           )}
         </div>
       )}
+
+      {/* Progress Bar Area */}
+      <div className={`${showHeader ? "bg-white rounded-lg border border-gray-200 p-6 mb-6" : "bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm sticky top-0 z-10"}`}>
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium text-gray-700">Survey Progress</span>
+          <span className="text-sm font-semibold text-blue-600">{progressMetrics.percentage}% Complete</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div
+            className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progressMetrics.percentage}%` }}
+          ></div>
+        </div>
+        <div className="mt-2 text-[11px] text-gray-500 flex justify-between">
+          <span>{progressMetrics.answered} of {progressMetrics.total} questions answered</span>
+          {progressMetrics.percentage === 100 && (
+            <span className="text-green-600 font-medium flex items-center">
+              Ready to submit!
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* Page Content */}
       <div className={showHeader ? "bg-white rounded-lg border border-gray-200 p-6 mb-6" : "mb-6"}>

@@ -18,9 +18,10 @@ interface Evaluation {
   SubjectName: string;
   SurveyTitle: string;
   Status: 'Pending' | 'InProgress' | 'Completed';
-  AssignedDate: string;
-  CompletedDate?: string;
+  AssignedAt: string;
+  CompletedAt?: string;
   DueDate?: string;
+  RelationshipType: string;
 }
 
 type FilterStatus = 'All' | 'Pending' | 'InProgress' | 'Completed';
@@ -118,7 +119,7 @@ export default function AssignedEvaluations({ params }: AssignedEvaluationsProps
           return a.Status.localeCompare(b.Status);
         case 'date':
         default:
-          return new Date(b.AssignedDate).getTime() - new Date(a.AssignedDate).getTime();
+          return new Date(b.AssignedAt).getTime() - new Date(a.AssignedAt).getTime();
       }
     });
 
@@ -257,6 +258,12 @@ export default function AssignedEvaluations({ params }: AssignedEvaluationsProps
                         Survey Title
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                        <div className="flex flex-col">
+                          <span>Relationship</span>
+                          <span className="text-[10px] text-gray-500 normal-case font-normal">Relationship with you</span>
+                        </div>
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                         Status
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
@@ -275,6 +282,9 @@ export default function AssignedEvaluations({ params }: AssignedEvaluationsProps
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-black">{evaluation.SurveyTitle}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-black capitalize">{evaluation.RelationshipType}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getStatusBadge(evaluation.Status)}

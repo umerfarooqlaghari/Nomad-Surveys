@@ -25,6 +25,7 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [showVerifyOtpModal, setShowVerifyOtpModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [resetTenantSlug, setResetTenantSlug] = useState('');
 
   const { login, superAdminLogin } = useAuth();
 
@@ -36,16 +37,16 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
     try {
       if (isSuperAdmin) {
         await superAdminLogin({
-          email,
+          email: email.trim(),
           password,
           rememberMe,
         });
         toast.success('Login successful! Welcome back.');
       } else {
         await login({
-          email,
+          email: email.trim(),
           password,
-          tenantSlug,
+          tenantSlug: tenantSlug.trim(),
           rememberMe,
         });
         toast.success('Login successful! Welcome back.');
@@ -61,17 +62,12 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
 
   const handleForgotPasswordClick = (e: React.MouseEvent) => {
     e.preventDefault();
-
-    if (!isSuperAdmin && !tenantSlug) {
-      toast.error('Please enter your Company/Tenant ID first');
-      return;
-    }
-
     setShowForgotPasswordModal(true);
   };
 
-  const handleOtpSent = (emailAddress: string) => {
+  const handleOtpSent = (emailAddress: string, slug: string) => {
     setResetEmail(emailAddress);
+    setResetTenantSlug(slug);
     setShowVerifyOtpModal(true);
   };
 
@@ -130,7 +126,7 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
 
             {/* Tagline */}
             <h1 className={styles.tagline}>
-Insight-driven decisions for people and organizations
+              Insight-driven decisions for people and organizations
             </h1>
 
             {/* Description */}
@@ -140,174 +136,174 @@ Insight-driven decisions for people and organizations
           </div>
         </div>
 
-      {/* Right Side - Login Form */}
-      <div className={styles.rightSide}>
-        <div className={styles.formContainer}>
-          <div className={styles.header}>
-            <h2>Sign In</h2>
-            <p>
-              {isSuperAdmin
-                ? 'Access the SuperAdmin dashboard'
-                : 'Access your account dashboard'
-              }
-            </p>
-          </div>
-
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <div className={styles.formFields}>
-            <div className={styles.fieldGroup}>
-              <label htmlFor="email" className={styles.label}>
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                className={styles.input}
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+        {/* Right Side - Login Form */}
+        <div className={styles.rightSide}>
+          <div className={styles.formContainer}>
+            <div className={styles.header}>
+              <h2>Sign In</h2>
+              <p>
+                {isSuperAdmin
+                  ? 'Access the SuperAdmin dashboard'
+                  : 'Access your account dashboard'
+                }
+              </p>
             </div>
 
-            <div className={styles.fieldGroup}>
-              <label htmlFor="password" className={styles.label}>
-                Password
-              </label>
-              <div className={styles.passwordContainer}>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  required
-                  className={styles.passwordInput}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+            <form className={styles.form} onSubmit={handleSubmit}>
+              <div className={styles.formFields}>
+                <div className={styles.fieldGroup}>
+                  <label htmlFor="email" className={styles.label}>
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    className={styles.input}
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label htmlFor="password" className={styles.label}>
+                    Password
+                  </label>
+                  <div className={styles.passwordContainer}>
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      required
+                      className={styles.passwordInput}
+                      placeholder="Password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className={styles.passwordToggle}
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                        </svg>
+                      ) : (
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {!isSuperAdmin && (
+                  <div className={styles.fieldGroup}>
+                    <label htmlFor="tenantSlug" className={styles.label}>
+                      Company Code
+                    </label>
+                    <input
+                      id="tenantSlug"
+                      name="tenantSlug"
+                      type="text"
+                      required
+                      className={styles.input}
+                      placeholder="Company Code"
+                      value={tenantSlug}
+                      onChange={(e) => setTenantSlug(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className={styles.rememberForgot}>
+                <div className={styles.rememberContainer}>
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className={styles.checkbox}
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <label htmlFor="remember-me" className={styles.checkboxLabel}>
+                    Remember me
+                  </label>
+                </div>
+                <div>
+                  <a
+                    href="#"
+                    className={styles.forgotLink}
+                    onClick={handleForgotPasswordClick}
+                  >
+                    Reset Password?
+                  </a>
+                </div>
+              </div>
+
+              {error && (
+                <div className={styles.errorMessage}>
+                  <div className={styles.errorText}>{error}</div>
+                </div>
+              )}
+
+              <div>
                 <button
-                  type="button"
-                  className={styles.passwordToggle}
-                  onClick={() => setShowPassword(!showPassword)}
+                  type="submit"
+                  disabled={isLoading}
+                  className={styles.submitButton}
                 >
-                  {showPassword ? (
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                    </svg>
-                  ) : (
-                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  )}
+                  {isLoading ? 'Signing in...' : 'Sign In'}
                 </button>
               </div>
-            </div>
 
-            {!isSuperAdmin && (
-              <div className={styles.fieldGroup}>
-                <label htmlFor="tenantSlug" className={styles.label}>
-                  Company Code
-                </label>
-                <input
-                  id="tenantSlug"
-                  name="tenantSlug"
-                  type="text"
-                  required
-                  className={styles.input}
-                  placeholder="Company Code"
-                  value={tenantSlug}
-                  onChange={(e) => setTenantSlug(e.target.value)}
-                />
-              </div>
-            )}
+              {!isSuperAdmin && (
+                <div className={styles.linkSection}>
+                  <p className={styles.linkText}>
+                    Need SuperAdmin access?{' '}
+                    <Link href="/superadmin/login" className={styles.link}>
+                      SuperAdmin Login
+                    </Link>
+                  </p>
+                </div>
+              )}
+
+              {isSuperAdmin && (
+                <div className={styles.linkSection}>
+                  <p className={styles.linkText}>
+                    Regular user?{' '}
+                    <Link href="/login" className={styles.link}>
+                      User Login
+                    </Link>
+                  </p>
+                </div>
+              )}
+            </form>
           </div>
-
-          <div className={styles.rememberForgot}>
-            <div className={styles.rememberContainer}>
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className={styles.checkbox}
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
-              <label htmlFor="remember-me" className={styles.checkboxLabel}>
-                Remember me
-              </label>
-            </div>
-            <div>
-              <a
-                href="#"
-                className={styles.forgotLink}
-                onClick={handleForgotPasswordClick}
-              >
-                Reset Password?
-              </a>
-            </div>
-          </div>
-
-          {error && (
-            <div className={styles.errorMessage}>
-              <div className={styles.errorText}>{error}</div>
-            </div>
-          )}
-
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={styles.submitButton}
-            >
-              {isLoading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </div>
-
-          {!isSuperAdmin && (
-            <div className={styles.linkSection}>
-              <p className={styles.linkText}>
-                Need SuperAdmin access?{' '}
-                <Link href="/superadmin/login" className={styles.link}>
-                  SuperAdmin Login
-                </Link>
-              </p>
-            </div>
-          )}
-
-          {isSuperAdmin && (
-            <div className={styles.linkSection}>
-              <p className={styles.linkText}>
-                Regular user?{' '}
-                <Link href="/login" className={styles.link}>
-                  User Login
-                </Link>
-              </p>
-            </div>
-          )}
-        </form>
         </div>
       </div>
-    </div>
 
-    {/* Password Reset Modals */}
-    <ForgotPasswordModal
-      isOpen={showForgotPasswordModal}
-      onClose={() => setShowForgotPasswordModal(false)}
-      onOtpSent={handleOtpSent}
-      tenantSlug={isSuperAdmin ? '' : tenantSlug}
-    />
+      {/* Password Reset Modals */}
+      <ForgotPasswordModal
+        isOpen={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        onOtpSent={handleOtpSent}
+        initialTenantSlug={isSuperAdmin ? '' : tenantSlug.trim()}
+      />
 
-    <VerifyOtpModal
-      isOpen={showVerifyOtpModal}
-      onClose={() => setShowVerifyOtpModal(false)}
-      onSuccess={handlePasswordResetSuccess}
-      email={resetEmail}
-      tenantSlug={isSuperAdmin ? '' : tenantSlug}
-    />
+      <VerifyOtpModal
+        isOpen={showVerifyOtpModal}
+        onClose={() => setShowVerifyOtpModal(false)}
+        onSuccess={handlePasswordResetSuccess}
+        email={resetEmail}
+        tenantSlug={isSuperAdmin ? '' : resetTenantSlug}
+      />
     </>
   );
 }

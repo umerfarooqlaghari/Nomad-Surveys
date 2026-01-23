@@ -15,20 +15,22 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
     private readonly ILogger<SubjectEvaluatorService> _logger;
     private readonly ISubjectService _subjectService;
     private readonly IEvaluatorService _evaluatorService;
-    private const string DefaultPassword = "Password@123";
+    private readonly IPasswordGenerator _passwordGenerator;
 
     public SubjectEvaluatorService(
         NomadSurveysDbContext context,
         IMapper mapper,
         ILogger<SubjectEvaluatorService> logger,
         ISubjectService subjectService,
-        IEvaluatorService evaluatorService)
+        IEvaluatorService evaluatorService,
+        IPasswordGenerator passwordGenerator)
     {
         _context = context;
         _mapper = mapper;
         _logger = logger;
         _subjectService = subjectService;
         _evaluatorService = evaluatorService;
+        _passwordGenerator = passwordGenerator;
     }
 
     public async Task<AssignmentResponse> AssignEvaluatorsToSubjectAsync(Guid subjectId, AssignEvaluatorsToSubjectRequest request)
@@ -76,7 +78,7 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = subject.TenantId
@@ -230,7 +232,7 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = evaluator.TenantId

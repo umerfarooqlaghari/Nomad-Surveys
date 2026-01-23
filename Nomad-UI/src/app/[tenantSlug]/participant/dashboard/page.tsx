@@ -26,6 +26,7 @@ interface PendingEvaluation {
   SurveyTitle: string;
   DueDate?: string;
   Status: string;
+  RelationshipType: string;
 }
 
 interface ParticipantDashboardProps {
@@ -194,6 +195,9 @@ export default function ParticipantDashboard({ params }: ParticipantDashboardPro
                         <h3 className="text-sm font-semibold text-black">{evaluation.SurveyTitle}</h3>
                         <p className="text-sm text-black mt-1">
                           Subject: <span className="font-medium text-black">{evaluation.SubjectName}</span>
+                        </p>
+                        <p className="text-sm text-black mt-1">
+                          Relationship: <span className="font-medium text-black capitalize">{evaluation.RelationshipType}</span>
                         </p>
                         {evaluation.DueDate && (
                           <p className="text-xs text-black mt-1">

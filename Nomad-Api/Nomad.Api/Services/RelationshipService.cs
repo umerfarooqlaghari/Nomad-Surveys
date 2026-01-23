@@ -3,6 +3,7 @@ using Nomad.Api.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Nomad.Api.DTOs.Request;
+using Nomad.Api.Services.Interfaces;
 
 namespace Nomad.Api.Services;
 
@@ -71,12 +72,13 @@ public class RelationshipService : IRelationshipService
 {
     private readonly NomadSurveysDbContext _context;
     private readonly ILogger<RelationshipService> _logger;
-    private const string DefaultPassword = "Password@123";
+    private readonly IPasswordGenerator _passwordGenerator;
 
-    public RelationshipService(NomadSurveysDbContext context, ILogger<RelationshipService> logger)
+    public RelationshipService(NomadSurveysDbContext context, ILogger<RelationshipService> logger, IPasswordGenerator passwordGenerator)
     {
         _context = context;
         _logger = logger;
+        _passwordGenerator = passwordGenerator;
     }
 
     public async Task<RelationshipResult> CreateSubjectEvaluatorRelationshipsAsync(
@@ -273,7 +275,7 @@ public class RelationshipService : IRelationshipService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = tenantId
@@ -568,7 +570,7 @@ public class RelationshipService : IRelationshipService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = tenantId
@@ -833,7 +835,7 @@ public class RelationshipService : IRelationshipService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = tenantId
@@ -1102,7 +1104,7 @@ public class RelationshipService : IRelationshipService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = tenantId

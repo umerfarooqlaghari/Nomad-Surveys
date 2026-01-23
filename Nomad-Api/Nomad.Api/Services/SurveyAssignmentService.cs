@@ -14,18 +14,20 @@ public class SurveyAssignmentService : ISurveyAssignmentService
     private readonly ILogger<SurveyAssignmentService> _logger;
     private readonly IEmailService _emailService;
     private readonly IConfiguration _configuration;
-    private const string DefaultPassword = "Password@123";
+    private readonly IPasswordGenerator _passwordGenerator;
 
     public SurveyAssignmentService(
         NomadSurveysDbContext context,
         ILogger<SurveyAssignmentService> logger,
         IEmailService emailService,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IPasswordGenerator passwordGenerator)
     {
         _context = context;
         _logger = logger;
         _emailService = emailService;
         _configuration = configuration;
+        _passwordGenerator = passwordGenerator;
     }
 
     public async Task<SurveyAssignmentResponse> AssignSurveyToRelationshipsAsync(Guid surveyId, AssignSurveyRequest request)
@@ -295,7 +297,7 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                             Id = Guid.NewGuid(),
                             EmployeeId = subjectEmployee.Id,
                             Employee = subjectEmployee, // Link for safety
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(subjectEmployee.Email)),
                             IsActive = true,
                             CreatedAt = now,
                             TenantId = survey.TenantId
@@ -319,7 +321,7 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                             Id = Guid.NewGuid(),
                             EmployeeId = evaluatorEmployee.Id,
                             Employee = evaluatorEmployee, // Link for safety
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(evaluatorEmployee.Email)),
                             IsActive = true,
                             CreatedAt = now,
                             TenantId = survey.TenantId
@@ -678,8 +680,9 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                 try
                 {
                     var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:3000";
-                    var isDefaultPassword = BCrypt.Net.BCrypt.Verify(DefaultPassword, data.PasswordHash);
-                    var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
+                    var generatedPassword = _passwordGenerator.Generate(email);
+                    var isDefaultPassword = BCrypt.Net.BCrypt.Verify(generatedPassword, data.PasswordHash);
+                    var passwordDisplay = isDefaultPassword ? generatedPassword : "omitted for privacy";
                     
                     if (data.Count == 1)
                     {

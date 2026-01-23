@@ -25,95 +25,100 @@
     <!-- Footer -->
     <div class="page-footer">
         <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
-        <span class="footer-text">© 2023 Ascend People Consulting Pvt. Ltd, a firm registered in Pakistan. All rights reserved.</span>
-        <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span></div>
+        <div class="page-number">Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+        </div>
     </div>
 </div>
 
 <style>
     /* Feedback Section Styles - inherits from main .page styles in ReportTemplate.html */
 
-    
+
     .banner-content {
         height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
         text-align: center;
-        }
+    }
 
     .banner-content h1 {
         font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif;
         font-size: 48px;
         font-weight: 700;
         line-height: 1.25;
-        color: var(--primary-color);  
+        color: var(--primary-color);
         margin: 0;
         letter-spacing: -0.5px;
-        }
+    }
 
- .page-footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 20mm;
-            padding: 5mm 15mm;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 10px;
-            border-top: 1px solid var(--border-color);
-            z-index: 10;
+    .page-footer {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 20mm;
+        padding: 5mm 15mm;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 10px;
+        border-top: 1px solid var(--border-color);
+        z-index: 10;
+    }
+
+    .ascend-logo {
+        height: 12mm;
+        width: auto;
+        object-fit: contain;
+    }
+
+    /* Print/PDF specific footer styles */
+    @media print {
+        .page-footer {
+            height: 12mm;
+            padding: 2mm 15mm;
+            box-sizing: border-box;
         }
 
         .ascend-logo {
-            height: 12mm;
-            width: auto;
-            object-fit: contain;
-        }
-
-        /* Print/PDF specific footer styles */
-        @media print {
-            .page-footer {
-                height: 12mm;
-                padding: 2mm 15mm;
-                box-sizing: border-box;
-            }
-            .ascend-logo {
-                height: 8mm;
-            }
-            .footer-text {
-                font-size: 7pt;
-            }
-            .page-number {
-                font-size: 7pt;
-            }
-            .page-content {
-                padding-bottom: 15mm;
-            }
-            /* Ensure consistent horizontal padding for all page content in PDF */
-            .page-content,
-            .page-content.respondent-summary-page {
-                padding-left: 15mm !important;
-                padding-right: 15mm !important;
-                box-sizing: border-box;
-                width: 100%;
-            }
+            height: 8mm;
         }
 
         .footer-text {
-            font-size: 8pt;
-            color: var(--dark-gray);
-            line-height: 1.4;
+            font-size: 7pt;
         }
 
         .page-number {
-            margin-left: auto;
-            font-size: 8pt;
-            color: var(--dark-gray);
-            white-space: nowrap;
+            font-size: 7pt;
         }
+
+        .page-content {
+            padding-bottom: 15mm;
+        }
+
+        /* Ensure consistent horizontal padding for all page content in PDF */
+        .page-content,
+        .page-content.respondent-summary-page {
+            padding-left: 15mm !important;
+            padding-right: 15mm !important;
+            box-sizing: border-box;
+            width: 100%;
+        }
+    }
+
+    .footer-text {
+        font-size: 8pt;
+        color: var(--dark-gray);
+        line-height: 1.4;
+    }
+
+    .page-number {
+        margin-left: auto;
+        font-size: 8pt;
+        color: var(--dark-gray);
+        white-space: nowrap;
+    }
 
     .feedback-main-title {
         font-size: 22pt;
@@ -210,12 +215,13 @@
         margin-bottom: 4px;
     }
 
-     .page-content {
-            padding: 45mm 15mm 25mm 15mm; /* Top padding for header, bottom for footer */
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
+    .page-content {
+        padding: 45mm 15mm 25mm 15mm;
+        /* Top padding for header, bottom for footer */
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
 
 
     /* Page Break Handling for Print/PDF */
@@ -233,4 +239,3 @@
         }
     }
 </style>
-

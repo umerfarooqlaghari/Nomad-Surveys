@@ -226,7 +226,7 @@ class TenantService {
       errors.push('Organization name is required');
     }
     if (!data.Slug.trim()) {
-      errors.push('Tenant slug is required');
+      errors.push('Company Code is required');
     }
 
     // Validate company info
@@ -254,7 +254,7 @@ class TenantService {
 
       const filledFields = [hasFirstName, hasLastName, hasEmail, hasPhoneNumber];
       const filledCount = filledFields.filter(Boolean).length;
-      
+
       // "All or Nothing" rule
       const allEmpty = filledCount === 0 && !hasPassword;
       const allFilled = filledCount === 4 && (isEditMode || hasPassword);

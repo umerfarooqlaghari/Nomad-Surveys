@@ -18,6 +18,7 @@ interface Submission {
   CompletedDate: string;
   CompletedAt: string;
   SubmittedAt: string;
+  RelationshipType: string;
 }
 
 interface MySubmissionsProps {
@@ -167,6 +168,9 @@ export default function MySubmissions({ params }: MySubmissionsProps) {
                         Survey Title
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                        Relationship
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
                         Submitted Date
                       </th>
                       {/* <th className="px-6 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">
@@ -182,6 +186,9 @@ export default function MySubmissions({ params }: MySubmissionsProps) {
                         </td>
                         <td className="px-6 py-4">
                           <div className="text-sm text-black">{submission.SurveyTitle}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-black capitalize">{submission.RelationshipType}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center text-sm text-black">

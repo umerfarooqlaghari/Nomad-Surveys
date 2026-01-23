@@ -16,20 +16,22 @@ public class EmployeeService : IEmployeeService
     private readonly ILogger<EmployeeService> _logger;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<TenantRole> _roleManager;
-    private const string DefaultPassword = "Password@123";
+    private readonly IPasswordGenerator _passwordGenerator;
 
     public EmployeeService(
         NomadSurveysDbContext context,
         IMapper mapper,
         ILogger<EmployeeService> logger,
         UserManager<ApplicationUser> userManager,
-        RoleManager<TenantRole> roleManager)
+        RoleManager<TenantRole> roleManager,
+        IPasswordGenerator passwordGenerator)
     {
         _context = context;
         _mapper = mapper;
         _logger = logger;
         _userManager = userManager;
         _roleManager = roleManager;
+        _passwordGenerator = passwordGenerator;
     }
 
     public async Task<List<EmployeeListResponse>> GetEmployeesAsync(
@@ -477,7 +479,7 @@ public class EmployeeService : IEmployeeService
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    var result = await _userManager.CreateAsync(newUser, DefaultPassword);
+                    var result = await _userManager.CreateAsync(newUser, _passwordGenerator.Generate(employee.Email));
                     if (result.Succeeded)
                     {
                         // Assign Participant role
