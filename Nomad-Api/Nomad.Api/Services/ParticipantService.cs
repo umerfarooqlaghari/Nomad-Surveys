@@ -101,7 +101,8 @@ public class ParticipantService : IParticipantService
                     SubjectName = $"{a.SubjectEvaluator.Subject.Employee.FirstName} {a.SubjectEvaluator.Subject.Employee.LastName}",
                     SurveyTitle = a.Survey.Title,
                     DueDate = null, // Can be added to SubjectEvaluatorSurvey entity if needed
-                    Status = submissions.FirstOrDefault(s => s.SubjectEvaluatorSurveyId == a.Id)?.Status ?? SurveySubmissionStatus.Pending
+                    Status = submissions.FirstOrDefault(s => s.SubjectEvaluatorSurveyId == a.Id)?.Status ?? SurveySubmissionStatus.Pending,
+                    RelationshipType = a.SubjectEvaluator.Relationship
                 })
                 .ToList();
 

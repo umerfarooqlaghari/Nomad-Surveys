@@ -57,6 +57,25 @@ export default function SurveyRenderer({
     setCurrentPageIndex(0);
   }, [activePages.length, relationshipType]);
 
+  // Calculate progress metrics
+  const progressMetrics = React.useMemo(() => {
+    // 1. Get all visible questions across all active pages
+    const allVisibleQuestions = activePages.flatMap(page => getVisibleQuestionsForPage(page.questions));
+    const total = allVisibleQuestions.length;
+
+    // 2. Count answered questions
+    const answered = allVisibleQuestions.filter(q => {
+      const answer = responses[q.id];
+      if (answer === undefined || answer === null || answer === '') return false;
+      if (Array.isArray(answer) && answer.length === 0) return false;
+      return true;
+    }).length;
+
+    const percentage = total > 0 ? Math.round((answered / total) * 100) : 0;
+
+    return { total, answered, percentage };
+  }, [activePages, responses]);
+
   const currentPage = activePages[currentPageIndex];
 
   // Helper to get questions for the current page
@@ -131,6 +150,28 @@ export default function SurveyRenderer({
         </div>
       )}
 
+      {/* Progress Bar Area */}
+      <div className={`${showHeader ? "bg-white rounded-lg border border-gray-200 p-6 mb-6" : "bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm sticky top-0 z-10"}`}>
+        <div className="flex justify-between items-center mb-2">
+          <span className="text-sm font-medium text-gray-700">Survey Progress</span>
+          <span className="text-sm font-semibold text-blue-600">{progressMetrics.percentage}% Complete</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div
+            className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progressMetrics.percentage}%` }}
+          ></div>
+        </div>
+        <div className="mt-2 text-[11px] text-gray-500 flex justify-between">
+          <span>{progressMetrics.answered} of {progressMetrics.total} questions answered</span>
+          {progressMetrics.percentage === 100 && (
+            <span className="text-green-600 font-medium flex items-center">
+              Ready to submit!
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* Page Content */}
       <div className={showHeader ? "bg-white rounded-lg border border-gray-200 p-6 mb-6" : "mb-6"}>
         {/* Page Header */}
@@ -170,24 +211,25 @@ export default function SurveyRenderer({
 
       {/* Navigation */}
       <div className={showHeader ? "bg-white rounded-lg border border-gray-200 p-4" : "p-4"}>
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center gap-2">
           <button
             onClick={handlePrevious}
             disabled={currentPageIndex === 0}
-            className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 sm:px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base whitespace-nowrap"
           >
-            ← Previous
+            ← <span className="hidden sm:inline">Previous</span>
+            <span className="sm:hidden">Prev</span>
           </button>
 
-          {/* Page Indicators */}
-          <div className="flex gap-2">
+          {/* Page Indicators - Hidden on mobile, shown on desktop */}
+          <div className="hidden sm:flex gap-2">
             {activePages.map((_, index) => {
               if (index < currentPageIndex - 2 || index > currentPageIndex + 2) return null;
               return (
                 <button
                   key={index}
                   onClick={() => setCurrentPageIndex(index)}
-                  className={`w-8 h-8 rounded-full transition-colors ${index === currentPageIndex
+                  className={`w-8 h-8 rounded-full transition-colors text-sm ${index === currentPageIndex
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                     }`}
@@ -198,11 +240,16 @@ export default function SurveyRenderer({
             })}
           </div>
 
+          {/* Page Counter for Mobile */}
+          <div className="sm:hidden text-xs font-medium text-gray-500">
+            Page {displayPageIndex} of {totalDisplayPages}
+          </div>
+
           {currentPageIndex < activePages.length - 1 ? (
             <button
               onClick={handleNext}
               disabled={!isPageComplete()}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base whitespace-nowrap"
             >
               Next →
             </button>
@@ -210,9 +257,9 @@ export default function SurveyRenderer({
             <button
               onClick={onSubmit}
               disabled={!isPageComplete() || isPreview}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 sm:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base whitespace-nowrap"
             >
-              {isPreview ? 'Preview Mode' : 'Submit'}
+              {isPreview ? 'Preview' : 'Submit'}
             </button>
           )}
         </div>

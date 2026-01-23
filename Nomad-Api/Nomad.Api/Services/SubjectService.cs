@@ -16,20 +16,22 @@ public class SubjectService : ISubjectService
     private readonly ILogger<SubjectService> _logger;
     private readonly IAuthenticationService _authenticationService;
     private readonly IRelationshipService _relationshipService;
-    private const string DefaultPassword = "Password@123";
+    private readonly IPasswordGenerator _passwordGenerator;
 
     public SubjectService(
         NomadSurveysDbContext context,
         IMapper mapper,
         ILogger<SubjectService> logger,
         IAuthenticationService authenticationService,
-        IRelationshipService relationshipService)
+        IRelationshipService relationshipService,
+        IPasswordGenerator passwordGenerator)
     {
         _context = context;
         _mapper = mapper;
         _logger = logger;
         _authenticationService = authenticationService;
         _relationshipService = relationshipService;
+        _passwordGenerator = passwordGenerator;
     }
 
     public async Task<List<SubjectListResponse>> GetSubjectsAsync(Guid? tenantId = null)
@@ -227,7 +229,7 @@ public class SubjectService : ISubjectService
             {
                 Id = Guid.NewGuid(),
                 EmployeeId = employee.Id,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 TenantId = tenantId
@@ -416,7 +418,7 @@ public class SubjectService : ISubjectService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = tenantId

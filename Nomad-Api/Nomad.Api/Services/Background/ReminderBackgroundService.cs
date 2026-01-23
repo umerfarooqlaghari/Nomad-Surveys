@@ -10,7 +10,6 @@ public class ReminderBackgroundService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<ReminderBackgroundService> _logger;
     private readonly IConfiguration _configuration;
-    private const string DefaultPassword = "Password@123";
 
     public ReminderBackgroundService(
         IServiceProvider serviceProvider,
@@ -53,7 +52,7 @@ public class ReminderBackgroundService : BackgroundService
         {
             var context = scope.ServiceProvider.GetRequiredService<NomadSurveysDbContext>();
             var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-            var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:3000";
+            var frontendUrl = _configuration["FrontendUrl"] ?? "https://nomad-surveys.vercel.app/";
 
             // 1. Identify pending assignments that need reminders
             // Criteria:
@@ -122,17 +121,17 @@ public class ReminderBackgroundService : BackgroundService
                 var tenantSlug = assignments.First().Tenant.Slug;
                 var passwordHash = assignments.First().SubjectEvaluator.Evaluator.PasswordHash;
 
-                var isDefaultPassword = BCrypt.Net.BCrypt.Verify(DefaultPassword, passwordHash);
-                var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
+                var passwordGenerator = scope.ServiceProvider.GetRequiredService<IPasswordGenerator>();
+                var generatedPassword = passwordGenerator.Generate(evaluatorEmail);
+                var isDefaultPassword = BCrypt.Net.BCrypt.Verify(generatedPassword, passwordHash);
+                var passwordDisplay = isDefaultPassword ? generatedPassword : "omitted for privacy";
                 
                 var dashboardLink = $"{frontendUrl}/{tenantSlug}/participant/dashboard";
 
                 var pendingItems = assignments.Select(a => (
                     FormTitle: a.Survey.Title,
                     SubjectName: a.SubjectEvaluator.Subject.Employee.FullName,
-                    // Link: $"{frontendUrl}/{tenantSlug}/participant/forms/{a.Id}"
-                                        Link: $"{frontendUrl}"
-
+                    Link: $"{frontendUrl}/{tenantSlug}/participant/forms/{a.Id}"
                 )).ToList();
 
                 // Send Email

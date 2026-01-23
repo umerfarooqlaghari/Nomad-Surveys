@@ -9,17 +9,18 @@ import styles from './ForgotPasswordModal.module.css';
 interface ForgotPasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onOtpSent: (email: string) => void;
-  tenantSlug: string;
+  onOtpSent: (email: string, tenantSlug: string) => void;
+  initialTenantSlug: string;
 }
 
 export default function ForgotPasswordModal({
   isOpen,
   onClose,
   onOtpSent,
-  tenantSlug,
+  initialTenantSlug,
 }: ForgotPasswordModalProps) {
   const [email, setEmail] = useState('');
+  const [localTenantSlug, setLocalTenantSlug] = useState(initialTenantSlug);
   const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -29,6 +30,11 @@ export default function ForgotPasswordModal({
 
     if (!email) {
       toast.error('Please enter your email address');
+      return;
+    }
+
+    if (!localTenantSlug.trim()) {
+      toast.error('Please enter your Company Code');
       return;
     }
 
@@ -42,11 +48,13 @@ export default function ForgotPasswordModal({
     setIsLoading(true);
 
     try {
-      const result = await emailService.sendPasswordResetOtp(tenantSlug, email);
+      const trimmedEmail = email.trim();
+      const trimmedSlug = localTenantSlug.trim();
+      const result = await emailService.sendPasswordResetOtp(trimmedSlug, trimmedEmail);
 
       if (result.success) {
         toast.success(result.message);
-        onOtpSent(email);
+        onOtpSent(trimmedEmail, trimmedSlug);
         onClose();
       } else {
         toast.error(result.error || 'Failed to send OTP');
@@ -84,6 +92,22 @@ export default function ForgotPasswordModal({
           <p className={styles.description}>
             Enter your email address and we&apos;ll send you a verification code to reset your password.
           </p>
+
+          <div className={styles.fieldGroup}>
+            <label htmlFor="localTenantSlug" className={styles.label}>
+              Company Code
+            </label>
+            <input
+              id="localTenantSlug"
+              type="text"
+              required
+              className={styles.input}
+              placeholder="Enter Company Code"
+              value={localTenantSlug}
+              onChange={(e) => setLocalTenantSlug(e.target.value)}
+              disabled={isLoading}
+            />
+          </div>
 
           <div className={styles.fieldGroup}>
             <label htmlFor="email" className={styles.label}>

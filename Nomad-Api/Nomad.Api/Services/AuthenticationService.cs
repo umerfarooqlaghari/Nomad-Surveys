@@ -48,20 +48,24 @@ public class AuthenticationService : IAuthenticationService
             Tenant? tenant = null;
 
             // Find tenant if provided (not required for SuperAdmin)
-            if (!string.IsNullOrEmpty(request.TenantSlug) && request.TenantSlug.Trim() != "")
+            if (!string.IsNullOrEmpty(request.TenantSlug))
             {
-                tenant = await _context.Tenants
-                    .IgnoreQueryFilters()
-                    .FirstOrDefaultAsync(t => t.Slug == request.TenantSlug && t.IsActive);
-
-                if (tenant == null)
+                var trimmedSlug = request.TenantSlug.Trim();
+                if (!string.IsNullOrEmpty(trimmedSlug))
                 {
-                    throw new UnauthorizedAccessException("Invalid tenant");
+                    tenant = await _context.Tenants
+                        .IgnoreQueryFilters()
+                        .FirstOrDefaultAsync(t => t.Slug == trimmedSlug && t.IsActive);
+
+                    if (tenant == null)
+                    {
+                        throw new UnauthorizedAccessException("Invalid tenant");
+                    }
                 }
             }
 
             // Find user by email
-            var user = await _userManager.FindByEmailAsync(request.Email);
+            var user = await _userManager.FindByEmailAsync(request.Email?.Trim());
             if (user == null || !user.IsActive)
             {
                 throw new UnauthorizedAccessException("Invalid credentials");

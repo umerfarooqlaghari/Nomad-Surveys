@@ -40,7 +40,7 @@ export default function QuestionRenderer({
                   key={option.id}
                   onClick={() => onChange(optionValue)}
                   disabled={isPreview}
-                  className={`py-3 px-6 border-2 rounded-lg font-medium transition-colors ${value === optionValue
+                  className={`flex-1 min-w-[100px] py-2 sm:py-3 px-3 sm:px-6 border-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${value === optionValue
                     ? 'border-blue-600 bg-blue-50 text-blue-700'
                     : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
                     } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
@@ -66,13 +66,13 @@ export default function QuestionRenderer({
 
       return (
         <div className="space-y-3">
-          <div className="flex justify-between items-center gap-2">
+          <div className="flex flex-wrap justify-between items-center gap-2">
             {options.map((option) => (
               <button
                 key={option}
                 onClick={() => onChange(option)}
                 disabled={isPreview}
-                className={`flex-1 py-3 px-4 border-2 rounded-lg font-medium transition-colors ${value === option
+                className={`flex-1 min-w-[40px] py-2 sm:py-3 px-2 sm:px-4 border-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${value === option
                   ? 'border-blue-600 bg-blue-50 text-blue-700'
                   : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
                   } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}

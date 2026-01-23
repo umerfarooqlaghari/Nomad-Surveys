@@ -155,7 +155,7 @@ public class EmailService : IEmailService
     {
         var loginInfo = $@"
             <div style=""background-color: #f3f4f6; padding: 15px; border-radius: 4px; margin: 10px 0;"">
-                <strong>Tenant Slug:</strong> {tenantSlug}<br>
+                <strong>Company Code:</strong> {tenantSlug}<br>
                 <strong>Email:</strong> {email}<br>
                 <strong>Password:</strong> {password}
             </div>";
@@ -215,7 +215,7 @@ public class EmailService : IEmailService
                             {loginInfo}
                             
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                Once you have entered your Username (Email) and Password and clicked on 'Sign In', you will be prompted to reset your password. Enter your new password and then click on the 'Reset Password' button. You can then click on 'Sign in'. thereafter, you will be directed to your portal where you can see the surveys you have to complete.
+                                Once you have entered your Username (Email) and Password and clicked on 'Sign In', you will be directed to your portal where you can see the surveys you have to complete.
                             </p>
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
                                 In case you have accessed the link before and changed your password, your password will say omitted for privacy and you can continue using your new password.
@@ -266,7 +266,7 @@ public class EmailService : IEmailService
     {
         var loginInfo = $@"
             <div style=""background-color: #f3f4f6; padding: 15px; border-radius: 4px; margin: 10px 0;"">
-                <strong>Tenant Slug:</strong> {tenantSlug}<br>
+                <strong>Company Code:</strong> {tenantSlug}<br>
                 <strong>Email:</strong> {email}<br>
                 <strong>Password:</strong> {password}
             </div>";
@@ -372,7 +372,7 @@ public class EmailService : IEmailService
     {
         var loginInfo = $@"
             <div style=""background-color: #f3f4f6; padding: 15px; border-radius: 4px; margin: 10px 0;"">
-                <strong>Tenant Slug:</strong> {tenantSlug}<br>
+                <strong>Company Code:</strong> {tenantSlug}<br>
                 <strong>Email:</strong> {email}<br>
                 <strong>Password:</strong> {password}
             </div>";
@@ -506,7 +506,7 @@ public class EmailService : IEmailService
     {
         var loginInfo = $@"
             <div style=""background-color: #f3f4f6; padding: 15px; border-radius: 4px; margin: 10px 0;"">
-                <strong>Tenant Slug:</strong> {tenantSlug}<br>
+                <strong>Company Code:</strong> {tenantSlug}<br>
                 <strong>Email:</strong> {email}<br>
                 <strong>Password:</strong> {password}
             </div>";

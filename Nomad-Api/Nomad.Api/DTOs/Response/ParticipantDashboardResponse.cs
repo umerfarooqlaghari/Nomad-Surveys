@@ -31,5 +31,6 @@ public class PendingEvaluationDto
     public string SurveyTitle { get; set; } = string.Empty;
     public DateTime? DueDate { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string RelationshipType { get; set; } = string.Empty;
 }
 
