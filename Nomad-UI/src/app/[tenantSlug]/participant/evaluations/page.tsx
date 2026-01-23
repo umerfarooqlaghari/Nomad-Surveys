@@ -247,78 +247,123 @@ export default function AssignedEvaluations({ params }: AssignedEvaluationsProps
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                        Subject Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                        Survey Title
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                        <div className="flex flex-col">
-                          <span>Relationship</span>
-                          <span className="text-[10px] text-gray-500 normal-case font-normal">Relationship with you</span>
-                        </div>
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                        Due Date
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredEvaluations.map((evaluation) => (
-                      <tr key={evaluation.AssignmentId} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-black">{evaluation.SubjectName}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-black">{evaluation.SurveyTitle}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-black capitalize">{evaluation.RelationshipType}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {getStatusBadge(evaluation.Status)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-black">
-                            {evaluation.DueDate
-                              ? new Date(evaluation.DueDate).toLocaleDateString()
-                              : '-'}
+              <>
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                          Subject Name
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                          Survey Title
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                          <div className="flex flex-col">
+                            <span>Relationship</span>
+                            <span className="text-[10px] text-gray-500 normal-case font-normal">Relationship with you</span>
                           </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          {evaluation.Status === 'Completed' ? (
-                            <button
-                              disabled
-                              // onClick={() => router.push(`/${tenantSlug}/participant/submissions/${evaluation.AssignmentId}`)}
-                              className="px-4 py-2 border border-gray-300 text-black rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                              Completed
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => router.push(`/${tenantSlug}/participant/evaluations/${evaluation.AssignmentId}`)}
-                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                              {evaluation.Status === 'InProgress' ? 'Continue' : 'Start'}
-                            </button>
-                          )}
-                        </td>
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
+                          Due Date
+                        </th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">
+                          Action
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredEvaluations.map((evaluation) => (
+                        <tr key={evaluation.AssignmentId} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-black">{evaluation.SubjectName}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-black">{evaluation.SurveyTitle}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-black capitalize">{evaluation.RelationshipType}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {getStatusBadge(evaluation.Status)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-black">
+                              {evaluation.DueDate
+                                ? new Date(evaluation.DueDate).toLocaleDateString()
+                                : '-'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            {evaluation.Status === 'Completed' ? (
+                              <button
+                                disabled
+                                className="px-4 py-2 border border-gray-300 text-black rounded-lg bg-gray-50 opacity-50 cursor-not-allowed"
+                              >
+                                Completed
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => router.push(`/${tenantSlug}/participant/evaluations/${evaluation.AssignmentId}`)}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              >
+                                {evaluation.Status === 'InProgress' ? 'Continue' : 'Start'}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden divide-y divide-gray-200">
+                  {filteredEvaluations.map((evaluation) => (
+                    <div key={evaluation.AssignmentId} className="p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-sm font-bold text-black">{evaluation.SurveyTitle}</h3>
+                          <p className="text-xs text-gray-500 mt-0.5">Subject: {evaluation.SubjectName}</p>
+                        </div>
+                        {getStatusBadge(evaluation.Status)}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <p className="text-gray-500">Relationship</p>
+                          <p className="text-black capitalize">{evaluation.RelationshipType}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Due Date</p>
+                          <p className="text-black">{evaluation.DueDate ? new Date(evaluation.DueDate).toLocaleDateString() : '-'}</p>
+                        </div>
+                      </div>
+
+                      <div className="pt-2">
+                        {evaluation.Status === 'Completed' ? (
+                          <button
+                            disabled
+                            className="w-full py-2.5 border border-gray-300 text-black rounded-lg bg-gray-50 opacity-50 cursor-not-allowed text-sm font-medium"
+                          >
+                            Completed
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => router.push(`/${tenantSlug}/participant/evaluations/${evaluation.AssignmentId}`)}
+                            className="w-full py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                          >
+                            {evaluation.Status === 'InProgress' ? 'Continue' : 'Start'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -326,4 +371,3 @@ export default function AssignedEvaluations({ params }: AssignedEvaluationsProps
     </ProtectedRoute>
   );
 }
-

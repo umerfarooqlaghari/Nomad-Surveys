@@ -190,7 +190,7 @@ export default function ParticipantDashboard({ params }: ParticipantDashboardPro
                     key={evaluation.AssignmentId}
                     className="px-6 py-4 hover:bg-gray-50 transition-colors"
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div className="flex-1">
                         <h3 className="text-sm font-semibold text-black">{evaluation.SurveyTitle}</h3>
                         <p className="text-sm text-black mt-1">
@@ -207,9 +207,9 @@ export default function ParticipantDashboard({ params }: ParticipantDashboardPro
                       </div>
                       <button
                         onClick={() => router.push(`/${tenantSlug}/participant/evaluations/${evaluation.AssignmentId}`)}
-                        className="ml-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors text-center"
                       >
-                        Start
+                        {evaluation.Status === 'InProgress' ? 'Continue' : 'Start'}
                       </button>
                     </div>
                   </div>
