@@ -142,18 +142,30 @@ export default function CustomSurveyBuilder({
   }, []);
 
   // Add a new page
-  const handleAddPage = useCallback(() => {
+  const handleAddPage = useCallback((index?: number) => {
     const newPage = createDefaultPage();
-    newPage.title = `Page ${survey.pages.length + 1}`;
-    newPage.order = survey.pages.length;
 
-    setSurvey((prev) => ({
-      ...prev,
-      pages: [...prev.pages, newPage],
-    }));
+    setSurvey((prev) => {
+      const newPages = [...prev.pages];
+      const insertIndex = typeof index === 'number' ? index : newPages.length;
+
+      // Insert the new page at the specified index
+      newPages.splice(insertIndex, 0, newPage);
+
+      // Recalculate titles and orders for all pages
+      return {
+        ...prev,
+        pages: newPages.map((p, idx) => ({
+          ...p,
+          title: p.title.startsWith('Page ') ? `Page ${idx + 1}` : p.title,
+          order: idx
+        })),
+      };
+    });
+
     setHasUnsavedChanges(true);
     toast.success('Page added');
-  }, [survey.pages.length]);
+  }, []);
 
   // Update a page
   const handleUpdatePage = useCallback((pageId: string, updatedPage: SurveyPage) => {
@@ -392,13 +404,12 @@ export default function CustomSurveyBuilder({
                 }
                 setActiveTab('form');
               }}
-              className={`px-6 py-3 font-medium border-b-2 transition-colors ${
-                activeTab === 'form'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-3 font-medium border-b-2 transition-colors ${activeTab === 'form'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
             >
-               Form Editor
+              Form Editor
             </button>
             <button
               onClick={() => {
@@ -416,23 +427,21 @@ export default function CustomSurveyBuilder({
                 }
                 setActiveTab('settings');
               }}
-              className={`px-6 py-3 font-medium border-b-2 transition-colors ${
-                activeTab === 'settings'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-3 font-medium border-b-2 transition-colors ${activeTab === 'settings'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
             >
-               Settings
+              Settings
             </button>
             <button
               onClick={handleSwitchToJsonTab}
-              className={`px-6 py-3 font-medium border-b-2 transition-colors ${
-                activeTab === 'json'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
+              className={`px-6 py-3 font-medium border-b-2 transition-colors ${activeTab === 'json'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
             >
-               JSON Editor
+              JSON Editor
             </button>
           </div>
         </div>
@@ -524,41 +533,42 @@ export default function CustomSurveyBuilder({
             </div>
 
             {/* Pages */}
-        {survey.pages.map((page, index) => (
-          <PageEditor
-            key={page.id}
-            page={page}
-            pageNumber={index + 1}
-            totalPages={survey.pages.length}
-            tenantSlug={tenantSlug}
-            token={token}
-            tenantSettings={tenantSettings}
-            onUpdate={(updatedPage: SurveyPage) => handleUpdatePage(page.id, updatedPage)}
-            onDelete={() => handleDeletePage(page.id)}
-            onMoveUp={
-              index > 0
-                ? () => {
-                    const newPages = [...survey.pages];
-                    [newPages[index - 1], newPages[index]] = [newPages[index], newPages[index - 1]];
-                    handleReorderPages(newPages);
-                  }
-                : undefined
-            }
-            onMoveDown={
-              index < survey.pages.length - 1
-                ? () => {
-                    const newPages = [...survey.pages];
-                    [newPages[index], newPages[index + 1]] = [newPages[index + 1], newPages[index]];
-                    handleReorderPages(newPages);
-                  }
-                : undefined
-            }
-          />
-        ))}
+            {survey.pages.map((page, index) => (
+              <PageEditor
+                key={page.id}
+                page={page}
+                pageNumber={index + 1}
+                totalPages={survey.pages.length}
+                tenantSlug={tenantSlug}
+                token={token}
+                tenantSettings={tenantSettings}
+                onUpdate={(updatedPage: SurveyPage) => handleUpdatePage(page.id, updatedPage)}
+                onDelete={() => handleDeletePage(page.id)}
+                onAddPageBelow={() => handleAddPage(index + 1)}
+                onMoveUp={
+                  index > 0
+                    ? () => {
+                      const newPages = [...survey.pages];
+                      [newPages[index - 1], newPages[index]] = [newPages[index], newPages[index - 1]];
+                      handleReorderPages(newPages);
+                    }
+                    : undefined
+                }
+                onMoveDown={
+                  index < survey.pages.length - 1
+                    ? () => {
+                      const newPages = [...survey.pages];
+                      [newPages[index], newPages[index + 1]] = [newPages[index + 1], newPages[index]];
+                      handleReorderPages(newPages);
+                    }
+                    : undefined
+                }
+              />
+            ))}
 
             {/* Add Page Button */}
             <button
-              onClick={handleAddPage}
+              onClick={() => handleAddPage()}
               className="w-full py-3 text-black border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-colors"
             >
               + Add Page

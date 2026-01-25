@@ -16,6 +16,7 @@ interface PageEditorProps {
   tenantSettings: TenantSettings | null;
   onUpdate: (updatedPage: SurveyPage) => void;
   onDelete: () => void;
+  onAddPageBelow?: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
 }
@@ -29,6 +30,7 @@ export default function PageEditor({
   tenantSettings,
   onUpdate,
   onDelete,
+  onAddPageBelow,
   onMoveUp,
   onMoveDown,
 }: PageEditorProps) {
@@ -376,6 +378,21 @@ export default function PageEditor({
         tenantSlug={tenantSlug}
         token={token}
       />
+
+      {/* Add Page Below Button */}
+      {onAddPageBelow && (
+        <div className="mt-4 px-4 pb-4">
+          <button
+            onClick={onAddPageBelow}
+            className="w-full py-2 flex items-center justify-center gap-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Add Page Below
+          </button>
+        </div>
+      )}
     </div>
   );
 }

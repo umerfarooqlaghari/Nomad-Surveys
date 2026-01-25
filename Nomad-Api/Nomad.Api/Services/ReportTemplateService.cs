@@ -1611,8 +1611,16 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
                             column.Item().Text("The HTML version of this report is available.")
                                 .FontSize(12);
                             column.Item().PaddingTop(5);
-                            column.Item().Text("PDF generation encountered an error. Please use the HTML export option.")
+                            column.Item().Text("PDF generation encountered an error. Detailed error:")
                                 .FontSize(10)
+                                .FontColor(Colors.Grey.Medium);
+                            column.Item().PaddingTop(2);
+                            column.Item().Text(ex.Message)
+                                .FontSize(8)
+                                .FontColor(Colors.Red.Medium);
+                            column.Item().PaddingTop(5);
+                            column.Item().Text(ex.StackTrace)
+                                .FontSize(6)
                                 .FontColor(Colors.Grey.Medium);
                         });
                 });
