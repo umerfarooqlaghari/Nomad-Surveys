@@ -47,6 +47,13 @@ RUN apt-get update && apt-get install -y \
     libxrandr2 \
     libgbm1 \
     libasound2 \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libxshmfence1 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user for security
