@@ -526,6 +526,37 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
     }
   };
 
+  const handlePrint = () => {
+    if (!selectedSubjectId) {
+      toast.error('Please select a subject first');
+      return;
+    }
+
+    if (previewRef.current && previewRef.current.contentWindow) {
+      // Find the selected subject name for the filename
+      const subject = subjectsForSurvey.find(s => s.SubjectId === selectedSubjectId);
+      const fileName = subject
+        ? `Report - ${subject.SubjectFullName} (${subject.SubjectEmployeeIdString})`
+        : `Report - ${selectedSubjectId}`;
+
+      const iframeDoc = previewRef.current.contentWindow.document;
+      const originalTitle = iframeDoc.title;
+
+      try {
+        // Temporarily set iframe title which browsers use as the default filename for "Save as PDF"
+        iframeDoc.title = fileName;
+        previewRef.current.contentWindow.print();
+      } finally {
+        // Restore original title
+        setTimeout(() => {
+          iframeDoc.title = originalTitle;
+        }, 1000);
+      }
+    } else {
+      toast.error('Preview not ready for printing');
+    }
+  };
+
   return (
     <>
       <div className="flex h-[calc(100vh-200px)] gap-4">
@@ -634,7 +665,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                 {showDownloadMenu && (
                   <div ref={downloadMenuRef} className="absolute z-20 mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden">
                     <div className="py-1">
-                      <button
+                      {/* <button
                         onClick={async () => {
                           if (!selectedSubjectId) {
                             toast.error('Please select a subject first');
@@ -704,7 +735,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                         Download PDF
-                      </button>
+                      </button> */}
                       <button
                         onClick={async () => {
                           if (!selectedSurveyId) {
@@ -878,6 +909,22 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                         </svg>
                         360 Survey Results
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!selectedSubjectId) {
+                            toast.error('Please select a subject first');
+                            return;
+                          }
+                          setShowDownloadMenu(false);
+                          handlePrint();
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 border-t border-gray-100"
+                      >
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Download Report
                       </button>
                     </div>
                   </div>
@@ -1197,7 +1244,6 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                 />
               </div>
             </div>
-
           </div>
         </div>
       </div>
