@@ -8,9 +8,29 @@
     <style>
         /* CSS Variables for Brand Colors - These will be replaced dynamically */
         :root {
-            --primary-color: {{PRIMARY_COLOR}};
-            --secondary-color: {{SECONDARY_COLOR}};
-            --tertiary-color: {{TERTIARY_COLOR}};
+            --primary-color: {
+                    {
+                    PRIMARY_COLOR
+                }
+            }
+
+            ;
+
+            --secondary-color: {
+                    {
+                    SECONDARY_COLOR
+                }
+            }
+
+            ;
+
+            --tertiary-color: {
+                    {
+                    TERTIARY_COLOR
+                }
+            }
+
+            ;
             --text-color: #434141ff;
             --border-color: #d3d3d3;
             --background-color: #ffffff;
@@ -81,7 +101,12 @@
 
         /* For print/PDF we want the original behavior (no shadows/margins) */
         @media print {
-            body { background: white; padding: 0; margin: 0; }
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+
             .page {
                 box-shadow: none;
                 border: none;
@@ -90,7 +115,10 @@
                 width: 100%;
                 height: 297mm;
             }
-            .pdf-viewer-button { display: none !important; }
+
+            .pdf-viewer-button {
+                display: none !important;
+            }
         }
 
         /* Header - Fixed on every page */
@@ -1031,11 +1059,28 @@
         }
 
         /* Position each label at exact percentage: 0%, 25%, 50%, 75%, 100% */
-        .agreement-x-axis .axis-label:nth-child(1) { left: 0%; transform: translateX(0%); }
-        .agreement-x-axis .axis-label:nth-child(2) { left: 25%; }
-        .agreement-x-axis .axis-label:nth-child(3) { left: 50%; }
-        .agreement-x-axis .axis-label:nth-child(4) { left: 75%; }
-        .agreement-x-axis .axis-label:nth-child(5) { left: 100%; transform: translateX(-100%); }
+        .agreement-x-axis .axis-label:nth-child(1) {
+            left: 0%;
+            transform: translateX(0%);
+        }
+
+        .agreement-x-axis .axis-label:nth-child(2) {
+            left: 25%;
+        }
+
+        .agreement-x-axis .axis-label:nth-child(3) {
+            left: 50%;
+        }
+
+        .agreement-x-axis .axis-label:nth-child(4) {
+            left: 75%;
+        }
+
+        .agreement-x-axis .axis-label:nth-child(5) {
+            left: 100%;
+            transform: translateX(-100%);
+        }
+
         /* ====== END: Agreement Chart X-Axis with absolute positioning for exact alignment ====== */
 
 
@@ -1457,12 +1502,12 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
-            font-size: 14px;
+            font-size: 12px;
             table-layout: fixed;
         }
 
         .high-low-scores-table th {
-            padding: 12px 10px;
+            padding: 10px 6px;
             font-weight: 600;
             color: #555;
             text-align: left;
@@ -1496,7 +1541,7 @@
         }
 
         .high-low-scores-table td {
-            padding: 14px 10px;
+            padding: 12px 6px;
             border-bottom: 1px solid #eee;
             vertical-align: top;
         }
@@ -1837,12 +1882,15 @@
             <p class="section-description">
                 This 360° Feedback Survey is based on the Top Talent Framework as part of Elevate – Unlock
                 Possibilities.
-                The survey provides you insight across {{CLUSTER_COUNT_WORD}} clusters: <strong>{{CLUSTER_NAMES_LIST}}</strong>.
+                The survey provides you insight across {{CLUSTER_COUNT_WORD}} clusters:
+                <strong>{{CLUSTER_NAMES_LIST}}</strong>.
                 <br><br>
-                Each cluster has {{DIMENSIONS_PER_CLUSTER}} dimensions that have been measured using several items, or questions, in the survey.
+                Each cluster has {{DIMENSIONS_PER_CLUSTER}} dimensions that have been measured using several items, or
+                questions, in the survey.
                 Each cluster also has an X-Factor that gives you an edge to master each leadership cluster.
                 <br><br>
-                The {{TOTAL_DIMENSIONS_COUNT}} Dimensions and {{CLUSTER_COUNT}} X-factors, collectively, will help you guide insights to introspect, direct and
+                The {{TOTAL_DIMENSIONS_COUNT}} Dimensions and {{CLUSTER_COUNT}} X-factors, collectively, will help you
+                guide insights to introspect, direct and
                 influence the
                 performance and experience of your team, and to drive organization's growth and success.
                 <br><br>

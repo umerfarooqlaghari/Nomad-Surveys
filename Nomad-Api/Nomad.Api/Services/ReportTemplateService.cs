@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Nomad.Api.Data;
 using Nomad.Api.DTOs.Request;
@@ -484,6 +485,7 @@ public class ReportTemplateService : IReportTemplateService
         Guid subjectId,
         Guid? surveyId,
         Guid tenantId,
+        string companyName,
         string? companyLogoUrl = null,
         string? coverImageUrl = null,
         string? primaryColor = null,
@@ -492,8 +494,6 @@ public class ReportTemplateService : IReportTemplateService
     {
         try
         {
-            // Load HTML template
-            var htmlTemplate = await LoadTemplateAsync();
 
             // Fetch comprehensive report data
             var reportData = await _reportingService.GetComprehensiveReportAsync(
@@ -509,6 +509,11 @@ public class ReportTemplateService : IReportTemplateService
             List<RelationshipCompletionStats>? relationshipStats = null;
             HighLowScoresResult? highLowScores = null;
             LatentStrengthsBlindspotsResult? latentStrengthsBlindspots = null;
+            AgreementChartResult? agreementChartData = null;
+            RaterGroupSummaryResult? raterGroupSummary = null;
+            ClusterCompetencyHierarchyResult? clusterHierarchy = null;
+            OpenEndedFeedbackResult? openEndedFeedback = null;
+
             if (surveyId.HasValue && _reportAnalyticsRepository != null)
             {
                 try
@@ -519,7 +524,6 @@ public class ReportTemplateService : IReportTemplateService
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to get self-assessment status for subject {SubjectId}", subjectId);
-                    selfAssessmentStatus = "Not Available";
                 }
 
                 try
@@ -551,10 +555,98 @@ public class ReportTemplateService : IReportTemplateService
                 {
                     _logger.LogWarning(ex, "Failed to get latent strengths/blindspots for subject {SubjectId}", subjectId);
                 }
+
+                try
+                {
+                    agreementChartData = await _reportAnalyticsRepository.GetAgreementChartDataAsync(
+                        subjectId, surveyId.Value, tenantId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get agreement chart data for subject {SubjectId}", subjectId);
+                }
+
+                try
+                {
+                    raterGroupSummary = await _reportAnalyticsRepository.GetRaterGroupSummaryAsync(
+                        subjectId, surveyId.Value, tenantId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get rater group summary for subject {SubjectId}", subjectId);
+                }
+
+                try
+                {
+                    clusterHierarchy = await _reportAnalyticsRepository.GetClusterCompetencyHierarchyAsync(
+                        subjectId, surveyId.Value, tenantId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to get cluster hierarchy for subject {SubjectId}", subjectId);
+                }
+
+                if (clusterHierarchy?.Clusters?.Count > 0)
+                {
+                    try
+                    {
+                        openEndedFeedback = await _reportAnalyticsRepository.GetOpenEndedFeedbackAsync(
+                            subjectId, surveyId.Value, tenantId);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to get open-ended feedback for subject {SubjectId}", subjectId);
+                    }
+                }
             }
 
-            // Replace placeholders with actual data
-            var html = ReplacePlaceholders(htmlTemplate, reportData, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor, selfAssessmentStatus, relationshipStats, highLowScores, latentStrengthsBlindspots);
+            // Fetch chart images for this survey
+            List<ReportChartImage>? chartImages = null;
+            if (surveyId.HasValue && _dbContext != null)
+            {
+                try
+                {
+                    chartImages = await _dbContext.ReportChartImages
+                        .Where(i => i.SurveyId == surveyId.Value && i.TenantId == tenantId)
+                        .ToListAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load chart images for subject {SubjectId}", subjectId);
+                }
+            }
+
+            string html;
+            if (clusterHierarchy?.Clusters?.Count > 0)
+            {
+                // Use dynamic generation if we have cluster data
+                html = await BuildDynamicReportHtmlAsync(
+                    companyName,
+                    companyLogoUrl,
+                    coverImageUrl,
+                    primaryColor,
+                    secondaryColor,
+                    tertiaryColor,
+                    clusterHierarchy,
+                    openEndedFeedback?.Items,
+                    chartImages);
+
+                // Replace Part 1 and brand placeholders
+                html = html.Replace("{{SUBJECT_NAME}}", EscapeHtml(reportData.SubjectName ?? "N/A"));
+                html = html.Replace("{{SELF_ASSESSMENT_STATUS}}", EscapeHtml(selfAssessmentStatus));
+
+                html = ReplaceAdditionalPlaceholdersInDynamicReport(html, companyName, reportData.SubjectName,
+                    selfAssessmentStatus, relationshipStats, highLowScores, latentStrengthsBlindspots,
+                    agreementChartData, raterGroupSummary, clusterHierarchy, chartImages);
+            }
+            else
+            {
+                // Fallback to static template
+                var htmlTemplate = await LoadTemplateAsync();
+                html = ReplacePlaceholders(htmlTemplate, reportData, companyName, companyLogoUrl, coverImageUrl, 
+                    primaryColor, secondaryColor, tertiaryColor, selfAssessmentStatus, 
+                    relationshipStats, highLowScores, latentStrengthsBlindspots);
+            }
 
             // Save template settings if provided
             await SaveTemplateSettingsIfProvided(
@@ -578,6 +670,7 @@ public class ReportTemplateService : IReportTemplateService
         Guid subjectId,
         Guid? surveyId,
         Guid tenantId,
+        string companyName,
         string? companyLogoUrl = null,
         string? coverImageUrl = null,
         string? primaryColor = null,
@@ -616,7 +709,7 @@ public class ReportTemplateService : IReportTemplateService
 
             // Generate HTML first
             var html = await GenerateReportHtmlAsync(
-                subjectId, surveyId, tenantId, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor);
+                subjectId, surveyId, tenantId, companyName, companyLogoUrl, coverImageUrl, primaryColor, secondaryColor, tertiaryColor);
 
             // Convert HTML to PDF using PuppeteerSharp
             var pdfBytes = await GeneratePdfFromHtmlAsync(html);
@@ -887,6 +980,13 @@ public class ReportTemplateService : IReportTemplateService
         // Replace questions table with mock data
         html = html.Replace("{{QUESTIONS_TABLE}}", GenerateMockQuestionsTable());
 
+        // Replace Ascend logo with base64 for visibility
+        var ascendLogoBase64 = GetAscendLogoBase64();
+        if (!string.IsNullOrEmpty(ascendLogoBase64))
+        {
+            html = html.Replace("/logos/ascendevelopment_logo.jpeg", ascendLogoBase64);
+        }
+
         return html;
     }
 
@@ -951,7 +1051,7 @@ public class ReportTemplateService : IReportTemplateService
         }
 
         var sb = new StringBuilder();
-        foreach (var item in items)
+        foreach (var item in items.Take(4))
         {
             sb.AppendLine($@"
         <tr>
@@ -981,7 +1081,7 @@ public class ReportTemplateService : IReportTemplateService
         }
 
         var sb = new StringBuilder();
-        foreach (var item in items)
+        foreach (var item in items.Take(4))
         {
             // Format gap with sign (+ for positive, - for negative)
             var gapDisplay = item.Gap >= 0 ? $"+{item.Gap:0.00}" : $"{item.Gap:0.00}";
@@ -1331,6 +1431,7 @@ public class ReportTemplateService : IReportTemplateService
     private string ReplacePlaceholders(
         string template,
         ComprehensiveReportResponse reportData,
+        string companyName,
         string? companyLogoUrl,
         string? coverImageUrl,
         string? primaryColor,
@@ -1348,9 +1449,8 @@ public class ReportTemplateService : IReportTemplateService
         html = html.Replace("{{SECONDARY_COLOR}}", secondaryColor ?? "#1D8F6C");
         html = html.Replace("{{TERTIARY_COLOR}}", tertiaryColor ?? "#6C757D");
 
-        // Replace company information (use companyName parameter if available)
-        // This will be passed through the GenerateReportHtmlAsync method signature
-        html = html.Replace("{{COMPANY_NAME}}", "Company Name"); // TODO: Get from tenant settings or request
+        // Replace company information
+        html = html.Replace("{{COMPANY_NAME}}", EscapeHtml(companyName));
 
         // Replace logo in header
         if (!string.IsNullOrEmpty(companyLogoUrl))
@@ -1469,6 +1569,13 @@ public class ReportTemplateService : IReportTemplateService
 
         // Replace questions table
         html = html.Replace("{{QUESTIONS_TABLE}}", GenerateQuestionsTable(reportData));
+
+        // Replace Ascend logo with base64 for PDF visibility
+        var ascendLogoBase64 = GetAscendLogoBase64();
+        if (!string.IsNullOrEmpty(ascendLogoBase64))
+        {
+            html = html.Replace("/logos/ascendevelopment_logo.jpeg", ascendLogoBase64);
+        }
 
         return html;
     }
@@ -1854,7 +1961,8 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
         var lastPageHtml = lastPageTemplate.Replace("{{COMPANY_LOGO}}", GetLogoHtml(companyLogoUrl));
         sb.Append(lastPageHtml);
 
-        return sb.ToString();
+        return ReplaceBrandPlaceholders(sb.ToString(), companyName, companyLogoUrl, coverImageUrl, 
+            primaryColor, secondaryColor, tertiaryColor);
     }
 
     /// <summary>
@@ -1914,6 +2022,13 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
                 "<div class=\"cover-image\" style=\"width: 100%; height: 200mm; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);\"></div>");
         }
 
+        // Replace Ascend logo with base64 for PDF visibility
+        var ascendLogoBase64 = GetAscendLogoBase64();
+        if (!string.IsNullOrEmpty(ascendLogoBase64))
+        {
+            html = html.Replace("/logos/ascendevelopment_logo.jpeg", ascendLogoBase64);
+        }
+
         return html;
     }
 
@@ -1927,6 +2042,30 @@ var pdfBytes = await page.PdfDataAsync(new PdfOptions
             return $"<img src=\"{companyLogoUrl}\" alt=\"Company Logo\" class=\"client-logo\" />";
         }
         return "<div class=\"client-logo\" style=\"width: 80mm; height: 30mm; background: #f0f0f0; border: 1px solid #ddd;\"></div>";
+    }
+
+    /// <summary>
+    /// Gets the Ascend logo as a base64 string
+    /// </summary>
+    private string GetAscendLogoBase64()
+    {
+        try
+        {
+            var templatesDir = Path.GetDirectoryName(_templatePath) ?? "";
+            var logoPath = Path.Combine(templatesDir, "ascendevelopment_logo.jpeg");
+
+            if (File.Exists(logoPath))
+            {
+                var bytes = File.ReadAllBytes(logoPath);
+                var base64 = Convert.ToBase64String(bytes);
+                return $"data:image/jpeg;base64,{base64}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load Ascend logo for base64 embedding");
+        }
+        return "";
     }
 
     /// <summary>
