@@ -665,7 +665,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                 {showDownloadMenu && (
                   <div ref={downloadMenuRef} className="absolute z-20 mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden">
                     <div className="py-1">
-                      {/* <button
+                      <button
                         onClick={async () => {
                           if (!selectedSubjectId) {
                             toast.error('Please select a subject first');
@@ -675,9 +675,8 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                           try {
                             // Close menu immediately
                             setShowDownloadMenu(false);
-
-                            const toastId = toast.loading('Generating PDF, It may take upto a 2 minutes to generate one');
-
+                            toast.success('We will notify you once your pdf is ready.')
+                            const toastId = toast.loading('Generating PDF, It may take upto a 2 minutes to generate one.');
                             const reportData = {
                               subjectId: selectedSubjectId,
                               surveyId: selectedSurveyId || null,
@@ -735,7 +734,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                         Download PDF
-                      </button> */}
+                      </button>
                       <button
                         onClick={async () => {
                           if (!selectedSurveyId) {
@@ -910,7 +909,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                         </svg>
                         360 Survey Results
                       </button>
-                      <button
+                      {/* <button
                         onClick={() => {
                           if (!selectedSubjectId) {
                             toast.error('Please select a subject first');
@@ -925,7 +924,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                         </svg>
                         Download Report
-                      </button>
+                      </button> */}
                     </div>
                   </div>
                 )}
