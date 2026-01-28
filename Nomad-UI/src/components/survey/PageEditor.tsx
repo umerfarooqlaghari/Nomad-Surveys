@@ -23,6 +23,7 @@ interface PageEditorProps {
   onMoveDown?: () => void;
 }
 
+
 export default function PageEditor({
   page,
   pageNumber,
