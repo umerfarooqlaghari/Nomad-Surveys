@@ -131,6 +131,15 @@ export default function SurveyRenderer({
   const displayPageIndex = currentPageIndex + 1;
   const totalDisplayPages = activePages.length;
 
+  // Helper to calculate the starting number for the current page's questions
+  const getQuestionStartIndex = (pageIndex: number) => {
+    let count = 0;
+    for (let i = 0; i < pageIndex; i++) {
+      count += getVisibleQuestionsForPage(activePages[i].questions).length;
+    }
+    return count;
+  };
+
   return (
     <div className={showHeader ? "max-w-3xl mx-auto" : ""}>
       {/* Survey Header */}
@@ -198,7 +207,7 @@ export default function SurveyRenderer({
               <QuestionRenderer
                 key={question.id}
                 question={question}
-                questionNumber={index + 1}
+                questionNumber={getQuestionStartIndex(currentPageIndex) + index + 1}
                 isSelf={isSelf}
                 value={responses[question.id]}
                 onChange={(value) => handleAnswerChange(question.id, value)}

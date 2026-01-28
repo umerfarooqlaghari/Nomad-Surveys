@@ -17,6 +17,8 @@ interface PageEditorProps {
   onUpdate: (updatedPage: SurveyPage) => void;
   onDelete: () => void;
   onAddPageBelow?: () => void;
+  onBulkImport?: (questions: any[], index?: number) => void;
+  existingQuestionIds?: string[];
   onMoveUp?: () => void;
   onMoveDown?: () => void;
 }
@@ -31,6 +33,8 @@ export default function PageEditor({
   onUpdate,
   onDelete,
   onAddPageBelow,
+  onBulkImport,
+  existingQuestionIds,
   onMoveUp,
   onMoveDown,
 }: PageEditorProps) {
@@ -90,71 +94,14 @@ export default function PageEditor({
   };
 
   // Import question from library
-  const handleImportQuestion = (importedQuestion: any) => {
-    console.log('📥 [IMPORT] Starting import with tenantSettings:', tenantSettings);
-    console.log('📥 [IMPORT] Imported question data:', importedQuestion);
-
-    // Use tenant settings for default question type if available
-    const questionType = tenantSettings?.defaultQuestionType || mapQuestionType(importedQuestion.QuestionType);
-
-    console.log('📥 [IMPORT] Question type decision:', {
-      'tenantSettings exists': !!tenantSettings,
-      'tenantSettings.defaultQuestionType': tenantSettings?.defaultQuestionType,
-      'originalType from backend': importedQuestion.QuestionType,
-      'mappedType': mapQuestionType(importedQuestion.QuestionType),
-      'FINAL questionType': questionType,
-      'hasRatingOptions': tenantSettings?.defaultRatingOptions?.length,
-    });
-
-    // Determine the config based on question type and tenant settings
-    let questionConfig;
-    if (questionType === 'rating' && tenantSettings?.defaultRatingOptions && tenantSettings.defaultRatingOptions.length > 0) {
-      // Use tenant settings rating options
-      questionConfig = {
-        ratingOptions: tenantSettings.defaultRatingOptions.map(opt => ({
-          id: opt.id,
-          value: opt.score ?? opt.order + 1, // Explicitly use score as value
-          text: opt.text,
-          order: opt.order,
-          score: opt.score ?? opt.order + 1,
-        })),
-      };
-      console.log('✅ Using tenant settings rating options for imported question:', questionConfig.ratingOptions);
+  const handleImportQuestion = (importedQuestions: any[]) => {
+    if (onBulkImport) {
+      onBulkImport(importedQuestions, pageNumber - 1);
     } else {
-      // Use default config for the question type
-      questionConfig = getDefaultConfigForType(questionType);
+      // Fallback for single import if builder doesn't support bulk yet
+      // though ideally CustomSurveyBuilder handles this now.
+      toast.error('Bulk import not supported by builder');
     }
-
-    // Map imported question to our schema
-    const newQuestion: Question = {
-      id: generateQuestionId(),
-      name: `question_${Date.now()}`,
-      type: questionType,
-      selfText: importedQuestion.SelfQuestion,
-      othersText: importedQuestion.OthersQuestion,
-      required: false,
-      order: page.questions.length,
-      config: questionConfig,
-      showTo: 'everyone',
-      importedFrom: {
-        questionId: importedQuestion.Id,
-        clusterId: importedQuestion.ClusterId || '',
-        competencyId: importedQuestion.CompetencyId,
-      },
-    };
-
-    console.log('📋 [IMPORT] Final question object:', {
-      type: newQuestion.type,
-      config: newQuestion.config,
-      hasRatingOptions: !!newQuestion.config.ratingOptions,
-      ratingOptionsCount: newQuestion.config.ratingOptions?.length,
-    });
-
-    onUpdate({
-      ...page,
-      questions: [...page.questions, newQuestion],
-    });
-    toast.success('Question imported');
   };
 
   // Update a question
@@ -377,6 +324,7 @@ export default function PageEditor({
         onImport={handleImportQuestion}
         tenantSlug={tenantSlug}
         token={token}
+        existingQuestionIds={existingQuestionIds}
       />
 
       {/* Add Page Below Button */}

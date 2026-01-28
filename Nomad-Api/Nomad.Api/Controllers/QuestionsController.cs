@@ -252,5 +252,73 @@ public class QuestionsController : ControllerBase
             return StatusCode(500, new { error = "An error occurred while deleting the question" });
         }
     }
+    /// <summary>
+    /// Upload a question bank from an Excel file
+    /// </summary>
+    /// <param name="file">The Excel file containing clusters, competencies, and questions</param>
+    /// <returns>Success status</returns>
+    [HttpPost("upload-question-bank")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> UploadQuestionBank(IFormFile file)
+    {
+        try
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { error = "No file uploaded" });
+            }
+
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            if (extension != ".xlsx")
+            {
+                return BadRequest(new { error = "Only .xlsx files are supported" });
+            }
+
+            var tenantId = GetCurrentTenantId();
+            if (tenantId == null)
+            {
+                return Unauthorized(new { error = "Tenant context not found" });
+            }
+
+            using var stream = file.OpenReadStream();
+            var success = await _questionService.UploadQuestionBankAsync(tenantId.Value, stream);
+
+            if (!success)
+            {
+                return BadRequest(new { error = "Failed to process the question bank file" });
+            }
+
+            return Ok(new { message = "Question bank uploaded successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading question bank");
+            return StatusCode(500, new { error = "An error occurred while uploading the question bank: " + ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Download a template for the question bank upload
+    /// </summary>
+    /// <returns>Excel file template</returns>
+    [HttpGet("download-template")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DownloadTemplate()
+    {
+        try
+        {
+            var (content, fileName) = await _questionService.GenerateQuestionBankTemplateAsync();
+            return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating question bank template");
+            return StatusCode(500, new { error = "An error occurred while generating the template" });
+        }
+    }
 }
 

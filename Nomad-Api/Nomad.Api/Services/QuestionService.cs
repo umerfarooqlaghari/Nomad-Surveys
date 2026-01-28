@@ -236,5 +236,124 @@ public class QuestionService : IQuestionService
             throw;
         }
     }
+
+    public async Task<bool> UploadQuestionBankAsync(Guid tenantId, Stream excelStream)
+    {
+        using var workbook = new ClosedXML.Excel.XLWorkbook(excelStream);
+        var worksheet = workbook.Worksheet(1);
+        var rows = worksheet.RowsUsed().Skip(1); // Skip header
+
+        var clusters = await _context.Clusters
+            .Where(c => c.TenantId == tenantId && c.IsActive)
+            .ToListAsync();
+
+        var competencies = await _context.Competencies
+            .Where(c => c.TenantId == tenantId && c.IsActive)
+            .Include(c => c.Cluster)
+            .ToListAsync();
+
+        var newQuestions = new List<Question>();
+
+        foreach (var row in rows)
+        {
+            var clusterName = row.Cell(1).GetValue<string>().Trim();
+            var competencyName = row.Cell(2).GetValue<string>().Trim();
+            var selfQuestionText = row.Cell(3).GetValue<string>().Trim();
+            var othersQuestionText = row.Cell(4).GetValue<string>().Trim();
+
+            if (string.IsNullOrEmpty(clusterName) || string.IsNullOrEmpty(competencyName) || string.IsNullOrEmpty(othersQuestionText))
+            {
+                continue; // Basic validation
+            }
+
+            // 1. Get or Create Cluster
+            var cluster = clusters.FirstOrDefault(c => c.ClusterName.Equals(clusterName, StringComparison.OrdinalIgnoreCase));
+            if (cluster == null)
+            {
+                cluster = new Cluster
+                {
+                    Id = Guid.NewGuid(),
+                    ClusterName = clusterName,
+                    TenantId = tenantId,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+                clusters.Add(cluster);
+                _context.Clusters.Add(cluster);
+            }
+
+            // 2. Get or Create Competency
+            var competency = competencies.FirstOrDefault(c => 
+                c.Name.Equals(competencyName, StringComparison.OrdinalIgnoreCase) && 
+                c.ClusterId == cluster.Id);
+            
+            if (competency == null)
+            {
+                competency = new Competency
+                {
+                    Id = Guid.NewGuid(),
+                    Name = competencyName,
+                    ClusterId = cluster.Id,
+                    TenantId = tenantId,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+                competencies.Add(competency);
+                _context.Competencies.Add(competency);
+            }
+
+            // 3. Create Question
+            newQuestions.Add(new Question
+            {
+                Id = Guid.NewGuid(),
+                CompetencyId = competency.Id,
+                SelfQuestion = selfQuestionText,
+                OthersQuestion = othersQuestionText,
+                TenantId = tenantId,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        if (newQuestions.Any())
+        {
+            _context.Questions.AddRange(newQuestions);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        await _context.SaveChangesAsync(); // In case only clusters/competencies were added
+        return true;
+    }
+
+    public async Task<(byte[] FileContent, string FileName)> GenerateQuestionBankTemplateAsync()
+    {
+        using var workbook = new ClosedXML.Excel.XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Question Bank Template");
+
+        // Headers
+        worksheet.Cell(1, 1).Value = "Cluster";
+        worksheet.Cell(1, 2).Value = "Competency";
+        worksheet.Cell(1, 3).Value = "Self Question";
+        worksheet.Cell(1, 4).Value = "Others Question";
+
+        // Styling
+        var headerRange = worksheet.Range(1, 1, 1, 4);
+        headerRange.Style.Font.Bold = true;
+        headerRange.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#B4C6E7");
+        headerRange.Style.Border.OutsideBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+
+        // Example Row
+        worksheet.Cell(2, 1).Value = "Core Competencies";
+        worksheet.Cell(2, 2).Value = "Communication";
+        worksheet.Cell(2, 3).Value = "How well do you communicate with your team?";
+        worksheet.Cell(2, 4).Value = "How well does this person communicate with the team?";
+
+        worksheet.Columns().AdjustToContents();
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return (stream.ToArray(), "QuestionBank_Template.xlsx");
+    }
 }
 

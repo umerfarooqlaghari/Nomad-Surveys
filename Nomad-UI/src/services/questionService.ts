@@ -17,7 +17,7 @@ import {
 
 class QuestionService {
   // ==================== CLUSTER METHODS ====================
-  
+
   /**
    * Get all clusters for a tenant
    */
@@ -323,6 +323,76 @@ class QuestionService {
       return { success: false, error: response.error || 'Failed to delete question' };
     } catch (error: any) {
       return { success: false, error: error.message || 'Failed to delete question' };
+    }
+  }
+
+  /**
+   * Upload a question bank (Excel file)
+   */
+  async uploadQuestionBank(
+    tenantSlug: string,
+    file: File,
+    token: string
+  ): Promise<{ data: any | null; error: string | null }> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Use native fetch to handle FormData and file upload
+      const response = await fetch(`${apiClient.baseURL}/${tenantSlug}/questions/upload-question-bank`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { data: null, error: errorData.error || 'Failed to upload question bank' };
+      }
+
+      const data = await response.json();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: error.message || 'Failed to upload question bank' };
+    }
+  }
+
+  /**
+   * Download the question bank template
+   */
+  async downloadTemplate(
+    tenantSlug: string,
+    token: string
+  ): Promise<{ error: string | null }> {
+    try {
+      const response = await fetch(`${apiClient.baseURL}/${tenantSlug}/questions/download-template`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return { error: errorData.error || 'Failed to download template' };
+      }
+
+      // Handle file download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'QuestionBank_Template.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      return { error: null };
+    } catch (error: any) {
+      return { error: error.message || 'Failed to download template' };
     }
   }
 }

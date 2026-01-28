@@ -15,7 +15,7 @@ export interface ApiError {
 }
 
 class ApiClient {
-  private baseURL: string;
+  public baseURL: string;
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL;
