@@ -52,6 +52,9 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
   const [clusterForm, setClusterForm] = useState({ ClusterName: '', Description: '' });
   const [competencyForm, setCompetencyForm] = useState({ Name: '', Description: '', ClusterId: '' });
   const [questionForm, setQuestionForm] = useState({ SelfQuestion: '', OthersQuestion: '', CompetencyId: '' });
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false);
+  const [questionBankBlobUrl, setQuestionBankBlobUrl] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const tenantSlug = projectSlug;
 
@@ -60,6 +63,42 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
       loadAllData();
     }
   }, [token, projectSlug]);
+
+  useEffect(() => {
+    if (clusters.length > 0 && !loading) {
+      const headers = ['Cluster Name', 'Competency Name', 'Self Question', 'Others Question'];
+      const rows: string[][] = [];
+
+      clusters.forEach(cluster => {
+        const clusterComps = competencies.filter(c => c.ClusterId === cluster.Id);
+        clusterComps.forEach(comp => {
+          const compQuestions = questions.filter(q => q.CompetencyId === comp.Id);
+          compQuestions.forEach(q => {
+            rows.push([
+              cluster.ClusterName,
+              comp.Name,
+              q.SelfQuestion || '',
+              q.OthersQuestion
+            ]);
+          });
+        });
+      });
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      setQuestionBankBlobUrl(url);
+
+      return () => {
+        URL.revokeObjectURL(url);
+      };
+    }
+  }, [clusters, competencies, questions, loading]);
 
   const loadAllData = async () => {
     if (!token) return;
@@ -397,6 +436,64 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    if (!token) return;
+    const loadingToast = toast.loading('Generating template...');
+    const result = await questionService.downloadTemplate(tenantSlug, token);
+    toast.dismiss(loadingToast);
+    if (result.error) {
+      toast.error(result.error);
+    }
+    setShowActionsDropdown(false);
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+    setShowActionsDropdown(false);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !token) return;
+
+    if (!file.name.endsWith('.xlsx')) {
+      toast.error('Please upload a .xlsx file');
+      return;
+    }
+
+    const loadingToast = toast.loading('Uploading question bank...');
+    try {
+      const result = await questionService.uploadQuestionBank(tenantSlug, file, token);
+      toast.dismiss(loadingToast);
+      if (result.error) {
+        toast.error(result.error);
+      } else {
+        toast.success('Question bank uploaded successfully');
+        loadAllData();
+      }
+    } catch (err: any) {
+      toast.dismiss(loadingToast);
+      toast.error(err.message || 'Failed to upload file');
+    }
+
+    // Reset input
+    if (e.target) e.target.value = '';
+  };
+
+  const handleDownloadQuestionBank = () => {
+    if (!questionBankBlobUrl) {
+      toast.error('Question bank is not ready for download yet');
+      return;
+    }
+    const a = document.createElement('a');
+    a.href = questionBankBlobUrl;
+    a.download = `QuestionBank_${tenantSlug}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setShowActionsDropdown(false);
+  };
+
   const getCompetenciesForCluster = (clusterId: string) => {
     return competencies.filter(c => c.ClusterId === clusterId);
   };
@@ -418,13 +515,60 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
 
       <div className={styles.container}>
         <div className={styles.header}>
-          <h1 className={styles.title}>Question Management</h1>
-          <p className={styles.subtitle}>Manage clusters, competencies, and questions for your surveys</p>
+          <div className={styles.headerTop}>
+            <div className={styles.titleSection}>
+              <h1 className={styles.title}>Question Management</h1>
+              <p className={styles.subtitle}>Manage clusters, competencies, and questions for your surveys</p>
+            </div>
+            <div className={styles.actionsWrapper}>
+              <div className={styles.dropdownContainer}>
+                <button
+                  className={styles.actionsButton}
+                  onClick={() => setShowActionsDropdown(!showActionsDropdown)}
+                >
+                  Actions
+                  <svg className={`${styles.chevron} ${showActionsDropdown ? styles.rotate : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {showActionsDropdown && (
+                  <div className={styles.dropdownMenu}>
+                    <button onClick={handleUploadClick} className={styles.dropdownItem}>
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className={styles.menuIcon}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      Upload Question Bank
+                    </button>
+                    <button onClick={handleDownloadTemplate} className={styles.dropdownItem}>
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className={styles.menuIcon}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download Template
+                    </button>
+                    <button onClick={handleDownloadQuestionBank} className={styles.dropdownItem}>
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className={styles.menuIcon}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Download Question Bank
+                    </button>
+                  </div>
+                )}
+              </div>
+              <button onClick={handleAddCluster} className={styles.addClusterButton}>
+                + Add Cluster
+              </button>
+            </div>
+          </div>
         </div>
 
-        <button onClick={handleAddCluster} className={styles.addClusterButton}>
-          + Add Cluster
-        </button>
+        <input
+          type="file"
+          ref={fileInputRef}
+          style={{ display: 'none' }}
+          accept=".xlsx"
+          onChange={handleFileChange}
+        />
 
         {/* Adding New Cluster Form */}
         {isAddingCluster && (

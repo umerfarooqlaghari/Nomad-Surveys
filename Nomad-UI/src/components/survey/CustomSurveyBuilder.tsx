@@ -206,6 +206,112 @@ export default function CustomSurveyBuilder({
     setHasUnsavedChanges(true);
   }, []);
 
+  // Bulk import questions from library
+  const handleBulkImportQuestions = useCallback((newQuestions: any[], startIndex?: number) => {
+    setSurvey((prev) => {
+      const newPages = [...prev.pages];
+      const insertAt = typeof startIndex === 'number' ? startIndex + 1 : newPages.length;
+
+      const importedPages: SurveyPage[] = [];
+
+      newQuestions.forEach((q, index) => {
+        // Map backend type to frontend type
+        const typeMap: any = {
+          'Text': 'text',
+          'Rating': 'rating',
+          'MultipleChoice': 'single-choice',
+          'Checkbox': 'multiple-choice',
+          'Dropdown': 'dropdown'
+        };
+        const mappedType = typeMap[q.QuestionType] || 'text';
+
+        // Use tenant default if exists
+        const questionType = tenantSettings?.defaultQuestionType || mappedType;
+
+        // Default config
+        const defaults: any = {
+          'rating': { ratingMin: 1, ratingMax: 5, ratingStep: 1, ratingLabels: { min: 'Never', max: 'Always' } },
+          'single-choice': { options: [{ id: 'opt1', value: 1, text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', value: 2, text: 'Option 2', order: 1, score: 2 }] },
+          'multiple-choice': { options: [{ id: 'opt1', value: 1, text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', value: 2, text: 'Option 2', order: 1, score: 2 }], minSelections: 0 },
+          'text': { maxLength: 500, placeholder: 'Enter your answer...' },
+          'textarea': { maxLength: 2000, placeholder: 'Enter your answer...' },
+          'dropdown': { options: [{ id: 'opt1', value: 1, text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', value: 2, text: 'Option 2', order: 1, score: 2 }] },
+        };
+
+        let config = defaults[questionType] || {};
+
+        // Apply tenant rating options if applicable
+        if (questionType === 'rating' && tenantSettings?.defaultRatingOptions?.length) {
+          config = {
+            ratingOptions: tenantSettings.defaultRatingOptions.map(opt => ({
+              id: opt.id,
+              value: opt.score ?? opt.order + 1,
+              text: opt.text,
+              order: opt.order,
+              score: opt.score ?? opt.order + 1,
+            })),
+          };
+        }
+
+        const newSurveyQuestion: Question = {
+          id: `q_${Date.now()}_${index}`,
+          name: `question_${Date.now()}_${index}`,
+          type: questionType,
+          selfText: q.SelfQuestion,
+          othersText: q.OthersQuestion,
+          required: false,
+          order: 0,
+          config: config,
+          showTo: 'everyone',
+          importedFrom: {
+            questionId: q.Id,
+            clusterId: q.ClusterId || '',
+            competencyId: q.CompetencyId,
+          }
+        };
+
+        const newPage: SurveyPage = {
+          id: generatePageId(),
+          name: `page_${Date.now()}_${index}`,
+          title: `Page ${newPages.length + 1}`,
+          description: '',
+          order: newPages.length,
+          questions: [newSurveyQuestion]
+        };
+
+        importedPages.push(newPage);
+      });
+
+      // Insert all imported pages at the specified position
+      newPages.splice(insertAt, 0, ...importedPages);
+
+      return {
+        ...prev,
+        pages: newPages.map((p, idx) => ({
+          ...p,
+          title: p.title.startsWith('Page ') ? `Page ${idx + 1}` : p.title,
+          order: idx
+        }))
+      };
+    });
+
+    setHasUnsavedChanges(true);
+    toast.success(`Imported ${newQuestions.length} questions on ${newQuestions.length} new pages`);
+  }, [tenantSettings]);
+
+  // Helper to get all imported question IDs for "already imported" check
+  const getExistingQuestionIds = useCallback(() => {
+    const ids: string[] = [];
+    survey.pages.forEach(p => {
+      p.questions.forEach(q => {
+        if (q.importedFrom?.questionId) {
+          ids.push(q.importedFrom.questionId);
+        }
+      });
+    });
+    return ids;
+  }, [survey.pages]);
+
   // Save survey
   const handleSave = async () => {
     // Validate survey
@@ -545,6 +651,8 @@ export default function CustomSurveyBuilder({
                 onUpdate={(updatedPage: SurveyPage) => handleUpdatePage(page.id, updatedPage)}
                 onDelete={() => handleDeletePage(page.id)}
                 onAddPageBelow={() => handleAddPage(index + 1)}
+                onBulkImport={(questions) => handleBulkImportQuestions(questions, index)}
+                existingQuestionIds={getExistingQuestionIds()}
                 onMoveUp={
                   index > 0
                     ? () => {
