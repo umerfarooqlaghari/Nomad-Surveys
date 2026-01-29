@@ -14,16 +14,19 @@ public class EmailController : ControllerBase
     private readonly IEmailService _emailService;
     private readonly NomadSurveysDbContext _context;
     private readonly ILogger<EmailController> _logger;
+    private readonly IConfiguration _configuration;
     private const string DefaultPassword = "Password@123";
 
     public EmailController(
         IEmailService emailService,
         NomadSurveysDbContext context,
-        ILogger<EmailController> logger)
+        ILogger<EmailController> logger,
+        IConfiguration configuration)
     {
         _emailService = emailService;
         _context = context;
         _logger = logger;
+        _configuration = configuration;
     }
 
     /// <summary>
@@ -292,7 +295,7 @@ public class EmailController : ControllerBase
             
             if (methodInfo == null)
             {
-                 return StatusCode(500, new { message = "Method not found" });
+                return StatusCode(500, new { message = "Method not found" });
             }
 
             var task = (Task)methodInfo.Invoke(backgroundService, new object[] { CancellationToken.None })!;
@@ -304,6 +307,142 @@ public class EmailController : ControllerBase
         {
             _logger.LogError(ex, "Error triggering reminders");
             return StatusCode(500, new { message = $"Error: {ex.Message}" });
+        }
+    }
+
+    [HttpPost("send-bulk-reminders")]
+    [Authorize]
+    public async Task<ActionResult> SendBulkReminders(
+        [FromRoute] string tenantSlug,
+        [FromBody] BulkEmailRequest request)
+    {
+        try
+        {
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Slug == tenantSlug && t.IsActive);
+            if (tenant == null) return NotFound(new { message = "Tenant not found" });
+
+            var assignments = await _context.SubjectEvaluatorSurveys
+                .Include(ses => ses.Survey)
+                .Include(ses => ses.SubjectEvaluator).ThenInclude(se => se.Subject).ThenInclude(s => s.Employee)
+                .Include(ses => ses.SubjectEvaluator).ThenInclude(se => se.Evaluator).ThenInclude(e => e.Employee)
+                .Where(ses => request.SubjectEvaluatorSurveyIds.Contains(ses.Id) && ses.TenantId == tenant.Id && ses.IsActive)
+                .ToListAsync();
+
+            var frontendUrl = _configuration["FrontendUrl"];
+            
+            int batchSize = 14;
+            int delayMs = 1000;
+            int sentCount = 0;
+
+            for (int i = 0; i < assignments.Count; i += batchSize)
+            {
+                var batch = assignments.Skip(i).Take(batchSize).ToList();
+                var tasks = batch.Select(async assignment => {
+                    var submission = await _context.SurveySubmissions.FirstOrDefaultAsync(ss => ss.SubjectEvaluatorSurveyId == assignment.Id);
+                    if (submission != null && submission.Status == "Completed") return;
+
+                    var isDefaultPassword = assignment.SubjectEvaluator.Evaluator.PasswordHash != null && 
+                                          BCrypt.Net.BCrypt.Verify(DefaultPassword, assignment.SubjectEvaluator.Evaluator.PasswordHash);
+                    var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
+
+                    var success = await _emailService.SendFormReminderEmailAsync(
+                        assignment.SubjectEvaluator.Evaluator.Employee.Email,
+                        assignment.SubjectEvaluator.Evaluator.Employee.FullName,
+                        assignment.SubjectEvaluator.Subject.Employee.FullName,
+                        assignment.Survey.Title,
+                        frontendUrl,
+                        "No specific deadline",
+                        tenant.Name,
+                        tenantSlug,
+                        passwordDisplay
+                    );
+
+                    if (success) {
+                        assignment.LastReminderSentAt = DateTime.UtcNow;
+                        sentCount++;
+                    }
+                });
+
+                await Task.WhenAll(tasks);
+                await _context.SaveChangesAsync();
+
+                if (i + batchSize < assignments.Count)
+                {
+                    await Task.Delay(delayMs);
+                }
+            }
+
+            return Ok(new { message = $"Successfully sent {sentCount} reminders." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending bulk reminders");
+            return StatusCode(500, new { message = "An error occurred while sending bulk reminders" });
+        }
+    }
+
+    [HttpPost("send-bulk-assignments")]
+    [Authorize]
+    public async Task<ActionResult> SendBulkAssignments(
+        [FromRoute] string tenantSlug,
+        [FromBody] BulkEmailRequest request)
+    {
+        try
+        {
+            var tenant = await _context.Tenants.FirstOrDefaultAsync(t => t.Slug == tenantSlug && t.IsActive);
+            if (tenant == null) return NotFound(new { message = "Tenant not found" });
+
+            var assignments = await _context.SubjectEvaluatorSurveys
+                .Include(ses => ses.Survey)
+                .Include(ses => ses.SubjectEvaluator).ThenInclude(se => se.Subject).ThenInclude(s => s.Employee)
+                .Include(ses => ses.SubjectEvaluator).ThenInclude(se => se.Evaluator).ThenInclude(e => e.Employee)
+                .Where(ses => request.SubjectEvaluatorSurveyIds.Contains(ses.Id) && ses.TenantId == tenant.Id && ses.IsActive)
+                .ToListAsync();
+
+            var frontendUrl = _configuration["FrontendUrl"];
+            
+            int batchSize = 14;
+            int delayMs = 1000;
+            int sentCount = 0;
+
+            for (int i = 0; i < assignments.Count; i += batchSize)
+            {
+                var batch = assignments.Skip(i).Take(batchSize).ToList();
+                var tasks = batch.Select(async assignment => {
+                    var isDefaultPassword = assignment.SubjectEvaluator.Evaluator.PasswordHash != null && 
+                                          BCrypt.Net.BCrypt.Verify(DefaultPassword, assignment.SubjectEvaluator.Evaluator.PasswordHash);
+                    var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
+
+                    var success = await _emailService.SendFormAssignmentEmailAsync(
+                        assignment.SubjectEvaluator.Evaluator.Employee.Email,
+                        assignment.SubjectEvaluator.Evaluator.Employee.FullName,
+                        assignment.SubjectEvaluator.Subject.Employee.FullName,
+                        assignment.Survey.Title,
+                        frontendUrl,
+                        tenant.Name,
+                        tenantSlug,
+                        passwordDisplay
+                    );
+
+                    if (success) {
+                        sentCount++;
+                    }
+                });
+
+                await Task.WhenAll(tasks);
+
+                if (i + batchSize < assignments.Count)
+                {
+                    await Task.Delay(delayMs);
+                }
+            }
+
+            return Ok(new { message = $"Successfully sent {sentCount} assignments." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending bulk assignments");
+            return StatusCode(500, new { message = "An error occurred while sending bulk assignments" });
         }
     }
 }

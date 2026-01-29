@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 using Nomad.Api.Authorization;
 using Nomad.Api.DTOs.Request;
 using Nomad.Api.DTOs.Response;
@@ -14,17 +15,20 @@ public class SubjectEvaluatorController : ControllerBase
     private readonly ISubjectEvaluatorService _subjectEvaluatorService;
     private readonly ISubjectService _subjectService;
     private readonly IEvaluatorService _evaluatorService;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<SubjectEvaluatorController> _logger;
 
     public SubjectEvaluatorController(
         ISubjectEvaluatorService subjectEvaluatorService,
         ISubjectService subjectService,
         IEvaluatorService evaluatorService,
+        IMemoryCache cache,
         ILogger<SubjectEvaluatorController> logger)
     {
         _subjectEvaluatorService = subjectEvaluatorService;
         _subjectService = subjectService;
         _evaluatorService = evaluatorService;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -380,6 +384,40 @@ public class SubjectEvaluatorController : ControllerBase
         {
             _logger.LogError(ex, "Error retrieving relationships with surveys for evaluator {EvaluatorId}", evaluatorId);
             return StatusCode(500, new { message = "An error occurred while retrieving relationships" });
+        }
+    }
+
+    [HttpGet("subject-evaluators/emailing-list")]
+    [AuthorizeTenantAdmin]
+    public async Task<ActionResult<List<EmailingListItemResponse>>> GetEmailingList()
+    {
+        try
+        {
+            var tenantId = GetCurrentTenantId();
+            if (!tenantId.HasValue)
+            {
+                return Unauthorized(new { message = "Tenant ID not found in session" });
+            }
+
+            var cacheKey = $"EmailingList_{tenantId.Value}";
+
+            if (!_cache.TryGetValue(cacheKey, out List<EmailingListItemResponse>? result))
+            {
+                result = await _subjectEvaluatorService.GetEmailingListAsync(tenantId.Value);
+
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(5))
+                    .SetAbsoluteExpiration(TimeSpan.FromMinutes(15));
+
+                _cache.Set(cacheKey, result, cacheEntryOptions);
+            }
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving emailing list");
+            return StatusCode(500, new { message = "An error occurred while retrieving the emailing list" });
         }
     }
 }

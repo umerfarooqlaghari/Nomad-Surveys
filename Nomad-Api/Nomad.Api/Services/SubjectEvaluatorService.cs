@@ -666,4 +666,58 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
             throw;
         }
     }
+    public async Task<List<EmailingListItemResponse>> GetEmailingListAsync(Guid tenantId)
+    {
+        try
+        {
+            // Fetch only necessary fields into memory to avoid deep includes and large data transfer
+            var flatAssignments = await _context.SubjectEvaluatorSurveys
+                .AsNoTracking()
+                .Where(ses => ses.TenantId == tenantId && ses.IsActive)
+                .Select(ses => new
+                {
+                    ses.Id,
+                    ses.SurveyId,
+                    SurveyTitle = ses.Survey.Title,
+                    EvaluatorId = ses.SubjectEvaluator.EvaluatorId,
+                    EvaluatorName = ses.SubjectEvaluator.Evaluator.Employee.FullName,
+                    EvaluatorEmail = ses.SubjectEvaluator.Evaluator.Employee.Email,
+                    SubjectName = ses.SubjectEvaluator.Subject.Employee.FullName,
+                    ses.LastReminderSentAt
+                })
+                .ToListAsync();
+
+            if (!flatAssignments.Any())
+            {
+                return new List<EmailingListItemResponse>();
+            }
+
+            // Grouping in memory AFTER fetching only the required fields
+            var grouped = flatAssignments
+                .GroupBy(a => new { a.SurveyId, a.EvaluatorId })
+                .Select(g => new EmailingListItemResponse
+                {
+                    SurveyId = g.Key.SurveyId,
+                    SurveyName = g.First().SurveyTitle,
+                    EvaluatorId = g.Key.EvaluatorId,
+                    EvaluatorName = g.First().EvaluatorName,
+                    EvaluatorEmail = g.First().EvaluatorEmail,
+                    SubjectCount = g.Count(),
+                    SubjectNames = g.Select(a => a.SubjectName).Distinct().ToList(),
+                    LastReminderSentAt = g.Max(a => a.LastReminderSentAt),
+                    AssignmentEmailSentAt = null,
+                    SubjectEvaluatorSurveyIds = g.Select(a => a.Id).ToList()
+                })
+                .OrderBy(r => r.SurveyName)
+                .ThenBy(r => r.EvaluatorName)
+                .ToList();
+
+            return grouped;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting emailing list for tenant {TenantId}", tenantId);
+            throw;
+        }
+    }
 }

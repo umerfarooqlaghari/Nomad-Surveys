@@ -19,6 +19,10 @@ interface EmailResponse {
   message: string;
 }
 
+interface BulkEmailRequest {
+  subjectEvaluatorSurveyIds: string[];
+}
+
 class EmailService {
   /**
    * Send password reset OTP email
@@ -128,6 +132,70 @@ class EmailService {
         success: false,
         message: '',
         error: error.message || 'An error occurred while sending reminder',
+      };
+    }
+  }
+
+  /**
+   * Send bulk form reminder emails
+   */
+  async sendBulkReminders(
+    tenantSlug: string,
+    subjectEvaluatorSurveyIds: string[],
+    token: string
+  ): Promise<{ success: boolean; message: string; error?: string }> {
+    try {
+      const response = await apiClient.post<EmailResponse>(
+        `/${tenantSlug}/email/send-bulk-reminders`,
+        { subjectEvaluatorSurveyIds } as BulkEmailRequest,
+        token
+      );
+
+      if (response.error) {
+        return { success: false, message: '', error: response.error };
+      }
+
+      return {
+        success: true,
+        message: response.data?.message || 'Bulk reminders sent successfully',
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: '',
+        error: error.message || 'An error occurred while sending bulk reminders',
+      };
+    }
+  }
+
+  /**
+   * Send bulk assignment emails
+   */
+  async sendBulkAssignments(
+    tenantSlug: string,
+    subjectEvaluatorSurveyIds: string[],
+    token: string
+  ): Promise<{ success: boolean; message: string; error?: string }> {
+    try {
+      const response = await apiClient.post<EmailResponse>(
+        `/${tenantSlug}/email/send-bulk-assignments`,
+        { subjectEvaluatorSurveyIds } as BulkEmailRequest,
+        token
+      );
+
+      if (response.error) {
+        return { success: false, message: '', error: response.error };
+      }
+
+      return {
+        success: true,
+        message: response.data?.message || 'Bulk assignments sent successfully',
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: '',
+        error: error.message || 'An error occurred while sending bulk assignments',
       };
     }
   }

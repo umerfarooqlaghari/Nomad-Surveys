@@ -91,6 +91,19 @@ export interface BulkCreateResponse {
   CreatedIds: string[];
 }
 
+export interface EmailingListItem {
+  SurveyId: string;
+  SurveyName: string;
+  EvaluatorId: string;
+  EvaluatorName: string;
+  EvaluatorEmail: string;
+  SubjectCount: number;
+  SubjectNames: string[];
+  LastReminderSentAt?: string;
+  AssignmentEmailSentAt?: string;
+  SubjectEvaluatorSurveyIds: string[];
+}
+
 class EvaluatorService {
   /**
    * Get all evaluators for a tenant
@@ -653,6 +666,19 @@ class EvaluatorService {
     } catch (error: any) {
       console.error('Error removing evaluator subject:', error);
       return { success: false, error: error.message || 'Failed to remove relationship' };
+    }
+  }
+
+  /**
+   * Get the list of assignments for the Emailing tab
+   */
+  async getEmailingList(tenantSlug: string, token: string): Promise<{ data: EmailingListItem[] | null; error: string | null }> {
+    try {
+      const response = await apiClient.get<EmailingListItem[]>(`/${tenantSlug}/subject-evaluators/emailing-list`, token);
+      return handleApiResponse(response);
+    } catch (error: any) {
+      console.error('Error fetching emailing list:', error);
+      return { data: null, error: error.message || 'Failed to fetch emailing list' };
     }
   }
 }
