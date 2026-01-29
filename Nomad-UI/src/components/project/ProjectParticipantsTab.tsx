@@ -9,12 +9,14 @@ import { evaluatorService, EvaluatorListResponse, SubjectRelationship } from '@/
 import { employeeService, EmployeeListResponse } from '@/services/employeeService';
 import ManageRelationshipsModal from '@/components/modals/ManageRelationshipsModal';
 import ViewRelationshipsModal from '@/components/modals/ViewRelationshipsModal';
+import { EmailingListItem } from '@/services/evaluatorService';
+import emailService from '@/services/emailService';
 
 interface ProjectParticipantsTabProps {
   projectSlug: string;
 }
 
-type SubTabType = 'evaluators' | 'subjects';
+type SubTabType = 'evaluators' | 'subjects' | 'emailing';
 
 export default function ProjectParticipantsTab({ projectSlug }: ProjectParticipantsTabProps) {
   const { token } = useAuth();
@@ -46,16 +48,27 @@ export default function ProjectParticipantsTab({ projectSlug }: ProjectParticipa
   const [selectedSubject, setSelectedSubject] = useState<{ id: string; name: string } | null>(null);
   const [selectedSubjectForView, setSelectedSubjectForView] = useState<{ id: string; name: string } | null>(null);
 
+  // Emailing state
+  const [emailingList, setEmailingList] = useState<EmailingListItem[]>([]);
+  const [emailingLoading, setEmailingLoading] = useState(false);
+  const [emailingSearchTerm, setEmailingSearchTerm] = useState('');
+  const [selectedEmailingItems, setSelectedEmailingItems] = useState<string[]>([]); // Array of SurveyId|EvaluatorId
+  const [isSendingEmails, setIsSendingEmails] = useState(false);
+
   // Shared state
   const [employees, setEmployees] = useState<EmployeeListResponse[]>([]);
 
   useEffect(() => {
-    if (activeSubTab === 'evaluators') {
+    if (activeSubTab === 'evaluators' && evaluators.length === 0) {
       loadEvaluators();
-    } else {
+    } else if (activeSubTab === 'subjects' && subjects.length === 0) {
       loadSubjects();
+    } else if (activeSubTab === 'emailing' && emailingList.length === 0) {
+      loadEmailingList();
     }
-    loadEmployees();
+    if (employees.length === 0) {
+      loadEmployees();
+    }
   }, [projectSlug, activeSubTab]);
 
   // Evaluators functions
@@ -370,6 +383,96 @@ EMP001,EMP003,Peer`;
     }
   };
 
+  // Emailing functions
+  const loadEmailingList = async () => {
+    if (!token) return;
+    setEmailingLoading(true);
+    try {
+      const response = await evaluatorService.getEmailingList(projectSlug, token);
+      if (response.error) {
+        setEmailingList([]);
+        toast.error(response.error);
+      } else {
+        setEmailingList(response.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading emailing list:', error);
+      toast.error('Failed to load emailing list');
+      setEmailingList([]);
+    } finally {
+      setEmailingLoading(false);
+    }
+  };
+
+  const handleEmailingItemSelect = (surveyId: string, evaluatorId: string) => {
+    const key = `${surveyId}|${evaluatorId}`;
+    setSelectedEmailingItems(prev =>
+      prev.includes(key) ? prev.filter(id => id !== key) : [...prev, key]
+    );
+  };
+
+  const handleEmailingSelectAll = (itemsToSelect: EmailingListItem[]) => {
+    if (selectedEmailingItems.length === itemsToSelect.length) {
+      setSelectedEmailingItems([]);
+    } else {
+      setSelectedEmailingItems(itemsToSelect.map(item => `${item.SurveyId}|${item.EvaluatorId}`));
+    }
+  };
+
+  const handleSendBulkReminders = async () => {
+    if (selectedEmailingItems.length === 0 || !token) return;
+
+    setIsSendingEmails(true);
+    const loadingToast = toast.loading('Sending bulk reminders...');
+    try {
+      const surveyEvaluatorSurveyIds = emailingList
+        .filter(item => selectedEmailingItems.includes(`${item.SurveyId}|${item.EvaluatorId}`))
+        .flatMap(item => item.SubjectEvaluatorSurveyIds);
+
+      const response = await emailService.sendBulkReminders(projectSlug, surveyEvaluatorSurveyIds, token);
+      if (response.success) {
+        toast.success(response.message);
+        loadEmailingList();
+        setSelectedEmailingItems([]);
+      } else {
+        toast.error(response.error || 'Failed to send bulk reminders');
+      }
+    } catch (error) {
+      console.error('Error sending bulk reminders:', error);
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsSendingEmails(false);
+      toast.dismiss(loadingToast);
+    }
+  };
+
+  const handleSendBulkAssignments = async () => {
+    if (selectedEmailingItems.length === 0 || !token) return;
+
+    setIsSendingEmails(true);
+    const loadingToast = toast.loading('Sending bulk assignments...');
+    try {
+      const surveyEvaluatorSurveyIds = emailingList
+        .filter(item => selectedEmailingItems.includes(`${item.SurveyId}|${item.EvaluatorId}`))
+        .flatMap(item => item.SubjectEvaluatorSurveyIds);
+
+      const response = await emailService.sendBulkAssignments(projectSlug, surveyEvaluatorSurveyIds, token);
+      if (response.success) {
+        toast.success(response.message);
+        loadEmailingList();
+        setSelectedEmailingItems([]);
+      } else {
+        toast.error(response.error || 'Failed to send bulk assignments');
+      }
+    } catch (error) {
+      console.error('Error sending bulk assignments:', error);
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsSendingEmails(false);
+      toast.dismiss(loadingToast);
+    }
+  };
+
   // Shared functions
   const loadEmployees = async () => {
     if (!token) return;
@@ -422,6 +525,13 @@ EMP001,EMP003,Peer`;
     emp.EmployeeId.toLowerCase().includes(subjectSearchTerm.toLowerCase())
   );
 
+  const filteredEmailingList = emailingList.filter(item =>
+    emailingSearchTerm === '' ||
+    item.SurveyName.toLowerCase().includes(emailingSearchTerm.toLowerCase()) ||
+    item.EvaluatorName.toLowerCase().includes(emailingSearchTerm.toLowerCase()) ||
+    item.EvaluatorEmail.toLowerCase().includes(emailingSearchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       {/* Sub-tabs */}
@@ -445,6 +555,15 @@ EMP001,EMP003,Peer`;
                 } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm`}
             >
               Subjects
+            </button>
+            <button
+              onClick={() => setActiveSubTab('emailing')}
+              className={`${activeSubTab === 'emailing'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm`}
+            >
+              Emailing
             </button>
           </nav>
         </div>
@@ -895,6 +1014,142 @@ EMP001,EMP003,Peer`;
               <div className="mt-4 text-sm text-gray-600">
                 Showing {filteredSubjects.length} of {subjects.length} subjects
               </div>
+            </>
+          )}
+
+          {activeSubTab === 'emailing' && (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-bold text-gray-900">Emailing</h2>
+                  <button
+                    onClick={loadEmailingList}
+                    disabled={emailingLoading}
+                    className="p-1 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50"
+                    title="Refresh list"
+                  >
+                    <svg className={`w-5 h-5 text-gray-600 ${emailingLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSendBulkReminders}
+                    disabled={selectedEmailingItems.length === 0 || isSendingEmails}
+                    className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:bg-gray-300"
+                  >
+                    Send Reminder email
+                  </button>
+                  <button
+                    onClick={handleSendBulkAssignments}
+                    disabled={selectedEmailingItems.length === 0 || isSendingEmails}
+                    className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:bg-gray-300"
+                  >
+                    Send assignment email
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <input
+                  type="text"
+                  placeholder="Search by survey name, evaluator name or email..."
+                  value={emailingSearchTerm}
+                  onChange={(e) => setEmailingSearchTerm(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-4 py-2 text-gray-900 bg-white"
+                />
+              </div>
+
+              {emailingLoading ? (
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                  <p className="mt-2 text-gray-600">Loading emailing list...</p>
+                </div>
+              ) : filteredEmailingList.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  {emailingSearchTerm ? 'No items match your search' : 'No survey assignments found.'}
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10">
+                          <div
+                            className="flex items-center justify-center cursor-pointer"
+                            onClick={() => handleEmailingSelectAll(filteredEmailingList)}
+                          >
+                            <div className={`w-5 h-5 rounded border ${selectedEmailingItems.length === filteredEmailingList.length && filteredEmailingList.length > 0
+                              ? 'bg-blue-600 border-blue-600'
+                              : 'border-gray-300 bg-white'
+                              } flex items-center justify-center transition-colors`}>
+                              {selectedEmailingItems.length === filteredEmailingList.length && filteredEmailingList.length > 0 && (
+                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          </div>
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Survey Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluator Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number of Subjects</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reminder email time</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredEmailingList.map((item) => {
+                        const isSelected = selectedEmailingItems.includes(`${item.SurveyId}|${item.EvaluatorId}`);
+                        return (
+                          <tr
+                            key={`${item.SurveyId}-${item.EvaluatorId}`}
+                            className={`transition-colors cursor-pointer ${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                            onClick={() => handleEmailingItemSelect(item.SurveyId, item.EvaluatorId)}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <div className="flex items-center justify-center">
+                                <div className={`w-5 h-5 rounded border ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-300 bg-white'
+                                  } flex items-center justify-center transition-colors`}>
+                                  {isSelected && (
+                                    <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-b border-transparent">
+                              {item.SurveyName}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {item.EvaluatorName}
+                              <div className="text-xs text-gray-500 font-normal">{item.EvaluatorEmail}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600" onClick={(e) => e.stopPropagation()}>
+                              <div className="group relative inline-block cursor-help border-b border-dotted border-gray-400">
+                                {item.SubjectCount}
+                                <div className="invisible group-hover:visible absolute z-[9999] w-64 p-3 mt-2 text-sm bg-gray-900 text-white rounded-lg shadow-xl -left-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                                  <p className="font-semibold mb-2 border-b border-gray-700 pb-1">Assigned Subjects:</p>
+                                  <ul className="list-disc list-inside space-y-1 text-wrap">
+                                    {item.SubjectNames.map((name, idx) => (
+                                      <li key={idx}>{name}</li>
+                                    ))}
+                                  </ul>
+                                  <div className="absolute -top-2 left-24 border-8 border-transparent border-b-gray-900"></div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                              {item.LastReminderSentAt ? new Date(item.LastReminderSentAt).toLocaleString() : '-'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </>
           )}
         </div>
