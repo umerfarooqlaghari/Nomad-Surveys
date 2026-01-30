@@ -48,7 +48,14 @@ var dataSource = dataSourceBuilder.Build();
 
 // Add Entity Framework with configured data source
 builder.Services.AddDbContext<NomadSurveysDbContext>(options =>
-    options.UseNpgsql(dataSource));
+    options.UseNpgsql(dataSource, npgsqlOptions => 
+    {
+        npgsqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorCodesToAdd: null);
+        npgsqlOptions.CommandTimeout(30); // 30 seconds timeout
+    }));
 
 // Add Identity
 builder.Services.AddIdentity<ApplicationUser, TenantRole>(options =>
