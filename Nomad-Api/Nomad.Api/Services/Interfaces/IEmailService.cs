@@ -33,5 +33,10 @@ public interface IEmailService
     /// Send a consolidated reminder email for multiple pending evaluations
     /// </summary>
     Task<bool> SendConsolidatedReminderEmailAsync(string toEmail, string evaluatorName, int pendingCount, List<(string FormTitle, string SubjectName, string Link)> pendingItems, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay);
+
+    /// <summary>
+    /// Send a consolidated assignment email for multiple new evaluations
+    /// </summary>
+    Task<bool> SendConsolidatedAssignmentEmailAsync(string toEmail, string evaluatorName, int formCount, List<(string FormTitle, string SubjectName)> assignedItems, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay);
 }
 

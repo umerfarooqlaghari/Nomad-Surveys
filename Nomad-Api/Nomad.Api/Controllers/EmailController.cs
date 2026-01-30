@@ -328,51 +328,97 @@ public class EmailController : ControllerBase
                 .Where(ses => request.SubjectEvaluatorSurveyIds.Contains(ses.Id) && ses.TenantId == tenant.Id && ses.IsActive)
                 .ToListAsync();
 
+            _logger.LogInformation("Bulk Reminders: Found {Count} assignments out of {RequestedCount} requested IDs.", 
+                assignments.Count, request.SubjectEvaluatorSurveyIds.Count);
+
             var frontendUrl = _configuration["FrontendUrl"];
-            
-            int batchSize = 14;
-            int delayMs = 1000;
+            var groups = assignments
+                .GroupBy(a => a.SubjectEvaluator.Evaluator.Employee.Email)
+                .ToList();
+
+            _logger.LogInformation("Bulk Reminders: Grouped into {Count} unique evaluator emails.", groups.Count);
+
             int sentCount = 0;
+            int delayMs = 1000;
 
-            for (int i = 0; i < assignments.Count; i += batchSize)
+            foreach (var group in groups)
             {
-                var batch = assignments.Skip(i).Take(batchSize).ToList();
-                var tasks = batch.Select(async assignment => {
-                    var submission = await _context.SurveySubmissions.FirstOrDefaultAsync(ss => ss.SubjectEvaluatorSurveyId == assignment.Id);
-                    if (submission != null && submission.Status == "Completed") return;
+                var evaluatorEmail = group.Key;
 
-                    var isDefaultPassword = assignment.SubjectEvaluator.Evaluator.PasswordHash != null && 
-                                          BCrypt.Net.BCrypt.Verify(DefaultPassword, assignment.SubjectEvaluator.Evaluator.PasswordHash);
-                    var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
-
-                    var success = await _emailService.SendFormReminderEmailAsync(
-                        assignment.SubjectEvaluator.Evaluator.Employee.Email,
-                        assignment.SubjectEvaluator.Evaluator.Employee.FullName,
-                        assignment.SubjectEvaluator.Subject.Employee.FullName,
-                        assignment.Survey.Title,
-                        frontendUrl,
-                        "No specific deadline",
-                        tenant.Name,
-                        tenantSlug,
-                        passwordDisplay
-                    );
-
-                    if (success) {
-                        assignment.LastReminderSentAt = DateTime.UtcNow;
-                        sentCount++;
-                    }
-                });
-
-                await Task.WhenAll(tasks);
-                await _context.SaveChangesAsync();
-
-                if (i + batchSize < assignments.Count)
+                if (string.IsNullOrEmpty(evaluatorEmail))
                 {
-                    await Task.Delay(delayMs);
+                    _logger.LogWarning("Bulk Reminders: Skipping a group because the evaluator email is null or empty.");
+                    continue;
                 }
+                var evaluatorAssignments = group.ToList();
+                var firstAssignment = evaluatorAssignments.First();
+                var evaluatorName = firstAssignment.SubjectEvaluator.Evaluator.Employee.FullName;
+                
+                // Pre-fetch completed submissions for this evaluator's assignments
+                var assignmentIds = evaluatorAssignments.Select(a => a.Id).ToList();
+                var completedSubmissionIds = await _context.SurveySubmissions
+                    .Where(ss => assignmentIds.Contains(ss.SubjectEvaluatorSurveyId) && ss.Status == "Completed")
+                    .Select(ss => ss.SubjectEvaluatorSurveyId)
+                    .ToListAsync();
+
+                var pendingItemsForEmail = evaluatorAssignments
+                    .Where(a => !completedSubmissionIds.Contains(a.Id))
+                    .Select(a => (
+                        FormTitle: a.Survey.Title,
+                        SubjectName: a.SubjectEvaluator.Subject.Employee.FullName,
+                        Link: $"{frontendUrl}" // Or specific link if needed
+                    )).ToList();
+
+                if (!pendingItemsForEmail.Any()) {
+                    _logger.LogInformation("Bulk Reminders: Skipping evaluator {Email} because all {Count} assignments are already completed.", 
+                        evaluatorEmail, evaluatorAssignments.Count);
+                    continue;
+                }
+
+                _logger.LogInformation("Bulk Reminders: Preparing to send consolidated email to {Email} with {PendingCount} forms.", 
+                    evaluatorEmail, pendingItemsForEmail.Count);
+
+                var isDefaultPassword = firstAssignment.SubjectEvaluator.Evaluator.PasswordHash != null && 
+                                      BCrypt.Net.BCrypt.Verify(DefaultPassword, firstAssignment.SubjectEvaluator.Evaluator.PasswordHash);
+                var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
+
+                var dashboardLink = $"{frontendUrl}/{tenantSlug}/participant/dashboard";
+
+                var success = await _emailService.SendConsolidatedReminderEmailAsync(
+                    evaluatorEmail,
+                    evaluatorName,
+                    pendingItemsForEmail.Count,
+                    pendingItemsForEmail,
+                    dashboardLink,
+                    tenant.Name,
+                    tenantSlug,
+                    passwordDisplay
+                );
+
+                if (success)
+                {
+                    var processedIds = evaluatorAssignments
+                        .Where(a => !completedSubmissionIds.Contains(a.Id))
+                        .Select(a => a.Id)
+                        .ToList();
+
+                    foreach (var id in processedIds)
+                    {
+                        var assignment = assignments.First(a => a.Id == id);
+                        assignment.LastReminderSentAt = DateTime.UtcNow;
+                    }
+                    sentCount++; // Counting evaluators notified
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    _logger.LogWarning("Bulk Reminders: Failed to send consolidated email to {Email}.", evaluatorEmail);
+                }
+
+                await Task.Delay(delayMs);
             }
 
-            return Ok(new { message = $"Successfully sent {sentCount} reminders." });
+            return Ok(new { message = $"Successfully sent consolidated reminders to {sentCount} evaluators." });
         }
         catch (Exception ex)
         {
@@ -400,44 +446,51 @@ public class EmailController : ControllerBase
                 .ToListAsync();
 
             var frontendUrl = _configuration["FrontendUrl"];
-            
-            int batchSize = 14;
-            int delayMs = 1000;
+            var groups = assignments
+                .GroupBy(a => a.SubjectEvaluator.Evaluator.Employee.Email)
+                .ToList();
+
             int sentCount = 0;
+            int delayMs = 1000;
 
-            for (int i = 0; i < assignments.Count; i += batchSize)
+            foreach (var group in groups)
             {
-                var batch = assignments.Skip(i).Take(batchSize).ToList();
-                var tasks = batch.Select(async assignment => {
-                    var isDefaultPassword = assignment.SubjectEvaluator.Evaluator.PasswordHash != null && 
-                                          BCrypt.Net.BCrypt.Verify(DefaultPassword, assignment.SubjectEvaluator.Evaluator.PasswordHash);
-                    var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
+                var evaluatorEmail = group.Key;
+                var evaluatorAssignments = group.ToList();
+                var firstAssignment = evaluatorAssignments.First();
+                var evaluatorName = firstAssignment.SubjectEvaluator.Evaluator.Employee.FullName;
 
-                    var success = await _emailService.SendFormAssignmentEmailAsync(
-                        assignment.SubjectEvaluator.Evaluator.Employee.Email,
-                        assignment.SubjectEvaluator.Evaluator.Employee.FullName,
-                        assignment.SubjectEvaluator.Subject.Employee.FullName,
-                        assignment.Survey.Title,
-                        frontendUrl,
-                        tenant.Name,
-                        tenantSlug,
-                        passwordDisplay
-                    );
+                var assignedItems = evaluatorAssignments.Select(a => (
+                    FormTitle: a.Survey.Title,
+                    SubjectName: a.SubjectEvaluator.Subject.Employee.FullName
+                )).ToList();
 
-                    if (success) {
-                        sentCount++;
-                    }
-                });
+                var isDefaultPassword = firstAssignment.SubjectEvaluator.Evaluator.PasswordHash != null && 
+                                      BCrypt.Net.BCrypt.Verify(DefaultPassword, firstAssignment.SubjectEvaluator.Evaluator.PasswordHash);
+                var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
 
-                await Task.WhenAll(tasks);
+                var dashboardLink = $"{frontendUrl}/{tenantSlug}/participant/dashboard";
 
-                if (i + batchSize < assignments.Count)
+                var success = await _emailService.SendConsolidatedAssignmentEmailAsync(
+                    evaluatorEmail,
+                    evaluatorName,
+                    assignedItems.Count,
+                    assignedItems,
+                    dashboardLink,
+                    tenant.Name,
+                    tenantSlug,
+                    passwordDisplay
+                );
+
+                if (success)
                 {
-                    await Task.Delay(delayMs);
+                    sentCount++;
                 }
+
+                await Task.Delay(delayMs);
             }
 
-            return Ok(new { message = $"Successfully sent {sentCount} assignments." });
+            return Ok(new { message = $"Successfully sent consolidated assignments to {sentCount} evaluators." });
         }
         catch (Exception ex)
         {

@@ -24,6 +24,17 @@ public class ReminderBackgroundService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("ReminderBackgroundService is starting.");
+        
+        // Stagger startup: Wait for 1 minute to allow the app to warm up and seed data
+        // without competing for database connections in the Singapore region.
+        try 
+        {
+            await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
 
         while (!stoppingToken.IsCancellationRequested)
         {
