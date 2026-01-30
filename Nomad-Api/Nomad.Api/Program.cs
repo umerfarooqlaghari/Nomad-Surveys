@@ -37,11 +37,17 @@ builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
-// Configure Npgsql Data Source with dynamic JSON support (required for EF Core 8 + Npgsql 8.x)
+// Configure Npgsql Data Source with dynamic JSON support
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
+// Use NpgsqlConnectionStringBuilder to safely set robust timeout and keepalive settings
+var npgsqlBuilder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
+npgsqlBuilder.Timeout = 60;
+npgsqlBuilder.CommandTimeout = 60;
+npgsqlBuilder["Keepalive"] = 30; // One word, no space
+
+var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(npgsqlBuilder.ConnectionString);
 // Enable dynamic JSON serialization for JSONB columns with complex types
 dataSourceBuilder.EnableDynamicJson();
 var dataSource = dataSourceBuilder.Build();
@@ -51,10 +57,10 @@ builder.Services.AddDbContext<NomadSurveysDbContext>(options =>
     options.UseNpgsql(dataSource, npgsqlOptions => 
     {
         npgsqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(30),
+            maxRetryCount: 10, // Increased retries
+            maxRetryDelay: TimeSpan.FromSeconds(5), // Faster retries
             errorCodesToAdd: null);
-        npgsqlOptions.CommandTimeout(30); // 30 seconds timeout
+        npgsqlOptions.CommandTimeout(60); // 60 seconds timeout
     }));
 
 // Add Identity

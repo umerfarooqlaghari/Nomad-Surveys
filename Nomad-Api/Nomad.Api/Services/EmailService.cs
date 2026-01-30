@@ -597,5 +597,127 @@ public class EmailService : IEmailService
     </body>
     </html>";
     }
+
+    public async Task<bool> SendConsolidatedAssignmentEmailAsync(string toEmail, string evaluatorName, int formCount, List<(string FormTitle, string SubjectName)> assignedItems, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay)
+    {
+        var subject = $"New Forms Assigned: You have {formCount} new evaluations";
+        var htmlBody = GenerateConsolidatedAssignmentEmailHtml(evaluatorName, formCount, assignedItems, dashboardLink, tenantName, toEmail, tenantSlug, passwordDisplay);
+
+        return await SendEmailAsync(toEmail, subject, htmlBody, evaluatorName);
+    }
+
+    private string GenerateConsolidatedAssignmentEmailHtml(string evaluatorName, int formCount, List<(string FormTitle, string SubjectName)> assignedItems, string dashboardLink, string tenantName, string email, string tenantSlug, string password)
+    {
+        var loginInfo = $@"
+            <div style=""background-color: #f3f4f6; padding: 15px; border-radius: 4px; margin: 10px 0;"">
+                <strong>Company Code:</strong> {tenantSlug}<br>
+                <strong>Email:</strong> {email}<br>
+                <strong>Password:</strong> {password}
+            </div>";
+
+        var itemsHtml = "";
+        foreach (var item in assignedItems.Take(10)) // Show max 10 items in email
+        {
+            itemsHtml += $@"
+            <tr>
+                <td style=""padding: 12px 16px; border-bottom: 1px solid #e5e7eb; font-size: 14px; color: #111827;"">
+                    <div style=""font-weight: 500;"">{item.FormTitle}</div>
+                    <div style=""color: #6b7280; font-size: 13px;"">Subject: {item.SubjectName}</div>
+                </td>
+            </tr>";
+        }
+
+        if (assignedItems.Count > 10)
+        {
+            itemsHtml += $@"
+            <tr>
+                <td style=""padding: 12px 16px; font-size: 13px; color: #6b7280; text-align: center;"">
+                    ...and {assignedItems.Count - 10} more new forms
+                </td>
+            </tr>";
+        }
+
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""UTF-8"">
+    <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
+    <title>New Forms Assigned</title>
+</head>
+<body style=""margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f5f5f5;"">
+    <table role=""presentation"" style=""width: 100%; border-collapse: collapse;"">
+        <tr>
+            <td align=""center"" style=""padding: 40px 0;"">
+                <table role=""presentation"" style=""width: 600px; max-width: 100%; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"">
+                    <!-- Header -->
+                    <tr>
+                        <td style=""padding: 40px 40px 30px; text-align: center; border-bottom: 1px solid #e5e7eb;"">
+                            <h1 style=""margin: 0; font-size: 24px; font-weight: 600; color: #111827;"">{tenantName}</h1>
+                        </td>
+                    </tr>
+                    <!-- Content -->
+                    <tr>
+                        <td style=""padding: 40px;"">
+                            <h2 style=""margin: 0 0 16px; font-size: 20px; font-weight: 600; color: #111827;"">New Forms Assigned</h2>
+                            <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
+                                Dear {evaluatorName},
+                            </p>
+                            <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
+                                Ascend Consulting is approaching you as an independent organization to seek your participation in a 360° Feedback Survey. You have been assigned to provide feedback for your following colleague(s) and/or complete a self-evaluation.
+                            </p>
+                            
+                            <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
+                                You have <strong>{formCount}</strong> new evaluation forms that require your attention.
+                            </p>
+
+                            <!-- List Container -->
+                            <div style=""border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 24px;"">
+                                <table role=""presentation"" style=""width: 100%; border-collapse: collapse;"">
+                                    {itemsHtml}
+                                </table>
+                            </div>
+
+                            <!-- CTA Button -->
+                            <table role=""presentation"" style=""margin: 0 0 24px;"">
+                                <tr>
+                                    <td style=""border-radius: 6px; background-color: #3b82f6;"">
+                                        <a href=""{dashboardLink}"" style=""display: inline-block; padding: 12px 32px; font-size: 15px; font-weight: 500; color: #ffffff; text-decoration: none;"">
+                                            Go to Dashboard
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            
+                            <p style=""margin: 0 0 16px; font-size: 15px; line-height: 24px; color: #6b7280;"">
+                                Please note your credentials:
+                            </p>
+                            {loginInfo}
+                            
+                            <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
+                                Once you have entered your Username (Email) and Password and clicked on 'Sign In', you will be directed to your portal where you can see the surveys you have to complete.
+                            </p>
+                            
+                            <p style=""margin: 0; font-size: 15px; line-height: 24px; color: #6b7280;"">
+                                Regards,<br>
+                                Ascend Consulting
+                            </p>
+                        </td>
+                    </tr>
+                    <!-- Footer -->
+                    <tr>
+                        <td style=""padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;"">
+                            <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af; text-align: center;"">
+                                This is an automated message from Nomad Surveys. Please do not reply to this email.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>";
+    }
 }
 
