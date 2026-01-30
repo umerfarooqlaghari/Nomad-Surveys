@@ -157,13 +157,13 @@ class EmailService {
 
       return {
         success: true,
-        message: response.data?.message || 'Bulk reminders sent successfully',
+        message: response.data?.message || 'Reminders sent successfully',
       };
     } catch (error: any) {
       return {
         success: false,
         message: '',
-        error: error.message || 'An error occurred while sending bulk reminders',
+        error: error.message || 'An error occurred while sending reminders',
       };
     }
   }
@@ -189,7 +189,7 @@ class EmailService {
 
       return {
         success: true,
-        message: response.data?.message || 'Bulk assignments sent successfully',
+        message: response.data?.message || 'assignments sent successfully',
       };
     } catch (error: any) {
       return {

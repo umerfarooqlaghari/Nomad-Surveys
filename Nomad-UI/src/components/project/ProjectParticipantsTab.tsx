@@ -423,7 +423,7 @@ EMP001,EMP003,Peer`;
     if (selectedEmailingItems.length === 0 || !token) return;
 
     setIsSendingEmails(true);
-    const loadingToast = toast.loading('Sending bulk reminders...');
+    const loadingToast = toast.loading('Sending reminders...');
     try {
       const surveyEvaluatorSurveyIds = emailingList
         .filter(item => selectedEmailingItems.includes(`${item.SurveyId}|${item.EvaluatorId}`))
@@ -435,7 +435,7 @@ EMP001,EMP003,Peer`;
         loadEmailingList();
         setSelectedEmailingItems([]);
       } else {
-        toast.error(response.error || 'Failed to send bulk reminders');
+        toast.error(response.error || 'Failed to send reminders');
       }
     } catch (error) {
       console.error('Error sending bulk reminders:', error);
@@ -450,7 +450,7 @@ EMP001,EMP003,Peer`;
     if (selectedEmailingItems.length === 0 || !token) return;
 
     setIsSendingEmails(true);
-    const loadingToast = toast.loading('Sending bulk assignments...');
+    const loadingToast = toast.loading('Sending assignments...');
     try {
       const surveyEvaluatorSurveyIds = emailingList
         .filter(item => selectedEmailingItems.includes(`${item.SurveyId}|${item.EvaluatorId}`))
@@ -462,10 +462,10 @@ EMP001,EMP003,Peer`;
         loadEmailingList();
         setSelectedEmailingItems([]);
       } else {
-        toast.error(response.error || 'Failed to send bulk assignments');
+        toast.error(response.error || 'Failed to send assignments');
       }
     } catch (error) {
-      console.error('Error sending bulk assignments:', error);
+      console.error('Error sending assignments:', error);
       toast.error('An unexpected error occurred');
     } finally {
       setIsSendingEmails(false);

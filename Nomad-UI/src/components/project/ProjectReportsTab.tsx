@@ -66,6 +66,8 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
   const [isLoadingSurveys, setIsLoadingSurveys] = useState(false);
   const [isLoadingSubjects, setIsLoadingSubjects] = useState(false);
 
+
+
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -379,6 +381,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
     fetchSubjectsForSurvey();
   }, [projectSlug, token, selectedSurveyId]);
 
+
   const handleSaveTemplate = async () => {
     if (!token) {
       toast.error('Authentication token not found. Please log in again.');
@@ -665,7 +668,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                 {showDownloadMenu && (
                   <div ref={downloadMenuRef} className="absolute z-20 mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200 overflow-hidden">
                     <div className="py-1">
-                      <button
+                      {/* <button
                         onClick={async () => {
                           if (!selectedSubjectId) {
                             toast.error('Please select a subject first');
@@ -734,6 +737,22 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                         </svg>
                         Download PDF
+                      </button> */}
+                      <button
+                        onClick={() => {
+                          if (!selectedSubjectId) {
+                            toast.error('Please select a subject first');
+                            return;
+                          }
+                          setShowDownloadMenu(false);
+                          handlePrint();
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 border-t border-gray-100"
+                      >
+                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                        </svg>
+                        Download Report
                       </button>
                       <button
                         onClick={async () => {
@@ -909,22 +928,6 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                         </svg>
                         360 Survey Results
                       </button>
-                      {/* <button
-                        onClick={() => {
-                          if (!selectedSubjectId) {
-                            toast.error('Please select a subject first');
-                            return;
-                          }
-                          setShowDownloadMenu(false);
-                          handlePrint();
-                        }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 border-t border-gray-100"
-                      >
-                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                        </svg>
-                        Download Report
-                      </button> */}
                     </div>
                   </div>
                 )}
@@ -956,11 +959,14 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
               </select>
             </div>
 
-            {/* Subject Selection Dropdown */}
+            {/* Subject Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Subject
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Select Subject
+                </label>
+              </div>
+
               <select
                 value={selectedSubjectId}
                 onChange={(e) => setSelectedSubjectId(e.target.value)}
@@ -983,6 +989,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                 ))}
               </select>
             </div>
+
 
             {/* Company Name */}
             <div>
@@ -1184,7 +1191,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
             {/* Primary Color */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Primary Color
+                Theme Color
               </label>
               <div className="flex gap-2">
                 <input
@@ -1203,7 +1210,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
             </div>
 
             {/* Secondary Color */}
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Secondary Color
               </label>
@@ -1221,10 +1228,10 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black"
                 />
               </div>
-            </div>
+            </div> */}
 
             {/* Tertiary Color */}
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Tertiary Color
               </label>
@@ -1242,7 +1249,7 @@ export default function ProjectReportsTab({ projectSlug }: ProjectReportsTabProp
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm text-black"
                 />
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
