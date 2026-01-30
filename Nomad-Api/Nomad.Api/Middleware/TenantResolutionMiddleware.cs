@@ -23,13 +23,10 @@ public class TenantResolutionMiddleware
             
             if (!string.IsNullOrEmpty(tenantSlug))
             {
-                // Temporarily disable query filters to find tenant
-                using var scope = dbContext.Database.BeginTransaction();
-                
                 var tenant = await dbContext.Tenants
                     .IgnoreQueryFilters()
                     .FirstOrDefaultAsync(t => t.Slug == tenantSlug && t.IsActive);
-                
+
                 if (tenant != null)
                 {
                     context.Items["TenantId"] = tenant.Id;
@@ -45,8 +42,6 @@ public class TenantResolutionMiddleware
                     await context.Response.WriteAsync($"Tenant '{tenantSlug}' not found or inactive");
                     return;
                 }
-                
-                scope.Rollback(); // We only needed to read, rollback the transaction
             }
             else
             {

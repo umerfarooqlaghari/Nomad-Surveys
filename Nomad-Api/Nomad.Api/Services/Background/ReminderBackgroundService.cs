@@ -59,101 +59,79 @@ public class ReminderBackgroundService : BackgroundService
             // - Assignment is Active
             // - Created more than 7 days ago
             // - Reminder NEVER sent (LastReminderSentAt is null)
-            // - NOT Completed (submission is null OR submission status != Completed)
+            // - NOT Completed (submission status != Completed)
             
             var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
 
-            var pendingAssignments = await context.SubjectEvaluatorSurveys
-                .Include(ses => ses.Survey)
-                .Include(ses => ses.SubjectEvaluator)
-                    .ThenInclude(se => se.Evaluator)
-                        .ThenInclude(e => e.Employee)
-                .Include(ses => ses.SubjectEvaluator)
-                    .ThenInclude(se => se.Subject)
-                        .ThenInclude(s => s.Employee)
-                .Include(ses => ses.Tenant)
+            var pendingData = await context.SubjectEvaluatorSurveys
+                .AsNoTracking()
                 .Where(ses => ses.IsActive 
                              && ses.CreatedAt < sevenDaysAgo 
-                             && ses.LastReminderSentAt == null)
+                             && ses.LastReminderSentAt == null
+                             && !context.SurveySubmissions.Any(ss => ss.SubjectEvaluatorSurveyId == ses.Id && ss.Status == SurveySubmissionStatus.Completed))
+                .Select(ses => new
+                {
+                    ses.Id,
+                    SurveyTitle = ses.Survey.Title,
+                    EvaluatorEmail = ses.SubjectEvaluator.Evaluator.Employee.Email,
+                    EvaluatorName = ses.SubjectEvaluator.Evaluator.Employee.FullName,
+                    EvaluatorPasswordHash = ses.SubjectEvaluator.Evaluator.PasswordHash,
+                    SubjectName = ses.SubjectEvaluator.Subject.Employee.FullName,
+                    TenantName = ses.Tenant.Name,
+                    TenantSlug = ses.Tenant.Slug
+                })
                 .ToListAsync(stoppingToken);
 
-            if (!pendingAssignments.Any())
+            if (!pendingData.Any())
             {
                 _logger.LogInformation("No pending assignments requiring reminders found.");
                 return;
             }
 
-            // Filter out those that are strictly completed
-            // We need to check the submissions table.
-            // Since we can't easily join on the submission status in the first query without a complex join,
-            // we'll fetch the IDs of completed submissions.
-            
-            var assignmentIds = pendingAssignments.Select(x => x.Id).ToList();
-            
-            var completedSubmissionIds = await context.SurveySubmissions
-                .Where(ss => assignmentIds.Contains(ss.SubjectEvaluatorSurveyId) && ss.Status == SurveySubmissionStatus.Completed)
-                .Select(ss => ss.SubjectEvaluatorSurveyId)
-                .ToListAsync(stoppingToken);
-
-            var reallyPendingAssignments = pendingAssignments
-                .Where(x => !completedSubmissionIds.Contains(x.Id))
-                .ToList();
-
-            if (!reallyPendingAssignments.Any())
-            {
-                _logger.LogInformation("No incomplete assignments older than 7 days found.");
-                return;
-            }
-
             // Group by Evaluator (Employee Email) to send consolidated emails
-            var assignmentsByEvaluator = reallyPendingAssignments
-                .GroupBy(x => x.SubjectEvaluator.Evaluator.Employee.Email)
+            var dataByEvaluator = pendingData
+                .GroupBy(x => x.EvaluatorEmail)
                 .ToList();
 
-            _logger.LogInformation("Found {Count} evaluators with pending forms older than 7 days.", assignmentsByEvaluator.Count);
+            _logger.LogInformation("Found {Count} evaluators with pending forms older than 7 days.", dataByEvaluator.Count);
 
-            foreach (var group in assignmentsByEvaluator)
+            var allProcessedIds = new List<Guid>();
+
+            foreach (var group in dataByEvaluator)
             {
                 var evaluatorEmail = group.Key;
-                var assignments = group.ToList();
-                var evaluatorName = assignments.First().SubjectEvaluator.Evaluator.Employee.FullName;
-                var tenantName = assignments.First().Tenant.Name; // Assuming same tenant for batch
-                var tenantSlug = assignments.First().Tenant.Slug;
-                var passwordHash = assignments.First().SubjectEvaluator.Evaluator.PasswordHash;
-
+                var items = group.ToList();
+                var firstItem = items.First();
+                
                 var passwordGenerator = scope.ServiceProvider.GetRequiredService<IPasswordGenerator>();
                 var generatedPassword = passwordGenerator.Generate(evaluatorEmail);
-                var isDefaultPassword = BCrypt.Net.BCrypt.Verify(generatedPassword, passwordHash);
+                var isDefaultPassword = BCrypt.Net.BCrypt.Verify(generatedPassword, firstItem.EvaluatorPasswordHash);
                 var passwordDisplay = isDefaultPassword ? generatedPassword : "omitted for privacy";
                 
-                var dashboardLink = $"{frontendUrl}/{tenantSlug}/participant/dashboard";
+                var dashboardLink = $"{frontendUrl}/{firstItem.TenantSlug}/participant/dashboard";
 
-                var pendingItems = assignments.Select(a => (
-                    FormTitle: a.Survey.Title,
-                    SubjectName: a.SubjectEvaluator.Subject.Employee.FullName,
-                    Link: $"{frontendUrl}/{tenantSlug}/participant/forms/{a.Id}"
+                var pendingItems = items.Select(a => (
+                    FormTitle: a.SurveyTitle,
+                    SubjectName: a.SubjectName,
+                    Link: $"{frontendUrl}/{firstItem.TenantSlug}/participant/forms/{a.Id}"
                 )).ToList();
 
                 // Send Email
                 var success = await emailService.SendConsolidatedReminderEmailAsync(
                     evaluatorEmail,
-                    evaluatorName,
-                    assignments.Count,
+                    firstItem.EvaluatorName,
+                    items.Count,
                     pendingItems,
                     dashboardLink,
-                    tenantName,
-                    tenantSlug,
+                    firstItem.TenantName,
+                    firstItem.TenantSlug,
                     passwordDisplay
                 );
 
                 if (success)
                 {
-                    // Update LastReminderSentAt
-                    foreach (var assignment in assignments)
-                    {
-                        assignment.LastReminderSentAt = DateTime.UtcNow;
-                    }
-                    _logger.LogInformation("Sent reminder to {Email} for {Count} forms.", evaluatorEmail, assignments.Count);
+                    allProcessedIds.AddRange(items.Select(i => i.Id));
+                    _logger.LogInformation("Sent reminder to {Email} for {Count} forms.", evaluatorEmail, items.Count);
                 }
                 else
                 {
@@ -161,7 +139,13 @@ public class ReminderBackgroundService : BackgroundService
                 }
             }
 
-            await context.SaveChangesAsync(stoppingToken);
+            if (allProcessedIds.Any())
+            {
+                // Efficiently update using ExecuteUpdateAsync (EF Core 9 feature)
+                await context.SubjectEvaluatorSurveys
+                    .Where(ses => allProcessedIds.Contains(ses.Id))
+                    .ExecuteUpdateAsync(setters => setters.SetProperty(s => s.LastReminderSentAt, DateTime.UtcNow), stoppingToken);
+            }
         }
     }
 }
