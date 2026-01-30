@@ -29,6 +29,9 @@ builder.Services.AddControllers()
 // Add HttpContextAccessor for tenant resolution
 builder.Services.AddHttpContextAccessor();
 
+// Add MemoryCache for caching
+builder.Services.AddMemoryCache();
+
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
