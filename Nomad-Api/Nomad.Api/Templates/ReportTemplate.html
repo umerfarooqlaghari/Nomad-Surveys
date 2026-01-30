@@ -8,9 +8,13 @@
     <style>
         /* CSS Variables for Brand Colors - These will be replaced dynamically */
         :root {
-            --primary-color: {{PRIMARY_COLOR}};
-            --secondary-color: {{SECONDARY_COLOR}};
-            --tertiary-color: {{TERTIARY_COLOR}};
+            --primary-color: {
+                    {
+                    PRIMARY_COLOR
+                }
+            }
+
+            ;
             --text-color: #434141ff;
             --border-color: #d3d3d3;
             --background-color: #ffffff;
@@ -248,7 +252,27 @@
             color: var(--primary-color);
             font-size: 18pt;
             font-weight: bold;
-            margin-top: 10px;
+            margin-top: 5px;
+            margin-bottom: 5px;
+        }
+
+        .competency-title {
+            color: var(--primary-color);
+            font-size: 16pt;
+            font-weight: bold;
+            font-style: italic;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            line-height: 1.1;
+        }
+
+        .reflection-question {
+            font-size: 11pt;
+            font-weight: 500;
+            color: #333;
+            margin-top: 20px;
+            margin-bottom: 8px;
+            display: block;
         }
 
         .section-heading-black {
@@ -256,6 +280,14 @@
             font-size: 18pt;
             font-weight: bold;
             margin-top: 10px;
+        }
+
+        .cluster-subtitle {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            display: block;
         }
 
         .section-subheading {
@@ -1249,9 +1281,10 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 40px;
-            height: 400px;
-            /* Fixed height for consistency */
+            margin-bottom: 20px;
+            /* Reduced from 40px */
+            min-height: 250px;
+            /* Changed from height: 400px to min-height */
         }
 
         /* Left Quadrant: Bar Chart */
@@ -1345,7 +1378,8 @@
 
         /* --- SVG RADIAL CHART --- */
         .radial-svg {
-            margin-top: 40px;
+            margin-top: 0px;
+            /* Reduced from 40px */
             width: 100%;
             max-width: 350px;
             height: auto;
@@ -1355,7 +1389,8 @@
 
         /* --- RADIAL CHART IMAGE (Uploaded from UI) --- */
         .radial-chart-image {
-            margin-top: 40px;
+            margin-top: 0px;
+            /* Reduced from 40px */
             width: 100%;
             max-width: 350px;
             height: auto;
@@ -1422,20 +1457,29 @@
         .pro-table th.col-dim {
             text-align: left;
             padding-left: 15px;
-            width: 25%;
+            width: 45%;
+            /* Increased from 25% */
         }
 
-        .pro-table td {
-            padding: 10px 5px;
-            text-align: center;
-            border-bottom: 1px solid #eee;
-            color: #333;
+        .pro-table th.col-score {
+            width: 8%;
+            /* Fixed width to reduce gaps */
+            padding: 10px 2px;
         }
 
         .pro-table td.td-dim {
             text-align: left;
             padding-left: 15px;
             font-weight: 500;
+            width: 45%;
+        }
+
+        .pro-table td {
+            padding: 10px 2px;
+            /* Reduced horizontal padding */
+            text-align: center;
+            border-bottom: 1px solid #eee;
+            color: #333;
         }
 
         /* Remove border from last row */
@@ -1687,7 +1731,7 @@
                         report
                         will help participants introspect allowing them to compare their self-perception to how others
                         perceive them.
-                        This report will help you:
+                        This report will help the participant:
                     </p>
 
                     <ul class="blue-bullets">
@@ -1707,16 +1751,15 @@
 
                     <p class="intro-text">
                         <strong class="section-subheading-black">Understanding the Report </strong> – This section
-                        explains the Top Talent Framework based on Interloop's context and local and global research on
-                        leadership behaviors, that has been the basis of seeking and providing feedback as part of
-                        Elevate - Unlock Possibilities.
+                        explains framework based on Nomad's local and global research on leadership behaviors, that has
+                        been the basis of seeking and providing feedback ad part of Nomad 360 Survey.
                     </p>
                 </div>
 
                 <!-- Right Column -->
                 <div class="intro-right-column">
                     <ul class="report-components-list">
-                        <li><strong class="section-subheading-black">Top Talent Framework Snapshot</strong> — Snapshot
+                        <li><strong class="section-subheading-black">Nomad Talent Framework Snapshot</strong> — Snapshot
                             of ratings between Self and Others across all dimensions.</li>
                         <li><strong class="section-subheading-black">High and Low Scores</strong> — Displays highest and
                             lowest scoring dimensions and items.</li>
@@ -1794,10 +1837,8 @@
                             group for items in each dimension.
                         </div>
                         <br>
-                        <div>6. A score of 0 signies 'Not Applicable' i.e., the
-                            respondent does not know the participant
-                            adequately enough to provide feedback on a given
-                            question.
+                        <div>6. A selection of N/A signifies "No Score" i.e., the respondent does not know the
+                            participant adequately enough to provide feedback on a given question
                         </div>
                     </ul>
                 </div>
@@ -1830,7 +1871,7 @@
                                 the greatest level of detail and indicates how your
                                 raters responded to the individual items (questions) in
                                 the survey. The questions were listed in random order
-                                in the survey and are organized by competency in this
+                                in the survey and are organized by dimension in this
                                 report.
                             </div>
                         </li>
@@ -1860,21 +1901,19 @@
             <h2 class="section-heading-black">Understanding The Report</h2>
 
             <p class="section-description">
-                This 360° Feedback Survey is based on the Top Talent Framework as part of Elevate – Unlock
-                Possibilities.
+                The 360 Feedback Survey report is based on {{COMPANY_NAME}} competency framework.
                 The survey provides you insight across {{CLUSTER_COUNT_WORD}} clusters:
                 <strong>{{CLUSTER_NAMES_LIST}}</strong>.
                 <br><br>
-                Each cluster has {{DIMENSIONS_PER_CLUSTER}} dimensions that have been measured using several items, or
+                Each cluster has several dimensions that have been measured using several items, or
                 questions, in the survey.
-                Each cluster also has an X-Factor that gives you an edge to master each leadership cluster.
                 <br><br>
-                The {{TOTAL_DIMENSIONS_COUNT}} Dimensions and {{CLUSTER_COUNT}} X-factors, collectively, will help you
+                The {{TOTAL_DIMENSIONS_COUNT}} Dimensions, collectively, will help you
                 guide insights to introspect, direct and
                 influence the
                 performance and experience of your team, and to drive organization's growth and success.
                 <br><br>
-                The figure below illustrates the Interloop 360 Feedback Survey Framework.
+                The figure below illustrates the {{COMPANY_NAME}} 360 Feedback Survey Framework.
             </p>
 
             <!-- Placeholder Image -->
@@ -2053,6 +2092,35 @@
 
 
 
+        </div>
+
+        <!-- FOOTER -->
+        <div class="page-footer">
+            <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" class="ascend-logo" />
+            <div class="page-number">
+                Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="page">
+
+        <!-- Header -->
+        <div class="page-header">
+            {{COMPANY_LOGO}}
+        </div>
+
+
+        <!-- START: High/Low Scores Table using high-low-scores-table class -->
+
+        <!-- END: High/Low Scores Table using high-low-scores-table class -->
+
+
+        <div class="page-content respondent-summary-page">
+            <!-- Main Heading -->
+            <div class="page-gap"></div>
             <div class="blue-divider"></div>
             <div>
                 <h2 class="section-Subheading-small">Guide for Interpretation:
@@ -2070,8 +2138,8 @@
                     </li>
                 </p>
             </div>
-
         </div>
+
 
         <!-- FOOTER -->
         <div class="page-footer">
@@ -2080,8 +2148,10 @@
                 Page <span class="page-number-index"></span> of <span class="page-number-total"></span>
             </div>
         </div>
-
     </div>
+
+
+
 
 
 
@@ -2182,10 +2252,12 @@
                         Some dimensions or items maybe known to you and some may appear as a surprise
                     </li>
                     <li>
-                        It is important to look for any dimensions repeatedly occurring in the tables in this section.
+                        It is important to look for any dimensions repeatedly occurring in the tables in this
+                        section.
                     </li>
                     <li>
-                        Dimensions appearing against items in both Latent Strengths and Blindspots give an insight on
+                        Dimensions appearing against items in both Latent Strengths and Blindspots give an insight
+                        on
                         behavioral tendency.
                     </li>
                     <li>
@@ -2288,17 +2360,20 @@
                 </h2>
                 <p class="section-description-small">
                     <li>
-                        The length of the solid line on the chart signies the magnitude of difference in perception of
+                        The length of the solid line on the chart signies the magnitude of difference in perception
+                        of
                         Self
                         and Others.
                     </li>
                     <li>
-                        Observe the trends where rating provided by Others is lower than the rating provided by Self,
+                        Observe the trends where rating provided by Others is lower than the rating provided by
+                        Self,
                         and is
                         denoted by a negative (-) gap.
                     </li>
                     <li>
-                        Observe the trends where the rating provided by Self is lower than ratings provided by Others,
+                        Observe the trends where the rating provided by Self is lower than ratings provided by
+                        Others,
                         and
                         is denoted by a positive (+) gap.
                     </li>
@@ -2333,7 +2408,8 @@
                 <h2 class="section-heading">Agreement Chart
                 </h2>
                 <div class="section-description-small">
-                    The agreement chart indicates the similarity of scores. Each dot represents how individuals rated
+                    The agreement chart indicates the similarity of scores. Each dot represents how individuals
+                    rated
                     you for
                     each dimension. The size of the dot shows how many raters gave you a specic rating.
                 </div>
@@ -3102,34 +3178,29 @@
             {{COMPANY_LOGO}}
         </div>
         <div class="page-content respondent-summary-page">
-            <div class="page-gap"></div>
             <h1 class="section-heading">My Reflection Summary</h1>
-            <div class="section-subheading-black">
-                <strong>
-                    What are my strengths, that are consistently mentioned by myself and my raters?
-                </strong>
+
+            <div class="reflection-question">
+                What are my strengths, that are consistently mentioned by myself and my raters?
             </div>
             <div class="page-gap"></div>
 
-            <div class="section-subheading-black">
-                <strong>
-                    What are my areas of growth that I should work on, as appearing consistently in feedback provided by
-                    my raters and is also mentioned in open ended feedback?
-                </strong>
+            <div class="reflection-question">
+                What are my areas of growth that I should work on, as appearing consistently in feedback
+                provided by my raters and is also mentioned in open ended feedback?
             </div>
             <div class="page-gap"></div>
 
-            <div class="section-subheading-black">
-                <strong>What have been my blindspots that I am now aware of? Look for dimensions and x-factors where
-                    rating of Self is higher than Others.
-                </strong>
+            <div class="reflection-question">
+                What have been my blindspots that I am now aware of? Look for dimensions and x-factors where
+                rating of Self is higher than Others.
             </div>
             <div class="page-gap"></div>
 
-            <div class="section-subheading-black">
-                <strong>
-                    What are my strengths, that are consistently mentioned by myself and my raters?
-                </strong>
+            <div class="reflection-question">
+                Is there anything that has been rated positively by one rater group but appears to be a growth area as
+                mentioned by another rater group? Key rater groups to compare can be Line Manager v/s Direct
+                Reports, Line Manager v/s Peers, Peers v/s Stakeholders.
             </div>
             <div class="page-gap"></div>
         </div>

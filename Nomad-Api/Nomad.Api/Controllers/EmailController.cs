@@ -412,7 +412,7 @@ public class EmailController : ControllerBase
                 }
                 else
                 {
-                    _logger.LogWarning("Bulk Reminders: Failed to send consolidated email to {Email}.", evaluatorEmail);
+                    _logger.LogWarning("Reminders: Failed to send consolidated email to {Email}.", evaluatorEmail);
                 }
 
                 await Task.Delay(delayMs);
@@ -422,8 +422,8 @@ public class EmailController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error sending bulk reminders");
-            return StatusCode(500, new { message = "An error occurred while sending bulk reminders" });
+            _logger.LogError(ex, "Error sending reminders");
+            return StatusCode(500, new { message = "An error occurred while sending reminders" });
         }
     }
 
