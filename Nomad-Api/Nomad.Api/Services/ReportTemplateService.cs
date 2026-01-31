@@ -740,6 +740,7 @@ public class ReportTemplateService : IReportTemplateService
         }
     }
 
+
     /// <summary>
     /// Sanitizes a string to be used as a valid filename
     /// </summary>
@@ -1656,83 +1657,53 @@ public class ReportTemplateService : IReportTemplateService
 
         return sb.ToString();
     }
-
     private async Task<byte[]> GeneratePdfFromHtmlAsync(string html)
     {
         try
         {
-            // Use PuppeteerSharp for HTML to PDF conversion
+            _logger.LogInformation("Launching new browser instance for PDF generation...");
             var browserFetcher = new BrowserFetcher();
             await browserFetcher.DownloadAsync();
-
+            
             await using var browser = await Puppeteer.LaunchAsync(new LaunchOptions
             {
                 Headless = true,
-                Args = new[] { "--no-sandbox", "--disable-setuid-sandbox" }
+                Args = new[] { 
+                    "--no-sandbox", 
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu"
+                }
             });
 
-await using var page = await browser.NewPageAsync();
+            await using var page = await browser.NewPageAsync();
+            
+            // Set a timeout for page rendering to prevent hangs
+            await page.SetContentAsync(html, new NavigationOptions { Timeout = 60000 });
 
-// Set page content
-await page.SetContentAsync(html);
+            var pdfBytes = await page.PdfDataAsync(new PdfOptions
+            {
+                Width = "210mm",
+                Height = "297mm",
+                PrintBackground = true,
+                MarginOptions = new MarginOptions
+                {
+                    Top = "0",
+                    Right = "0",
+                    Bottom = "0",
+                    Left = "0"
+                }
+            });
 
-var pdfBytes = await page.PdfDataAsync(new PdfOptions
-{
-    Width = "210mm",
-    Height = "297mm",
-    PrintBackground = true,
-    MarginOptions = new MarginOptions
-    {
-        Top = "0",
-        Right = "0",
-        Bottom = "0",
-        Left = "0"
-    }
-});
-    
-
+            await page.CloseAsync();
+            await browser.CloseAsync();
+            
             return pdfBytes;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error generating PDF from HTML using PuppeteerSharp. Falling back to simple PDF.");
-            
-            // Fallback to simple PDF if PuppeteerSharp fails
-            QuestPDF.Settings.License = LicenseType.Community;
-            return Document.Create(container =>
-            {
-                container.Page(page =>
-                {
-                    page.Size(PageSizes.A4);
-                    page.Margin(20);
-                    page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Segoe UI"));
-
-                    page.Content()
-                        .PaddingVertical(10)
-                        .Column(column =>
-                        {
-                            column.Item().Text("Report Generated Successfully")
-                                .FontSize(16)
-                                .Bold();
-                            column.Item().PaddingTop(10);
-                            column.Item().Text("The HTML version of this report is available.")
-                                .FontSize(12);
-                            column.Item().PaddingTop(5);
-                            column.Item().Text("PDF generation encountered an error. Detailed error:")
-                                .FontSize(10)
-                                .FontColor(Colors.Grey.Medium);
-                            column.Item().PaddingTop(2);
-                            column.Item().Text(ex.Message)
-                                .FontSize(8)
-                                .FontColor(Colors.Red.Medium);
-                            column.Item().PaddingTop(5);
-                            column.Item().Text(ex.StackTrace)
-                                .FontSize(6)
-                                .FontColor(Colors.Grey.Medium);
-                        });
-                });
-            })
-            .GeneratePdf();
+            _logger.LogError(ex, "Error generating PDF from HTML using PuppeteerSharp.");
+            throw;
         }
     }
 

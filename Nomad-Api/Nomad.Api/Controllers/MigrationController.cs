@@ -39,38 +39,41 @@ public class MigrationController : ControllerBase
     {
         _logger.LogInformation("Starting employee to user migration...");
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+        return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            // Step 1: Delete all users except SuperAdmin
-            var cleanResult = await CleanUsersTableAsync();
-
-            // Step 2: Migrate all employees to Users table
-            var migrateResult = await MigrateEmployeesAsync();
-
-            await transaction.CommitAsync();
-
-            var result = new
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                success = true,
-                message = "Migration completed successfully!",
-                usersDeleted = cleanResult.UsersDeleted,
-                rolesDeleted = cleanResult.RolesDeleted,
-                employeesMigrated = migrateResult.Created,
-                employeesFailed = migrateResult.Failed,
-                totalEmployees = migrateResult.Total,
-                defaultPassword = DefaultPassword
-            };
+                // Step 1: Delete all users except SuperAdmin
+                var cleanResult = await CleanUsersTableAsync();
 
-            _logger.LogInformation("✅ Migration completed: {Result}", result);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "❌ Migration failed!");
-            return StatusCode(500, new { success = false, message = "Migration failed", error = ex.Message });
-        }
+                // Step 2: Migrate all employees to Users table
+                var migrateResult = await MigrateEmployeesAsync();
+
+                await transaction.CommitAsync();
+
+                var result = new
+                {
+                    success = true,
+                    message = "Migration completed successfully!",
+                    usersDeleted = cleanResult.UsersDeleted,
+                    rolesDeleted = cleanResult.RolesDeleted,
+                    employeesMigrated = migrateResult.Created,
+                    employeesFailed = migrateResult.Failed,
+                    totalEmployees = migrateResult.Total,
+                    defaultPassword = DefaultPassword
+                };
+
+                _logger.LogInformation("✅ Migration completed: {Result}", result);
+                return Ok(result) as ActionResult;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "❌ Migration failed!");
+                return StatusCode(500, new { success = false, message = "Migration failed", error = ex.Message }) as ActionResult;
+            }
+        });
     }
 
     private async Task<(int UsersDeleted, int RolesDeleted)> CleanUsersTableAsync()
@@ -224,22 +227,25 @@ public class MigrationController : ControllerBase
     {
         _logger.LogInformation("Starting creation of missing Evaluator and Subject records...");
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+        return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            var result = await CreateMissingRecordsAsync();
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var result = await CreateMissingRecordsAsync();
 
-            await transaction.CommitAsync();
+                await transaction.CommitAsync();
 
-            _logger.LogInformation("✅ Creation completed: {Result}", result);
-            return Ok(result);
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "❌ Creation failed!");
-            return StatusCode(500, new { success = false, message = "Creation failed", error = ex.Message });
-        }
+                _logger.LogInformation("✅ Creation completed: {Result}", result);
+                return Ok(result) as ActionResult;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "❌ Creation failed!");
+                return StatusCode(500, new { success = false, message = "Creation failed", error = ex.Message }) as ActionResult;
+            }
+        });
     }
 
     private async Task<object> CreateMissingRecordsAsync()

@@ -288,125 +288,128 @@ public class EvaluatorService : IEvaluatorService
             TotalRequested = request.Evaluators.Count
         };
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
-
-        try
+        return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            foreach (var evaluatorRequest in request.Evaluators)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
             {
-                try
+                foreach (var evaluatorRequest in request.Evaluators)
                 {
-                    var employee = await _context.Employees
-                        .FirstOrDefaultAsync(e => e.EmployeeId == evaluatorRequest.EmployeeId && e.TenantId == tenantId && e.IsActive);
-
-                    if (employee == null)
+                    try
                     {
-                        response.Failed++;
-                        response.Errors.Add($"Employee '{evaluatorRequest.EmployeeId}' not found");
-                        continue;
-                    }
+                        var employee = await _context.Employees
+                            .FirstOrDefaultAsync(e => e.EmployeeId == evaluatorRequest.EmployeeId && e.TenantId == tenantId && e.IsActive);
 
-                    var existingEvaluator = await _context.Evaluators
-                        .FirstOrDefaultAsync(e => e.EmployeeId == employee.Id && e.TenantId == tenantId);
-
-                    if (existingEvaluator != null)
-                    {
-                        if (!existingEvaluator.IsActive)
+                        if (employee == null)
                         {
-                            existingEvaluator.IsActive = true;
-                            existingEvaluator.UpdatedAt = DateTime.UtcNow;
-                            _context.Evaluators.Update(existingEvaluator);
-                            await _context.SaveChangesAsync();
+                            response.Failed++;
+                            response.Errors.Add($"Employee '{evaluatorRequest.EmployeeId}' not found");
+                            continue;
+                        }
 
-                            response.UpdatedCount++;
-                            response.CreatedIds.Add(existingEvaluator.Id);
+                        var existingEvaluator = await _context.Evaluators
+                            .FirstOrDefaultAsync(e => e.EmployeeId == employee.Id && e.TenantId == tenantId);
 
-                            _logger.LogInformation("✅ Reactivated evaluator for employee {EmployeeId}", evaluatorRequest.EmployeeId);
-
-                            // Handle relationships when reactivating
-                            if (evaluatorRequest.SubjectRelationships != null && evaluatorRequest.SubjectRelationships.Any())
+                        if (existingEvaluator != null)
+                        {
+                            if (!existingEvaluator.IsActive)
                             {
-                                var subjectRelationships = evaluatorRequest.SubjectRelationships
-                                    .Select(sr => (sr.SubjectEmployeeId, sr.Relationship))
-                                    .ToList();
+                                existingEvaluator.IsActive = true;
+                                existingEvaluator.UpdatedAt = DateTime.UtcNow;
+                                _context.Evaluators.Update(existingEvaluator);
+                                await _context.SaveChangesAsync();
 
-                                await _relationshipService.MergeEvaluatorSubjectRelationshipsWithTypesAsync(
-                                    existingEvaluator.Id,
-                                    subjectRelationships,
-                                    tenantId
-                                );
+                                response.UpdatedCount++;
+                                response.CreatedIds.Add(existingEvaluator.Id);
+
+                                _logger.LogInformation("✅ Reactivated evaluator for employee {EmployeeId}", evaluatorRequest.EmployeeId);
+
+                                // Handle relationships when reactivating
+                                if (evaluatorRequest.SubjectRelationships != null && evaluatorRequest.SubjectRelationships.Any())
+                                {
+                                    var subjectRelationships = evaluatorRequest.SubjectRelationships
+                                        .Select(sr => (sr.SubjectEmployeeId, sr.Relationship))
+                                        .ToList();
+
+                                    await _relationshipService.MergeEvaluatorSubjectRelationshipsWithTypesAsync(
+                                        existingEvaluator.Id,
+                                        subjectRelationships,
+                                        tenantId
+                                    );
+                                }
+                            }
+                            else
+                            {
+                                response.UpdatedCount++;
+                                response.CreatedIds.Add(existingEvaluator.Id);
+
+                                _logger.LogInformation("ℹ️ Evaluator already active for employee {EmployeeId}", evaluatorRequest.EmployeeId);
+
+                                if (evaluatorRequest.SubjectRelationships != null && evaluatorRequest.SubjectRelationships.Any())
+                                {
+                                    var subjectRelationships = evaluatorRequest.SubjectRelationships
+                                        .Select(sr => (sr.SubjectEmployeeId, sr.Relationship))
+                                        .ToList();
+
+                                    await _relationshipService.MergeEvaluatorSubjectRelationshipsWithTypesAsync(
+                                        existingEvaluator.Id,
+                                        subjectRelationships,
+                                        tenantId
+                                    );
+                                }
                             }
                         }
                         else
                         {
-                            response.UpdatedCount++;
-                            response.CreatedIds.Add(existingEvaluator.Id);
+                            var newEvaluator = new Evaluator
+                            {
+                                Id = Guid.NewGuid(),
+                                EmployeeId = employee.Id,
+                                PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
+                                IsActive = true,
+                                CreatedAt = DateTime.UtcNow,
+                                TenantId = tenantId
+                            };
 
-                            _logger.LogInformation("ℹ️ Evaluator already active for employee {EmployeeId}", evaluatorRequest.EmployeeId);
+                            _context.Evaluators.Add(newEvaluator);
+                            await _context.SaveChangesAsync();
+
+                            response.SuccessfullyCreated++;
+                            response.CreatedIds.Add(newEvaluator.Id);
 
                             if (evaluatorRequest.SubjectRelationships != null && evaluatorRequest.SubjectRelationships.Any())
                             {
                                 var subjectRelationships = evaluatorRequest.SubjectRelationships
                                     .Select(sr => (sr.SubjectEmployeeId, sr.Relationship))
                                     .ToList();
-
-                                await _relationshipService.MergeEvaluatorSubjectRelationshipsWithTypesAsync(
-                                    existingEvaluator.Id,
+                                
+                                await _relationshipService.CreateEvaluatorSubjectRelationshipsWithTypesAsync(
+                                    newEvaluator.Id,
                                     subjectRelationships,
                                     tenantId
                                 );
                             }
                         }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        var newEvaluator = new Evaluator
-                        {
-                            Id = Guid.NewGuid(),
-                            EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
-                            IsActive = true,
-                            CreatedAt = DateTime.UtcNow,
-                            TenantId = tenantId
-                        };
-
-                        _context.Evaluators.Add(newEvaluator);
-                        await _context.SaveChangesAsync();
-
-                        response.SuccessfullyCreated++;
-                        response.CreatedIds.Add(newEvaluator.Id);
-
-                        if (evaluatorRequest.SubjectRelationships != null && evaluatorRequest.SubjectRelationships.Any())
-                        {
-                            var subjectRelationships = evaluatorRequest.SubjectRelationships
-                                .Select(sr => (sr.SubjectEmployeeId, sr.Relationship))
-                                .ToList();
-                            
-                            await _relationshipService.CreateEvaluatorSubjectRelationshipsWithTypesAsync(
-                                newEvaluator.Id,
-                                subjectRelationships,
-                                tenantId
-                            );
-                        }
+                        _logger.LogError(ex, "Error processing evaluator {EmployeeId}", evaluatorRequest.EmployeeId);
+                        response.Failed++;
+                        response.Errors.Add($"Error processing '{evaluatorRequest.EmployeeId}': {ex.Message}");
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error processing evaluator {EmployeeId}", evaluatorRequest.EmployeeId);
-                    response.Failed++;
-                    response.Errors.Add($"Error processing '{evaluatorRequest.EmployeeId}': {ex.Message}");
-                }
+
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error in bulk create evaluators");
+                throw;
             }
 
-            await transaction.CommitAsync();
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "Error in bulk create evaluators");
-            throw;
-        }
-
-        return response;
+            return response;
+        });
     }
 }
