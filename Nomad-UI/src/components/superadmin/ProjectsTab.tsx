@@ -62,7 +62,7 @@ export default function ProjectsTab() {
 
     // Admin fields validation: "All or Nothing" rule
     // If TenantAdmin doesn't exist, no admin validation needed
-    if (formData.TenantAdmin) {
+    if (formData.TenantAdmin && !isEditMode) {
       const admin = formData.TenantAdmin;
 
       // Check which fields have values (treating empty strings as no value)

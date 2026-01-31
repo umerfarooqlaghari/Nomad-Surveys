@@ -36,107 +36,112 @@ public class TenantService : ITenantService
 
     public async Task<TenantResponse> CreateTenantAsync(CreateTenantRequest request)
     {
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        
-        try
+        var strategy = _context.Database.CreateExecutionStrategy();
+
+        return await strategy.ExecuteAsync(async () =>
         {
-            // Check if slug already exists
-            var existingTenant = await _context.Tenants
-                .IgnoreQueryFilters()
-                .FirstOrDefaultAsync(t => t.Slug == request.Slug);
+            using var transaction = await _context.Database.BeginTransactionAsync();
 
-            if (existingTenant != null)
-            {
-                throw new InvalidOperationException($"Tenant with slug '{request.Slug}' already exists");
-            }
-
-            // Create tenant
-            var tenant = new Tenant
-            {
-                Id = Guid.NewGuid(),
-                Name = request.Name,
-                Slug = request.Slug,
-                Description = request.Description,
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Tenants.Add(tenant);
-            await _context.SaveChangesAsync();
-
-            // Create company
-            var company = new Company
-            {
-                Id = Guid.NewGuid(),
-                TenantId = tenant.Id,
-                Name = request.Company.Name,
-                NumberOfEmployees = request.Company.NumberOfEmployees,
-                Location = request.Company.Location,
-                Industry = request.Company.Industry,
-                ContactPersonName = request.Company.ContactPersonName,
-                ContactPersonEmail = request.Company.ContactPersonEmail,
-                ContactPersonRole = request.Company.ContactPersonRole,
-                ContactPersonPhone = request.Company.ContactPersonPhone,
-                LogoUrl = request.Company.LogoUrl,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Companies.Add(company);
-            await _context.SaveChangesAsync();
-
-            // Create tenant admin user if data is provided
-            ApplicationUser? tenantAdmin = null;
-            if (request.TenantAdmin != null && 
-                !string.IsNullOrWhiteSpace(request.TenantAdmin.Email) && 
-                !string.IsNullOrWhiteSpace(request.TenantAdmin.Password))
-            {
-                var createUserRequest = new CreateUserRequest
-                {
-                    FirstName = request.TenantAdmin.FirstName ?? string.Empty,
-                    LastName = request.TenantAdmin.LastName ?? string.Empty,
-                    Email = request.TenantAdmin.Email,
-                    PhoneNumber = request.TenantAdmin.PhoneNumber,
-                    Password = request.TenantAdmin.Password,
-                    Roles = new List<string> { "TenantAdmin" }
-                };
-
-                var createdTenantAdmin = await _authenticationService.CreateUserAsync(createUserRequest, tenant.Id);
-
-                // Update company with contact person if admin was created
-                company.ContactPersonId = createdTenantAdmin.Id;
-                await _context.SaveChangesAsync();
-            }
-
-            await transaction.CommitAsync();
-
-            // Seed clusters for the new tenant (fire and forget / non-blocking)
             try
             {
-                await _clusterSeedingService.SeedClustersAsync(tenant.Id);
+                // Check if slug already exists
+                var existingTenant = await _context.Tenants
+                    .IgnoreQueryFilters()
+                    .FirstOrDefaultAsync(t => t.Slug == request.Slug);
+
+                if (existingTenant != null)
+                {
+                    throw new InvalidOperationException($"Tenant with slug '{request.Slug}' already exists");
+                }
+
+                // Create tenant
+                var tenant = new Tenant
+                {
+                    Id = Guid.NewGuid(),
+                    Name = request.Name,
+                    Slug = request.Slug,
+                    Description = request.Description,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Tenants.Add(tenant);
+                await _context.SaveChangesAsync();
+
+                // Create company
+                var company = new Company
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Name = request.Company.Name,
+                    NumberOfEmployees = request.Company.NumberOfEmployees,
+                    Location = request.Company.Location,
+                    Industry = request.Company.Industry,
+                    ContactPersonName = request.Company.ContactPersonName,
+                    ContactPersonEmail = request.Company.ContactPersonEmail,
+                    ContactPersonRole = request.Company.ContactPersonRole,
+                    ContactPersonPhone = request.Company.ContactPersonPhone,
+                    LogoUrl = request.Company.LogoUrl,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Companies.Add(company);
+                await _context.SaveChangesAsync();
+
+                // Create tenant admin user if data is provided
+                ApplicationUser? tenantAdmin = null;
+                if (request.TenantAdmin != null &&
+                    !string.IsNullOrWhiteSpace(request.TenantAdmin.Email) &&
+                    !string.IsNullOrWhiteSpace(request.TenantAdmin.Password))
+                {
+                    var createUserRequest = new CreateUserRequest
+                    {
+                        FirstName = request.TenantAdmin.FirstName ?? string.Empty,
+                        LastName = request.TenantAdmin.LastName ?? string.Empty,
+                        Email = request.TenantAdmin.Email,
+                        PhoneNumber = request.TenantAdmin.PhoneNumber,
+                        Password = request.TenantAdmin.Password,
+                        Roles = new List<string> { "TenantAdmin" }
+                    };
+
+                    var createdTenantAdmin = await _authenticationService.CreateUserAsync(createUserRequest, tenant.Id);
+
+                    // Update company with contact person if admin was created
+                    company.ContactPersonId = createdTenantAdmin.Id;
+                    await _context.SaveChangesAsync();
+                }
+
+                await transaction.CommitAsync();
+
+                // Seed clusters for the new tenant (fire and forget / non-blocking)
+                try
+                {
+                    await _clusterSeedingService.SeedClustersAsync(tenant.Id);
+                }
+                catch (Exception ex)
+                {
+                    // Log but don't fail the tenant creation
+                    _logger.LogError(ex, "Failed to seed clusters for tenant {TenantId}", tenant.Id);
+                }
+
+                // Load tenant with company for response
+                var createdTenant = await _context.Tenants
+                    .IgnoreQueryFilters()
+                    .Include(t => t.Company)
+                    .FirstOrDefaultAsync(t => t.Id == tenant.Id);
+
+                var response = _mapper.Map<TenantResponse>(createdTenant);
+
+                _logger.LogInformation("Tenant created successfully: {TenantId} with slug {TenantSlug}", tenant.Id, tenant.Slug);
+                return response;
             }
             catch (Exception ex)
             {
-                // Log but don't fail the tenant creation
-                _logger.LogError(ex, "Failed to seed clusters for tenant {TenantId}", tenant.Id);
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Failed to create tenant with slug {TenantSlug}", request.Slug);
+                throw;
             }
-
-            // Load tenant with company for response
-            var createdTenant = await _context.Tenants
-                .IgnoreQueryFilters()
-                .Include(t => t.Company)
-                .FirstOrDefaultAsync(t => t.Id == tenant.Id);
-
-            var response = _mapper.Map<TenantResponse>(createdTenant);
-            
-            _logger.LogInformation("Tenant created successfully: {TenantId} with slug {TenantSlug}", tenant.Id, tenant.Slug);
-            return response;
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "Failed to create tenant with slug {TenantSlug}", request.Slug);
-            throw;
-        }
+        });
     }
 
     public async Task<TenantResponse?> GetTenantByIdAsync(Guid tenantId)
