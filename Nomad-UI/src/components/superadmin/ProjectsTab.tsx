@@ -33,6 +33,7 @@ export default function ProjectsTab() {
     admin: false
   });
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => ({
@@ -270,6 +271,7 @@ export default function ProjectsTab() {
       return;
     }
 
+    setIsSubmitting(true);
     setIsLoading(true);
     setError('');
 
@@ -295,6 +297,7 @@ export default function ProjectsTab() {
       toast.error(errorMessage);
       scrollToForm();
     } finally {
+      setIsSubmitting(false);
       setIsLoading(false);
     }
   };
@@ -522,6 +525,7 @@ export default function ProjectsTab() {
       return;
     }
 
+    setIsSubmitting(true);
     setIsLoading(true);
     setHasSubmitted(true);
     setError('');
@@ -551,12 +555,67 @@ export default function ProjectsTab() {
       toast.error(errorMessage);
       scrollToForm();
     } finally {
+      setIsSubmitting(false);
       setIsLoading(false);
     }
   };
 
   return (
     <div className={styles.container}>
+      {/* Loading Overlay */}
+      {(isSubmitting || isUploadingLogo) && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '1rem',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            padding: '2rem',
+            maxWidth: '24rem',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center'
+          }}>
+            <div style={{ position: 'relative', width: '4rem', height: '4rem', marginBottom: '1.5rem' }}>
+              <div style={{ position: 'absolute', inset: 0, border: '4px solid #e0e7ff', borderRadius: '9999px' }}></div>
+              <div style={{
+                position: 'absolute',
+                inset: 0,
+                border: '4px solid #4f46e5',
+                borderRadius: '9999px',
+                borderTopColor: 'transparent',
+                animation: 'spin 1s linear infinite'
+              }}></div>
+            </div>
+            <style jsx>{`
+              @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#111827', marginBottom: '0.5rem' }}>
+              {isUploadingLogo ? 'Uploading Logo' : 'Processing'}
+            </h3>
+            <p style={{ color: '#4b5563' }}>
+              Please wait while we {isUploadingLogo ? 'upload your file' : 'process your request'}. This may take a moment.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className={styles.header} ref={formTopRef}>
         <div className={styles.headerContent}>

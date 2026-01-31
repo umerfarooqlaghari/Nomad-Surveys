@@ -532,8 +532,25 @@ EMP001,EMP003,Peer`;
     item.EvaluatorEmail.toLowerCase().includes(emailingSearchTerm.toLowerCase())
   );
 
+  const isMutating = isImportingEvaluators || isImportingSubjects || isSendingEmails || (evaluatorsLoading && showAddEvaluatorForm) || (subjectsLoading && showAddSubjectForm);
+
   return (
     <div className="space-y-6">
+      {/* Loading Overlay */}
+      {isMutating && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full flex flex-col items-center text-center">
+            <div className="relative w-16 h-16 mb-6">
+              <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Processing</h3>
+            <p className="text-gray-600">
+              Please wait while we process your request. This may take a moment depending on the task.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Sub-tabs */}
       <div className="bg-white shadow-md rounded-lg">
         <div className="border-b border-gray-200">

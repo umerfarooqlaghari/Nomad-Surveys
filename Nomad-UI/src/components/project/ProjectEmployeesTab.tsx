@@ -259,6 +259,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
     // Reset the file input
     event.target.value = '';
 
+    setIsSubmitting(true);
     const loadingToast = toast.loading('Processing CSV file...');
 
     try {
@@ -283,6 +284,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
       if (employees.length === 0) {
         toast.dismiss(loadingToast);
         toast.error('No valid employees found in CSV file');
+        setIsSubmitting(false);
         return;
       }
 
@@ -302,6 +304,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
 
       if (error) {
         toast.error(`Failed to import employees: ${error}`);
+        setIsSubmitting(false);
         return;
       }
 
@@ -332,11 +335,28 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
       toast.dismiss(loadingToast);
       console.error('❌ [EMPLOYEES] Error during bulk import:', error);
       toast.error(`Failed to import employees: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Loading Overlay */}
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full flex flex-col items-center text-center">
+            <div className="relative w-16 h-16 mb-6">
+              <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Processing</h3>
+            <p className="text-gray-600">
+              Please wait while we process your request. This may take a moment depending on the amount of data.
+            </p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">

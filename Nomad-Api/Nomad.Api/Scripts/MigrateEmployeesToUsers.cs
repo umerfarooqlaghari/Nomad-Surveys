@@ -33,24 +33,27 @@ public class MigrateEmployeesToUsers
     {
         _logger.LogInformation("Starting employee to user migration...");
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+        await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            // Step 1: Delete all users except SuperAdmin
-            await CleanUsersTableAsync();
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Step 1: Delete all users except SuperAdmin
+                await CleanUsersTableAsync();
 
-            // Step 2: Migrate all employees to Users table
-            await MigrateEmployeesAsync();
+                // Step 2: Migrate all employees to Users table
+                await MigrateEmployeesAsync();
 
-            await transaction.CommitAsync();
-            _logger.LogInformation("✅ Migration completed successfully!");
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "❌ Migration failed!");
-            throw;
-        }
+                await transaction.CommitAsync();
+                _logger.LogInformation("✅ Migration completed successfully!");
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "❌ Migration failed!");
+                throw;
+            }
+        });
     }
 
     private async Task CleanUsersTableAsync()

@@ -35,310 +35,316 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
 
     public async Task<AssignmentResponse> AssignEvaluatorsToSubjectAsync(Guid subjectId, AssignEvaluatorsToSubjectRequest request)
     {
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+        return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            // Verify subject exists
-            var subject = await _context.Subjects
-                .FirstOrDefaultAsync(s => s.Id == subjectId && s.IsActive);
-
-            if (subject == null)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                return new AssignmentResponse
+                // Verify subject exists
+                var subject = await _context.Subjects
+                    .FirstOrDefaultAsync(s => s.Id == subjectId && s.IsActive);
+
+                if (subject == null)
                 {
-                    Success = false,
-                    Message = "Subject not found"
-                };
-            }
+                    return new AssignmentResponse
+                    {
+                        Success = false,
+                        Message = "Subject not found"
+                    };
+                }
 
-            var assignments = new List<SubjectEvaluator>();
-            var errors = new List<string>();
+                var assignments = new List<SubjectEvaluator>();
+                var errors = new List<string>();
 
-            foreach (var evaluatorRequest in request.Evaluators)
-            {
-                // Verify evaluator exists and belongs to same tenant
-                var evaluator = await _context.Evaluators
-                    .Include(e => e.Employee)
-                    .FirstOrDefaultAsync(e => e.Id == evaluatorRequest.EvaluatorId &&
-                                            e.TenantId == subject.TenantId &&
-                                            e.IsActive);
-
-                if (evaluator == null)
+                foreach (var evaluatorRequest in request.Evaluators)
                 {
-                    // Try to find the employee by ID to auto-create evaluator
-                    var employee = await _context.Employees
+                    // Verify evaluator exists and belongs to same tenant
+                    var evaluator = await _context.Evaluators
+                        .Include(e => e.Employee)
                         .FirstOrDefaultAsync(e => e.Id == evaluatorRequest.EvaluatorId &&
                                                 e.TenantId == subject.TenantId &&
                                                 e.IsActive);
 
-                    if (employee != null)
+                    if (evaluator == null)
                     {
-                        // Auto-create evaluator record
-                        evaluator = new Evaluator
+                        // Try to find the employee by ID to auto-create evaluator
+                        var employee = await _context.Employees
+                            .FirstOrDefaultAsync(e => e.Id == evaluatorRequest.EvaluatorId &&
+                                                    e.TenantId == subject.TenantId &&
+                                                    e.IsActive);
+
+                        if (employee != null)
+                        {
+                            // Auto-create evaluator record
+                            evaluator = new Evaluator
+                            {
+                                Id = Guid.NewGuid(),
+                                EmployeeId = employee.Id,
+                                PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
+                                IsActive = true,
+                                CreatedAt = DateTime.UtcNow,
+                                TenantId = subject.TenantId
+                            };
+
+                            _context.Evaluators.Add(evaluator);
+                            await _context.SaveChangesAsync();
+
+                            // Reload with Employee navigation property
+                            evaluator = await _context.Evaluators
+                                .Include(e => e.Employee)
+                                .FirstOrDefaultAsync(e => e.Id == evaluator.Id);
+
+                            _logger.LogInformation("Auto-created evaluator for employee {EmployeeId} ({EmployeeName})",
+                                employee.EmployeeId, employee.FullName);
+                        }
+                        else
+                        {
+                            errors.Add($"Employee {evaluatorRequest.EvaluatorId} not found or not in same tenant");
+                            continue;
+                        }
+                    }
+
+                    // Validate self-evaluation: if relationship is "Self", subject and evaluator must reference the same employee
+                    if (string.Equals(evaluatorRequest.Relationship, "Self", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var subjectWithEmployee = await _context.Subjects
+                            .Include(s => s.Employee)
+                            .FirstOrDefaultAsync(s => s.Id == subjectId);
+
+                        if (subjectWithEmployee?.EmployeeId != evaluator.EmployeeId)
+                        {
+                            errors.Add($"Relationship type 'Self' requires subject and evaluator to reference the same employee. Subject EmployeeId: {subjectWithEmployee?.EmployeeId}, Evaluator EmployeeId: {evaluator.EmployeeId}");
+                            continue;
+                        }
+                    }
+
+                    // Check if assignment already exists
+                    var existingAssignment = await _context.SubjectEvaluators
+                        .FirstOrDefaultAsync(se => se.SubjectId == subjectId && 
+                                                 se.EvaluatorId == evaluatorRequest.EvaluatorId);
+
+                    if (existingAssignment != null)
+                    {
+                        if (existingAssignment.IsActive)
+                        {
+                            errors.Add($"Assignment between subject and evaluator {evaluatorRequest.EvaluatorId} already exists");
+                            continue;
+                        }
+                        else
+                        {
+                            // Reactivate existing assignment
+                            existingAssignment.IsActive = true;
+                            existingAssignment.Relationship = evaluatorRequest.Relationship;
+                            existingAssignment.UpdatedAt = DateTime.UtcNow;
+                            assignments.Add(existingAssignment);
+                        }
+                    }
+                    else
+                    {
+                        // Create new assignment
+                        var assignment = new SubjectEvaluator
                         {
                             Id = Guid.NewGuid(),
-                            EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
-                            IsActive = true,
+                            SubjectId = subjectId,
+                            EvaluatorId = evaluatorRequest.EvaluatorId,
+                            Relationship = evaluatorRequest.Relationship,
+                            TenantId = subject.TenantId,
                             CreatedAt = DateTime.UtcNow,
-                            TenantId = subject.TenantId
+                            IsActive = true
                         };
 
-                        _context.Evaluators.Add(evaluator);
-                        await _context.SaveChangesAsync();
-
-                        // Reload with Employee navigation property
-                        evaluator = await _context.Evaluators
-                            .Include(e => e.Employee)
-                            .FirstOrDefaultAsync(e => e.Id == evaluator.Id);
-
-                        _logger.LogInformation("Auto-created evaluator for employee {EmployeeId} ({EmployeeName})",
-                            employee.EmployeeId, employee.FullName);
-                    }
-                    else
-                    {
-                        errors.Add($"Employee {evaluatorRequest.EvaluatorId} not found or not in same tenant");
-                        continue;
+                        await _context.SubjectEvaluators.AddAsync(assignment);
+                        assignments.Add(assignment);
                     }
                 }
 
-                // Validate self-evaluation: if relationship is "Self", subject and evaluator must reference the same employee
-                if (string.Equals(evaluatorRequest.Relationship, "Self", StringComparison.OrdinalIgnoreCase))
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                var assignmentResponses = new List<SubjectEvaluatorResponse>();
+                foreach (var assignment in assignments)
                 {
-                    var subjectWithEmployee = await _context.Subjects
-                        .Include(s => s.Employee)
-                        .FirstOrDefaultAsync(s => s.Id == subjectId);
-
-                    if (subjectWithEmployee?.EmployeeId != evaluator.EmployeeId)
+                    var assignmentResponse = await GetSubjectEvaluatorResponseAsync(assignment.Id);
+                    if (assignmentResponse != null)
                     {
-                        errors.Add($"Relationship type 'Self' requires subject and evaluator to reference the same employee. Subject EmployeeId: {subjectWithEmployee?.EmployeeId}, Evaluator EmployeeId: {evaluator.EmployeeId}");
-                        continue;
+                        assignmentResponses.Add(assignmentResponse);
                     }
                 }
 
-                // Check if assignment already exists
-                var existingAssignment = await _context.SubjectEvaluators
-                    .FirstOrDefaultAsync(se => se.SubjectId == subjectId && 
-                                             se.EvaluatorId == evaluatorRequest.EvaluatorId);
+                _logger.LogInformation("Assigned {Count} evaluators to subject {SubjectId}", 
+                    assignments.Count, subjectId);
 
-                if (existingAssignment != null)
+                return new AssignmentResponse
                 {
-                    if (existingAssignment.IsActive)
-                    {
-                        errors.Add($"Assignment between subject and evaluator {evaluatorRequest.EvaluatorId} already exists");
-                        continue;
-                    }
-                    else
-                    {
-                        // Reactivate existing assignment
-                        existingAssignment.IsActive = true;
-                        existingAssignment.Relationship = evaluatorRequest.Relationship;
-                        existingAssignment.UpdatedAt = DateTime.UtcNow;
-                        assignments.Add(existingAssignment);
-                    }
-                }
-                else
-                {
-                    // Create new assignment
-                    var assignment = new SubjectEvaluator
-                    {
-                        Id = Guid.NewGuid(),
-                        SubjectId = subjectId,
-                        EvaluatorId = evaluatorRequest.EvaluatorId,
-                        Relationship = evaluatorRequest.Relationship,
-                        TenantId = subject.TenantId,
-                        CreatedAt = DateTime.UtcNow,
-                        IsActive = true
-                    };
-
-                    await _context.SubjectEvaluators.AddAsync(assignment);
-                    assignments.Add(assignment);
-                }
+                    Success = true,
+                    Message = $"Successfully assigned {assignments.Count} evaluators. {errors.Count} errors occurred.",
+                    Assignments = assignmentResponses
+                };
             }
-
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            var assignmentResponses = new List<SubjectEvaluatorResponse>();
-            foreach (var assignment in assignments)
+            catch (Exception ex)
             {
-                var assignmentResponse = await GetSubjectEvaluatorResponseAsync(assignment.Id);
-                if (assignmentResponse != null)
-                {
-                    assignmentResponses.Add(assignmentResponse);
-                }
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error assigning evaluators to subject {SubjectId}", subjectId);
+                throw;
             }
-
-            _logger.LogInformation("Assigned {Count} evaluators to subject {SubjectId}", 
-                assignments.Count, subjectId);
-
-            return new AssignmentResponse
-            {
-                Success = true,
-                Message = $"Successfully assigned {assignments.Count} evaluators. {errors.Count} errors occurred.",
-                Assignments = assignmentResponses
-            };
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "Error assigning evaluators to subject {SubjectId}", subjectId);
-            throw;
-        }
+        });
     }
 
     public async Task<AssignmentResponse> AssignSubjectsToEvaluatorAsync(Guid evaluatorId, AssignSubjectsToEvaluatorRequest request)
     {
-        using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+        return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            // Verify evaluator exists
-            var evaluator = await _context.Evaluators
-                .FirstOrDefaultAsync(e => e.Id == evaluatorId && e.IsActive);
-
-            if (evaluator == null)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
             {
-                return new AssignmentResponse
+                // Verify evaluator exists
+                var evaluator = await _context.Evaluators
+                    .FirstOrDefaultAsync(e => e.Id == evaluatorId && e.IsActive);
+
+                if (evaluator == null)
                 {
-                    Success = false,
-                    Message = "Evaluator not found"
-                };
-            }
-
-            var assignments = new List<SubjectEvaluator>();
-            var errors = new List<string>();
-
-            foreach (var subjectRequest in request.Subjects)
-            {
-                // Verify subject exists and belongs to same tenant
-                var subject = await _context.Subjects
-                    .Include(s => s.Employee)
-                    .FirstOrDefaultAsync(s => s.Id == subjectRequest.SubjectId &&
-                                            s.TenantId == evaluator.TenantId &&
-                                            s.IsActive);
-
-                if (subject == null)
-                {
-                    // Try to find the employee by ID to auto-create subject
-                    var employee = await _context.Employees
-                        .FirstOrDefaultAsync(e => e.Id == subjectRequest.SubjectId &&
-                                                e.TenantId == evaluator.TenantId &&
-                                                e.IsActive);
-
-                    if (employee != null)
+                    return new AssignmentResponse
                     {
-                        // Auto-create subject record
-                        subject = new Subject
+                        Success = false,
+                        Message = "Evaluator not found"
+                    };
+                }
+
+                var assignments = new List<SubjectEvaluator>();
+                var errors = new List<string>();
+
+                foreach (var subjectRequest in request.Subjects)
+                {
+                    // Verify subject exists and belongs to same tenant
+                    var subject = await _context.Subjects
+                        .Include(s => s.Employee)
+                        .FirstOrDefaultAsync(s => s.Id == subjectRequest.SubjectId &&
+                                                s.TenantId == evaluator.TenantId &&
+                                                s.IsActive);
+
+                    if (subject == null)
+                    {
+                        // Try to find the employee by ID to auto-create subject
+                        var employee = await _context.Employees
+                            .FirstOrDefaultAsync(e => e.Id == subjectRequest.SubjectId &&
+                                                    e.TenantId == evaluator.TenantId &&
+                                                    e.IsActive);
+
+                        if (employee != null)
+                        {
+                            // Auto-create subject record
+                            subject = new Subject
+                            {
+                                Id = Guid.NewGuid(),
+                                EmployeeId = employee.Id,
+                                PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
+                                IsActive = true,
+                                CreatedAt = DateTime.UtcNow,
+                                TenantId = evaluator.TenantId
+                            };
+
+                            _context.Subjects.Add(subject);
+                            await _context.SaveChangesAsync();
+
+                            // Reload with Employee navigation property
+                            subject = await _context.Subjects
+                                .Include(s => s.Employee)
+                                .FirstOrDefaultAsync(s => s.Id == subject.Id);
+
+                            _logger.LogInformation("Auto-created subject for employee {EmployeeId} ({EmployeeName})",
+                                employee.EmployeeId, employee.FullName);
+                        }
+                        else
+                        {
+                            errors.Add($"Employee {subjectRequest.SubjectId} not found or not in same tenant");
+                            continue;
+                        }
+                    }
+
+                    // Validate self-evaluation: if relationship is "Self", subject and evaluator must reference the same employee
+                    if (string.Equals(subjectRequest.Relationship, "Self", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var evaluatorWithEmployee = await _context.Evaluators
+                            .Include(e => e.Employee)
+                            .FirstOrDefaultAsync(e => e.Id == evaluatorId);
+
+                        if (subject.EmployeeId != evaluatorWithEmployee?.EmployeeId)
+                        {
+                            errors.Add($"Relationship type 'Self' requires subject and evaluator to reference the same employee. Subject EmployeeId: {subject.EmployeeId}, Evaluator EmployeeId: {evaluatorWithEmployee?.EmployeeId}");
+                            continue;
+                        }
+                    }
+
+                    // Check if assignment already exists
+                    var existingAssignment = await _context.SubjectEvaluators
+                        .FirstOrDefaultAsync(se => se.SubjectId == subjectRequest.SubjectId && 
+                                                 se.EvaluatorId == evaluatorId);
+
+                    if (existingAssignment != null)
+                    {
+                        if (existingAssignment.IsActive)
+                        {
+                            errors.Add($"Assignment between evaluator and subject {subjectRequest.SubjectId} already exists");
+                            continue;
+                        }
+                        else
+                        {
+                            // Reactivate existing assignment
+                            existingAssignment.IsActive = true;
+                            existingAssignment.Relationship = subjectRequest.Relationship;
+                            existingAssignment.UpdatedAt = DateTime.UtcNow;
+                            assignments.Add(existingAssignment);
+                        }
+                    }
+                    else
+                    {
+                        // Create new assignment
+                        var assignment = new SubjectEvaluator
                         {
                             Id = Guid.NewGuid(),
-                            EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
-                            IsActive = true,
+                            SubjectId = subjectRequest.SubjectId,
+                            EvaluatorId = evaluatorId,
+                            Relationship = subjectRequest.Relationship,
+                            TenantId = evaluator.TenantId,
                             CreatedAt = DateTime.UtcNow,
-                            TenantId = evaluator.TenantId
+                            IsActive = true
                         };
 
-                        _context.Subjects.Add(subject);
-                        await _context.SaveChangesAsync();
-
-                        // Reload with Employee navigation property
-                        subject = await _context.Subjects
-                            .Include(s => s.Employee)
-                            .FirstOrDefaultAsync(s => s.Id == subject.Id);
-
-                        _logger.LogInformation("Auto-created subject for employee {EmployeeId} ({EmployeeName})",
-                            employee.EmployeeId, employee.FullName);
-                    }
-                    else
-                    {
-                        errors.Add($"Employee {subjectRequest.SubjectId} not found or not in same tenant");
-                        continue;
+                        await _context.SubjectEvaluators.AddAsync(assignment);
+                        assignments.Add(assignment);
                     }
                 }
 
-                // Validate self-evaluation: if relationship is "Self", subject and evaluator must reference the same employee
-                if (string.Equals(subjectRequest.Relationship, "Self", StringComparison.OrdinalIgnoreCase))
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                var assignmentResponses = new List<SubjectEvaluatorResponse>();
+                foreach (var assignment in assignments)
                 {
-                    var evaluatorWithEmployee = await _context.Evaluators
-                        .Include(e => e.Employee)
-                        .FirstOrDefaultAsync(e => e.Id == evaluatorId);
-
-                    if (subject.EmployeeId != evaluatorWithEmployee?.EmployeeId)
+                    var assignmentResponse = await GetSubjectEvaluatorResponseAsync(assignment.Id);
+                    if (assignmentResponse != null)
                     {
-                        errors.Add($"Relationship type 'Self' requires subject and evaluator to reference the same employee. Subject EmployeeId: {subject.EmployeeId}, Evaluator EmployeeId: {evaluatorWithEmployee?.EmployeeId}");
-                        continue;
+                        assignmentResponses.Add(assignmentResponse);
                     }
                 }
 
-                // Check if assignment already exists
-                var existingAssignment = await _context.SubjectEvaluators
-                    .FirstOrDefaultAsync(se => se.SubjectId == subjectRequest.SubjectId && 
-                                             se.EvaluatorId == evaluatorId);
+                _logger.LogInformation("Assigned {Count} subjects to evaluator {EvaluatorId}", 
+                    assignments.Count, evaluatorId);
 
-                if (existingAssignment != null)
+                return new AssignmentResponse
                 {
-                    if (existingAssignment.IsActive)
-                    {
-                        errors.Add($"Assignment between evaluator and subject {subjectRequest.SubjectId} already exists");
-                        continue;
-                    }
-                    else
-                    {
-                        // Reactivate existing assignment
-                        existingAssignment.IsActive = true;
-                        existingAssignment.Relationship = subjectRequest.Relationship;
-                        existingAssignment.UpdatedAt = DateTime.UtcNow;
-                        assignments.Add(existingAssignment);
-                    }
-                }
-                else
-                {
-                    // Create new assignment
-                    var assignment = new SubjectEvaluator
-                    {
-                        Id = Guid.NewGuid(),
-                        SubjectId = subjectRequest.SubjectId,
-                        EvaluatorId = evaluatorId,
-                        Relationship = subjectRequest.Relationship,
-                        TenantId = evaluator.TenantId,
-                        CreatedAt = DateTime.UtcNow,
-                        IsActive = true
-                    };
-
-                    await _context.SubjectEvaluators.AddAsync(assignment);
-                    assignments.Add(assignment);
-                }
+                    Success = true,
+                    Message = $"Successfully assigned {assignments.Count} subjects. {errors.Count} errors occurred.",
+                    Assignments = assignmentResponses
+                };
             }
-
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-
-            var assignmentResponses = new List<SubjectEvaluatorResponse>();
-            foreach (var assignment in assignments)
+            catch (Exception ex)
             {
-                var assignmentResponse = await GetSubjectEvaluatorResponseAsync(assignment.Id);
-                if (assignmentResponse != null)
-                {
-                    assignmentResponses.Add(assignmentResponse);
-                }
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error assigning subjects to evaluator {EvaluatorId}", evaluatorId);
+                throw;
             }
-
-            _logger.LogInformation("Assigned {Count} subjects to evaluator {EvaluatorId}", 
-                assignments.Count, evaluatorId);
-
-            return new AssignmentResponse
-            {
-                Success = true,
-                Message = $"Successfully assigned {assignments.Count} subjects. {errors.Count} errors occurred.",
-                Assignments = assignmentResponses
-            };
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "Error assigning subjects to evaluator {EvaluatorId}", evaluatorId);
-            throw;
-        }
+        });
     }
 
     public async Task<SubjectEvaluatorResponse?> UpdateAssignmentAsync(Guid subjectId, Guid evaluatorId, string relationship)

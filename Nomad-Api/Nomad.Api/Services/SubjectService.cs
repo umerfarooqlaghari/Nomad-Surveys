@@ -336,133 +336,136 @@ public class SubjectService : ISubjectService
             TotalRequested = request.Subjects.Count
         };
 
-        using var transaction = await _context.Database.BeginTransactionAsync();
-
-        try
+        return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
         {
-            foreach (var subjectRequest in request.Subjects)
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
             {
-                try
+                foreach (var subjectRequest in request.Subjects)
                 {
-                    // Find employee by EmployeeId string
-                    var employee = await _context.Employees
-                        .FirstOrDefaultAsync(e => e.EmployeeId == subjectRequest.EmployeeId && e.TenantId == tenantId && e.IsActive);
-
-                    if (employee == null)
+                    try
                     {
-                        response.Failed++;
-                        response.Errors.Add($"Employee '{subjectRequest.EmployeeId}' not found");
-                        continue;
-                    }
+                        // Find employee by EmployeeId string
+                        var employee = await _context.Employees
+                            .FirstOrDefaultAsync(e => e.EmployeeId == subjectRequest.EmployeeId && e.TenantId == tenantId && e.IsActive);
 
-                    // Check if already exists
-                    var existingSubject = await _context.Subjects
-                        .FirstOrDefaultAsync(s => s.EmployeeId == employee.Id && s.TenantId == tenantId);
-
-                    if (existingSubject != null)
-                    {
-                        if (!existingSubject.IsActive)
+                        if (employee == null)
                         {
-                            // Reactivate
-                            existingSubject.IsActive = true;
-                            existingSubject.UpdatedAt = DateTime.UtcNow;
-                            _context.Subjects.Update(existingSubject);
-                            await _context.SaveChangesAsync();
+                            response.Failed++;
+                            response.Errors.Add($"Employee '{subjectRequest.EmployeeId}' not found");
+                            continue;
+                        }
 
-                            response.UpdatedCount++;
-                            response.CreatedIds.Add(existingSubject.Id);
+                        // Check if already exists
+                        var existingSubject = await _context.Subjects
+                            .FirstOrDefaultAsync(s => s.EmployeeId == employee.Id && s.TenantId == tenantId);
 
-                            _logger.LogInformation("✅ Reactivated subject for employee {EmployeeId}", subjectRequest.EmployeeId);
-
-                            // Handle relationships when reactivating
-                            if (subjectRequest.EvaluatorRelationships != null && subjectRequest.EvaluatorRelationships.Any())
+                        if (existingSubject != null)
+                        {
+                            if (!existingSubject.IsActive)
                             {
-                                var evaluatorRelationships = subjectRequest.EvaluatorRelationships
-                                    .Select(er => (er.EvaluatorEmployeeId, er.Relationship))
-                                    .ToList();
+                                // Reactivate
+                                existingSubject.IsActive = true;
+                                existingSubject.UpdatedAt = DateTime.UtcNow;
+                                _context.Subjects.Update(existingSubject);
+                                await _context.SaveChangesAsync();
 
-                                await _relationshipService.MergeSubjectEvaluatorRelationshipsWithTypesAsync(
-                                    existingSubject.Id,
-                                    evaluatorRelationships,
-                                    tenantId
-                                );
+                                response.UpdatedCount++;
+                                response.CreatedIds.Add(existingSubject.Id);
+
+                                _logger.LogInformation("✅ Reactivated subject for employee {EmployeeId}", subjectRequest.EmployeeId);
+
+                                // Handle relationships when reactivating
+                                if (subjectRequest.EvaluatorRelationships != null && subjectRequest.EvaluatorRelationships.Any())
+                                {
+                                    var evaluatorRelationships = subjectRequest.EvaluatorRelationships
+                                        .Select(er => (er.EvaluatorEmployeeId, er.Relationship))
+                                        .ToList();
+
+                                    await _relationshipService.MergeSubjectEvaluatorRelationshipsWithTypesAsync(
+                                        existingSubject.Id,
+                                        evaluatorRelationships,
+                                        tenantId
+                                    );
+                                }
+                            }
+                            else
+                            {
+                                // Already active - skip or update relationships
+                                response.UpdatedCount++;
+                                response.CreatedIds.Add(existingSubject.Id);
+
+                                _logger.LogInformation("ℹ️ Subject already active for employee {EmployeeId}", subjectRequest.EmployeeId);
+
+                                // Update relationships if provided
+                                if (subjectRequest.EvaluatorRelationships != null && subjectRequest.EvaluatorRelationships.Any())
+                                {
+                                    var evaluatorRelationships = subjectRequest.EvaluatorRelationships
+                                        .Select(er => (er.EvaluatorEmployeeId, er.Relationship))
+                                        .ToList();
+
+                                    await _relationshipService.MergeSubjectEvaluatorRelationshipsWithTypesAsync(
+                                        existingSubject.Id,
+                                        evaluatorRelationships,
+                                        tenantId
+                                    );
+                                }
                             }
                         }
                         else
                         {
-                            // Already active - skip or update relationships
-                            response.UpdatedCount++;
-                            response.CreatedIds.Add(existingSubject.Id);
+                            // Create new
+                            var newSubject = new Subject
+                            {
+                                Id = Guid.NewGuid(),
+                                EmployeeId = employee.Id,
+                                PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
+                                IsActive = true,
+                                CreatedAt = DateTime.UtcNow,
+                                TenantId = tenantId
+                            };
 
-                            _logger.LogInformation("ℹ️ Subject already active for employee {EmployeeId}", subjectRequest.EmployeeId);
+                            _context.Subjects.Add(newSubject);
+                            await _context.SaveChangesAsync();
 
-                            // Update relationships if provided
+                            response.SuccessfullyCreated++;
+                            response.CreatedIds.Add(newSubject.Id);
+
+                            // Handle relationships
                             if (subjectRequest.EvaluatorRelationships != null && subjectRequest.EvaluatorRelationships.Any())
                             {
                                 var evaluatorRelationships = subjectRequest.EvaluatorRelationships
                                     .Select(er => (er.EvaluatorEmployeeId, er.Relationship))
                                     .ToList();
 
-                                await _relationshipService.MergeSubjectEvaluatorRelationshipsWithTypesAsync(
-                                    existingSubject.Id,
+                                await _relationshipService.CreateSubjectEvaluatorRelationshipsWithTypesAsync(
+                                    newSubject.Id,
                                     evaluatorRelationships,
                                     tenantId
                                 );
                             }
                         }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        // Create new
-                        var newSubject = new Subject
-                        {
-                            Id = Guid.NewGuid(),
-                            EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
-                            IsActive = true,
-                            CreatedAt = DateTime.UtcNow,
-                            TenantId = tenantId
-                        };
-
-                        _context.Subjects.Add(newSubject);
-                        await _context.SaveChangesAsync();
-
-                        response.SuccessfullyCreated++;
-                        response.CreatedIds.Add(newSubject.Id);
-
-                        // Handle relationships
-                        if (subjectRequest.EvaluatorRelationships != null && subjectRequest.EvaluatorRelationships.Any())
-                        {
-                            var evaluatorRelationships = subjectRequest.EvaluatorRelationships
-                                .Select(er => (er.EvaluatorEmployeeId, er.Relationship))
-                                .ToList();
-
-                            await _relationshipService.CreateSubjectEvaluatorRelationshipsWithTypesAsync(
-                                newSubject.Id,
-                                evaluatorRelationships,
-                                tenantId
-                            );
-                        }
+                        _logger.LogError(ex, "Error processing subject {EmployeeId}", subjectRequest.EmployeeId);
+                        response.Failed++;
+                        response.Errors.Add($"Error processing '{subjectRequest.EmployeeId}': {ex.Message}");
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error processing subject {EmployeeId}", subjectRequest.EmployeeId);
-                    response.Failed++;
-                    response.Errors.Add($"Error processing '{subjectRequest.EmployeeId}': {ex.Message}");
-                }
+
+                await transaction.CommitAsync();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error in bulk create subjects");
+                throw;
             }
 
-            await transaction.CommitAsync();
-        }
-        catch (Exception ex)
-        {
-            await transaction.RollbackAsync();
-            _logger.LogError(ex, "Error in bulk create subjects");
-            throw;
-        }
-
-        return response;
+            return response;
+        });
     }
 
     public async Task<ValidationResponse> ValidateSubjectsAsync(List<string> employeeIds, Guid tenantId)
