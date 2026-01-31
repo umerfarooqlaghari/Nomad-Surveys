@@ -33,6 +33,7 @@ interface StatItem {
   value: number;
   change: number;
   changeType: string;
+  label?: string;
 }
 
 interface ChartDataPoint {
@@ -75,10 +76,11 @@ export default function OverviewTab() {
         console.log('Dashboard API response:', data);
 
         // Helper to transform PascalCase StatItem to camelCase
-        const transformStatItem = (item: { Value?: number; value?: number; Change?: number; change?: number; ChangeType?: string; changeType?: string } | undefined): StatItem => ({
+        const transformStatItem = (item: { Value?: number; value?: number; Change?: number; change?: number; ChangeType?: string; changeType?: string; Label?: string; label?: string } | undefined): StatItem => ({
           value: item?.Value ?? item?.value ?? 0,
           change: item?.Change ?? item?.change ?? 0,
           changeType: item?.ChangeType ?? item?.changeType ?? 'increase',
+          label: item?.Label ?? item?.label,
         });
 
         // Transform PascalCase to camelCase
@@ -122,6 +124,7 @@ export default function OverviewTab() {
     value: item?.value ?? 0,
     change: item?.change ?? 0,
     changeType: item?.changeType ?? 'increase',
+    label: item?.label,
   });
 
   const stats = dashboardData ? [
@@ -130,6 +133,7 @@ export default function OverviewTab() {
       value: formatValue(getStatItem(dashboardData.companiesRegistered).value),
       change: formatChange(getStatItem(dashboardData.companiesRegistered).change),
       changeType: getStatItem(dashboardData.companiesRegistered).changeType,
+      label: getStatItem(dashboardData.companiesRegistered).label,
       icon: '/Icons/building-check.svg',
     },
     {
@@ -137,6 +141,7 @@ export default function OverviewTab() {
       value: formatValue(getStatItem(dashboardData.usersRegistered).value),
       change: formatChange(getStatItem(dashboardData.usersRegistered).change),
       changeType: getStatItem(dashboardData.usersRegistered).changeType,
+      label: getStatItem(dashboardData.usersRegistered).label,
       icon: '/Icons/person-check.svg',
     },
     {
@@ -144,6 +149,7 @@ export default function OverviewTab() {
       value: formatValue(getStatItem(dashboardData.surveysCompleted).value),
       change: formatChange(getStatItem(dashboardData.surveysCompleted).change),
       changeType: getStatItem(dashboardData.surveysCompleted).changeType,
+      label: getStatItem(dashboardData.surveysCompleted).label,
       icon: '/Icons/ui-checks.svg',
     },
     {
@@ -151,6 +157,7 @@ export default function OverviewTab() {
       value: formatValue(getStatItem(dashboardData.surveyCompletionRate).value, true),
       change: formatChange(getStatItem(dashboardData.surveyCompletionRate).change),
       changeType: getStatItem(dashboardData.surveyCompletionRate).changeType,
+      label: getStatItem(dashboardData.surveyCompletionRate).label,
       icon: '/Icons/percent.svg',
     },
   ] : [];
@@ -174,7 +181,7 @@ export default function OverviewTab() {
     labels: dashboardData?.surveyCompletionTrends.map(d => d.label) || [],
     datasets: [
       {
-        label: 'Surveys Completed',
+        label: 'Completion Rate (%)',
         data: dashboardData?.surveyCompletionTrends.map(d => d.value) || [],
         borderColor: 'rgb(16, 185, 129)',
         backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -246,7 +253,7 @@ export default function OverviewTab() {
           <div key={stat.name} className={styles.statCard}>
             <div className={styles.statCardContent}>
               <div className={styles.statCardInner}>
-                 <div className={styles.statIcon}>
+                <div className={styles.statIcon}>
                   <Image
                     src={stat.icon}
                     alt={""}
@@ -264,11 +271,11 @@ export default function OverviewTab() {
                       <div className={styles.statValue}>
                         {stat.value}
                       </div>
-                      <div className={`${styles.statChange} ${
-                        stat.changeType === 'increase' ? styles.statChangeIncrease : styles.statChangeDecrease
-                      }`}>
+                      <div className={`${styles.statChange} ${stat.changeType === 'increase' ? styles.statChangeIncrease : styles.statChangeDecrease
+                        }`}>
                         {stat.changeType === 'increase' ? '↗' : '↘'}
                         {stat.change}
+                        {stat.label && <span className="ml-1 text-[10px] opacity-70 font-normal">({stat.label})</span>}
                       </div>
                     </dd>
                   </dl>

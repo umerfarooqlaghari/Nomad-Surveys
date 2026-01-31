@@ -36,55 +36,67 @@ public class SuperAdminAnalyticsController : ControllerBase
             var startOfCurrentMonth = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
             var startOfPreviousMonth = startOfCurrentMonth.AddMonths(-1);
 
-            // Get companies count (tenants with companies)
+            // Get total counts (Value display)
             var totalCompanies = await _context.Companies
-                .Where(c => c.Tenant.IsActive)
+                .Include(c => c.Tenant)
+                .Where(c => c.Tenant != null && c.Tenant.IsActive)
                 .CountAsync();
-            var companiesLastMonth = await _context.Companies
-                .Where(c => c.CreatedAt < startOfCurrentMonth)
-                .Where(c => c.Tenant.IsActive)
+
+            var totalUsers = await _context.Users
+                .Include(u => u.Tenant)
+                .Where(u => u.TenantId != null && u.Tenant != null && u.Tenant.IsActive)
                 .CountAsync();
-            
-            // Get users count (excluding SuperAdmin users - those without TenantId)
-            var totalUsers = await _context.Users.Where(u => u.TenantId != null).Where(c => c.Tenant.IsActive).CountAsync();
-            var usersLastMonth = await _context.Users
-                .Where(u => u.TenantId != null && u.CreatedAt < startOfCurrentMonth)
-                .Where(c => c.Tenant.IsActive)
-                .CountAsync();
-            
-            // Get completed surveys count
+
             var completedSurveys = await _context.SurveySubmissions
-                .Where(s => s.Status == "Completed")
-                .Where(s => s.Tenant.IsActive)
+                .Include(s => s.Tenant)
+                .Where(s => s.Status == "Completed" && s.Tenant != null && s.Tenant.IsActive)
                 .CountAsync();
-            var completedSurveysLastMonth = await _context.SurveySubmissions
-                .Where(s => s.Status == "Completed" && s.CompletedAt < startOfCurrentMonth)
-                .Where(c => c.Tenant.IsActive)
+
+            // Get stats for current month and previous month for growth comparison
+            var companiesThisMonth = await _context.Companies
+                .Include(c => c.Tenant)
+                .Where(c => c.CreatedAt >= startOfCurrentMonth && c.Tenant != null && c.Tenant.IsActive)
                 .CountAsync();
-            
-            // Get survey completion rate
-            var totalSurveySubmissions = await _context.SurveySubmissions.Where(c => c.Tenant.IsActive).CountAsync();
-            var completionRate = totalSurveySubmissions > 0 
-                ? Math.Round((double)completedSurveys / totalSurveySubmissions * 100, 1)
-                : 0;
-            
-            var totalSubmissionsLastMonth = await _context.SurveySubmissions
-                .Where(s => s.CreatedAt < startOfCurrentMonth)
-                .Where(c => c.Tenant.IsActive)
+            var companiesPrevMonth = await _context.Companies
+                .Include(c => c.Tenant)
+                .Where(c => c.CreatedAt >= startOfPreviousMonth && c.CreatedAt < startOfCurrentMonth && c.Tenant != null && c.Tenant.IsActive)
                 .CountAsync();
-            var completedSubmissionsLastMonth = await _context.SurveySubmissions
-                .Where(s => s.Status == "Completed" && s.CreatedAt < startOfCurrentMonth)
-                .Where(c => c.Tenant.IsActive)
+
+            var usersThisMonth = await _context.Users
+                .Include(u => u.Tenant)
+                .Where(u => u.TenantId != null && u.CreatedAt >= startOfCurrentMonth && u.Tenant != null && u.Tenant.IsActive)
                 .CountAsync();
-            var completionRateLastMonth = totalSubmissionsLastMonth > 0 
-                ? Math.Round((double)completedSubmissionsLastMonth / totalSubmissionsLastMonth * 100, 1)
+            var usersPrevMonth = await _context.Users
+                .Include(u => u.Tenant)
+                .Where(u => u.TenantId != null && u.CreatedAt >= startOfPreviousMonth && u.CreatedAt < startOfCurrentMonth && u.Tenant != null && u.Tenant.IsActive)
+                .CountAsync();
+
+            // Surveys completed vs assigned (for the trend)
+            var totalAssigned = await _context.SurveySubmissions
+                .Include(s => s.Tenant)
+                .Where(c => c.Tenant != null && c.Tenant.IsActive)
+                .CountAsync();
+            var completionRate = totalAssigned > 0 
+                ? Math.Round((double)completedSurveys / totalAssigned * 100, 1)
                 : 0;
 
-            // Calculate percentage changes
-            var companiesChange = CalculatePercentageChange(companiesLastMonth, totalCompanies);
-            var usersChange = CalculatePercentageChange(usersLastMonth, totalUsers);
-            var surveysChange = CalculatePercentageChange(completedSurveysLastMonth, completedSurveys);
-            var completionRateChange = Math.Round(completionRate - completionRateLastMonth, 1);
+            // Completion rate last month
+            var totalAssignedLastMonth = await _context.SurveySubmissions
+                .Include(s => s.Tenant)
+                .Where(s => s.CreatedAt < startOfCurrentMonth && s.Tenant != null && s.Tenant.IsActive)
+                .CountAsync();
+            var completedLastMonth = await _context.SurveySubmissions
+                .Include(s => s.Tenant)
+                .Where(s => s.Status == "Completed" && s.CreatedAt < startOfCurrentMonth && s.Tenant != null && s.Tenant.IsActive)
+                .CountAsync();
+            var completionRateLastMonth = totalAssignedLastMonth > 0
+                ? Math.Round((double)completedLastMonth / totalAssignedLastMonth * 100, 1)
+                : 0;
+
+            // Calculate changes
+            var companiesGrowth = CalculatePercentageChange(companiesPrevMonth, companiesThisMonth);
+            var usersGrowth = CalculatePercentageChange(usersPrevMonth, usersThisMonth);
+            var completionRateDelta = Math.Round(completionRate - completionRateLastMonth, 1);
 
             // Get user growth data (last 6 months)
             var userGrowthData = await GetUserGrowthData(6);
@@ -97,26 +109,30 @@ public class SuperAdminAnalyticsController : ControllerBase
                 CompaniesRegistered = new StatItem
                 {
                     Value = totalCompanies,
-                    Change = companiesChange,
-                    ChangeType = companiesChange >= 0 ? "increase" : "decrease"
+                    Change = Math.Abs(companiesGrowth),
+                    ChangeType = companiesGrowth >= 0 ? "increase" : "decrease",
+                    Label = "vs last month"
                 },
                 UsersRegistered = new StatItem
                 {
                     Value = totalUsers,
-                    Change = Math.Abs(usersChange),
-                    ChangeType = usersChange >= 0 ? "increase" : "decrease"
+                    Change = Math.Abs(usersGrowth),
+                    ChangeType = usersGrowth >= 0 ? "increase" : "decrease",
+                    Label = "vs last month"
                 },
                 SurveysCompleted = new StatItem
                 {
                     Value = completedSurveys,
-                    Change = Math.Abs(surveysChange),
-                    ChangeType = surveysChange >= 0 ? "increase" : "decrease"
+                    Change = completionRate,
+                    ChangeType = "increase", // Always positive context for completion rate
+                    Label = "completion rate"
                 },
                 SurveyCompletionRate = new StatItem
                 {
                     Value = completionRate,
-                    Change = Math.Abs(completionRateChange),
-                    ChangeType = completionRateChange >= 0 ? "increase" : "decrease"
+                    Change = Math.Abs(completionRateDelta),
+                    ChangeType = completionRateDelta >= 0 ? "increase" : "decrease",
+                    Label = "vs last month"
                 },
                 UserGrowthData = userGrowthData,
                 SurveyCompletionTrends = surveyTrendsData
@@ -146,8 +162,9 @@ public class SuperAdminAnalyticsController : ControllerBase
             var monthEnd = monthStart.AddMonths(1);
 
             var count = await _context.Users
+                .Include(u => u.Tenant)
                 .Where(u => u.TenantId != null && u.CreatedAt >= monthStart && u.CreatedAt < monthEnd)
-                .Where(c => c.Tenant.IsActive)
+                .Where(c => c.Tenant != null && c.Tenant.IsActive)
                 .CountAsync();
 
             result.Add(new ChartDataPoint
@@ -170,15 +187,24 @@ public class SuperAdminAnalyticsController : ControllerBase
             var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(-i);
             var monthEnd = monthStart.AddMonths(1);
 
-            var count = await _context.SurveySubmissions
+            var completedCount = await _context.SurveySubmissions
+                .Include(s => s.Tenant)
                 .Where(s => s.Status == "Completed" && s.CompletedAt >= monthStart && s.CompletedAt < monthEnd)
-                .Where(c => c.Tenant.IsActive)
+                .Where(c => c.Tenant != null && c.Tenant.IsActive)
                 .CountAsync();
+
+            var totalCount = await _context.SurveySubmissions
+                .Include(s => s.Tenant)
+                .Where(s => s.CreatedAt >= monthStart && s.CreatedAt < monthEnd)
+                .Where(c => c.Tenant != null && c.Tenant.IsActive)
+                .CountAsync();
+
+            var rate = totalCount > 0 ? Math.Round((double)completedCount / totalCount * 100, 1) : 0;
 
             result.Add(new ChartDataPoint
             {
                 Label = monthStart.ToString("MMM"),
-                Value = count
+                Value = rate
             });
         }
 
@@ -202,6 +228,7 @@ public class StatItem
     public double Value { get; set; }
     public double Change { get; set; }
     public string ChangeType { get; set; } = "increase";
+    public string? Label { get; set; }
 }
 
 public class ChartDataPoint
