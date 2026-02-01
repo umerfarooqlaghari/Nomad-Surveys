@@ -3,6 +3,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import emailService from '@/services/emailService';
+import { authService } from '@/services/authService';
 import toast from 'react-hot-toast';
 import styles from './VerifyOtpModal.module.css';
 
@@ -34,6 +35,18 @@ export default function VerifyOtpModal({
     }
   }, [isOpen]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleOtpChange = (index: number, value: string) => {
@@ -59,7 +72,7 @@ export default function VerifyOtpModal({
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
     const pastedData = e.clipboardData.getData('text').slice(0, 6);
-    
+
     if (!/^\d+$/.test(pastedData)) return;
 
     const newOtp = [...otp];
@@ -88,8 +101,9 @@ export default function VerifyOtpModal({
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error('Password must be at least 6 characters long');
+    const validation = authService.validatePassword(newPassword);
+    if (!validation.isValid) {
+      toast.error('Password requirements not met:\n' + validation.errors.join('\n'));
       return;
     }
 

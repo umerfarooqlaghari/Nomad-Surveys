@@ -13,6 +13,14 @@ interface PreviewModalProps {
 export default function PreviewModal({ survey, onClose }: PreviewModalProps) {
   const [previewMode, setPreviewMode] = useState<'self' | 'others'>('self');
 
+  // Lock body scroll on mount
+  React.useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-transparent backdrop-blur-md border-4 border-black rounded-lg">
       <div className="flex items-center justify-center min-h-screen px-4 py-8">

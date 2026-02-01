@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import toast from 'react-hot-toast';
 import styles from './CompaniesTab.module.css';
 import { tenantService, CreateTenantData, TenantListItem } from '@/services/tenantService';
+import { authService } from '@/services/authService';
 
 export default function CompaniesTab() {
   const { token } = useAuth();
@@ -105,9 +106,12 @@ export default function CompaniesTab() {
         errors['Email'] = 'Invalid email format';
       }
 
-      // Validate password length if provided
-      if (hasPassword && admin.Password!.length < 8) {
-        errors['Password'] = 'Password must be at least 8 characters';
+      // Validate password if provided
+      if (hasPassword) {
+        const validation = authService.validatePassword(admin.Password!);
+        if (!validation.isValid) {
+          errors['Password'] = validation.errors.join('\n');
+        }
       }
     }
 

@@ -131,7 +131,7 @@ class AuthService {
       errors.push('Password must contain at least one number');
     }
 
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    if (!/[^a-zA-Z0-9]/.test(password)) {
       errors.push('Password must contain at least one special character');
     }
 
@@ -191,11 +191,11 @@ class AuthService {
   hasRole(token: string, role: string): boolean {
     const user = this.getUserFromToken(token);
     if (!user || !user.roles) return false;
-    
+
     if (Array.isArray(user.roles)) {
       return user.roles.includes(role);
     }
-    
+
     return user.roles === role;
   }
 
@@ -205,11 +205,11 @@ class AuthService {
   hasPermission(token: string, permission: string): boolean {
     const user = this.getUserFromToken(token);
     if (!user || !user.permissions) return false;
-    
+
     if (Array.isArray(user.permissions)) {
       return user.permissions.includes(permission);
     }
-    
+
     return user.permissions === permission;
   }
 

@@ -344,7 +344,7 @@ export default function ProjectEmployeesTab({ projectSlug }: ProjectEmployeesTab
     <div className="space-y-6">
       {/* Loading Overlay */}
       {isSubmitting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full flex flex-col items-center text-center">
             <div className="relative w-16 h-16 mb-6">
               <div className="absolute inset-0 border-4 border-indigo-100 rounded-full"></div>

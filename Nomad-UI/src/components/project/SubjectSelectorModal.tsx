@@ -30,6 +30,18 @@ export default function SubjectSelectorModal({
     }
   }, [isOpen, token, projectSlug]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   const loadSubjects = async () => {
     if (!token) return;
 
@@ -75,7 +87,7 @@ export default function SubjectSelectorModal({
     return subjects.filter(
       (subject) =>
         subject.FullName?.toLowerCase().includes(term) ||
-        subject.EmployeeIdString?.toLowerCase().includes(term) 
+        subject.EmployeeIdString?.toLowerCase().includes(term)
     );
   };
 
@@ -100,7 +112,7 @@ export default function SubjectSelectorModal({
   const filteredSubjects = getFilteredSubjects();
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/20 backdrop-blur-md flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -155,11 +167,10 @@ export default function SubjectSelectorModal({
                   <div
                     key={subject.Id}
                     onClick={() => toggleSubject(subject.Id)}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
-                      isSelected
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${isSelected
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <input

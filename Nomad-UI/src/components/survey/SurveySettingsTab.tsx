@@ -13,11 +13,8 @@ interface TenantSettingsTabProps {
 
 const QUESTION_TYPES: { value: QuestionType; label: string }[] = [
   { value: 'rating', label: 'Rating Scale' },
-  { value: 'single-choice', label: 'Single Choice' },
-  { value: 'multiple-choice', label: 'Multiple Choice' },
   { value: 'text', label: 'Short Text' },
   { value: 'textarea', label: 'Long Text' },
-  { value: 'dropdown', label: 'Dropdown' },
 ];
 
 export default function SurveySettingsTab({ tenantSlug, token: tokenProp }: TenantSettingsTabProps) {
