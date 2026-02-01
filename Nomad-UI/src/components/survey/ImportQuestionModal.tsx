@@ -65,6 +65,18 @@ export default function ImportQuestionModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   const loadClusters = async () => {
     try {
       setIsLoading(true);
@@ -221,7 +233,7 @@ export default function ImportQuestionModal({
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
         {/* Background overlay with backdrop blur */}
         <div
-          className="fixed inset-0 transition-opacity backdrop-blur-sm bg-black/20"
+          className="fixed inset-0 transition-opacity backdrop-blur-md bg-black/20"
           onClick={handleClose}
         ></div>
 
@@ -289,10 +301,10 @@ export default function ImportQuestionModal({
                       <div
                         key={cluster.Id}
                         className={`border rounded-lg transition-colors ${isClusterFullyImported
-                            ? 'bg-green-50 border-green-200'
-                            : isClusterPartiallyImported
-                              ? 'bg-yellow-50 border-yellow-200'
-                              : 'bg-white border-gray-300'
+                          ? 'bg-green-50 border-green-200'
+                          : isClusterPartiallyImported
+                            ? 'bg-yellow-50 border-yellow-200'
+                            : 'bg-white border-gray-300'
                           }`}
                       >
                         {/* Cluster Item */}
@@ -340,10 +352,10 @@ export default function ImportQuestionModal({
                                     <button
                                       onClick={() => handleCompetencyClick(competency.Id)}
                                       className={`w-full px-3 py-2 flex items-center justify-between hover:bg-black/5 transition-colors text-left ${isCompFullyImported
-                                          ? 'bg-green-100/50'
-                                          : isCompPartiallyImported
-                                            ? 'bg-yellow-100/50'
-                                            : ''
+                                        ? 'bg-green-100/50'
+                                        : isCompPartiallyImported
+                                          ? 'bg-yellow-100/50'
+                                          : ''
                                         }`}
                                     >
                                       <div className="flex items-center gap-2">

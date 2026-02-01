@@ -105,6 +105,39 @@ export default function SurveyRenderer({
     });
   };
 
+  // Check if the entire survey is complete (all required questions across all active pages)
+  const isEverythingComplete = () => {
+    if (isPreview) return true;
+
+    return activePages.every(page => {
+      const questions = getVisibleQuestionsForPage(page.questions);
+      return questions.every(q => {
+        if (!q.required) return true;
+        const answer = responses[q.id];
+        if (answer === undefined || answer === null || answer === '') return false;
+        if (Array.isArray(answer) && answer.length === 0) return false;
+        return true;
+      });
+    });
+  };
+
+  // Get list of incomplete page indices
+  const getIncompletePages = () => {
+    return activePages
+      .map((page, idx) => {
+        const questions = getVisibleQuestionsForPage(page.questions);
+        const isComplete = questions.every(q => {
+          if (!q.required) return true;
+          const answer = responses[q.id];
+          if (answer === undefined || answer === null || answer === '') return false;
+          if (Array.isArray(answer) && answer.length === 0) return false;
+          return true;
+        });
+        return isComplete ? null : idx + 1;
+      })
+      .filter((idx): idx is number => idx !== null);
+  };
+
   // Navigation handlers
   const handleNext = () => {
     if (currentPageIndex < activePages.length - 1) {
@@ -265,7 +298,7 @@ export default function SurveyRenderer({
           ) : (
             <button
               onClick={onSubmit}
-              disabled={!isPageComplete() || isPreview}
+              disabled={!isEverythingComplete() || isPreview}
               className="px-4 sm:px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base whitespace-nowrap"
             >
               {isPreview ? 'Preview' : 'Submit'}
@@ -273,10 +306,16 @@ export default function SurveyRenderer({
           )}
         </div>
 
-        {!isPageComplete() && !isPreview && (
-          <p className="text-sm text-red-600 mt-3 text-center">
-            Please answer all required questions to continue
-          </p>
+        {(!isEverythingComplete() && !isPreview) && (
+          <div className="mt-3 text-center">
+            {/* {getIncompletePages().length > 0 && (
+              <p className="text-sm text-red-600">
+                Please answer all required questions on {getIncompletePages().length === 1
+                  ? `Page ${getIncompletePages()[0]}`
+                  : `Pages ${getIncompletePages().join(', ')}`} to continue
+              </p>
+            )} */}
+          </div>
         )}
       </div>
     </div>

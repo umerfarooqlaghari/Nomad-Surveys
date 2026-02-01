@@ -7,11 +7,9 @@
 
 export type QuestionType =
   | 'rating'
-  | 'single-choice'
-  | 'multiple-choice'
   | 'text'
-  | 'textarea'
-  | 'dropdown';
+  | 'textarea';
+
 
 export interface ChoiceOption {
   id: string;
@@ -90,11 +88,8 @@ export interface SurveySchema {
 // Helper type for question type display names
 export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
   'rating': 'Rating Scale',
-  'single-choice': 'Multiple Choice (Single)',
-  'multiple-choice': 'Multiple Choice (Multi)',
   'text': 'Short Text',
   'textarea': 'Long Text',
-  'dropdown': 'Dropdown',
 };
 
 // Default configurations for each question type
@@ -105,20 +100,20 @@ export const DEFAULT_QUESTION_CONFIGS: Record<QuestionType, QuestionConfig> = {
     ratingStep: 1,
     ratingLabels: { min: 'Never', max: 'Always' },
   },
-  'single-choice': {
-    options: [
-      { id: 'opt1', text: 'Option 1', order: 0, score: 1 },
-      { id: 'opt2', text: 'Option 2', order: 1, score: 2 },
-    ],
-  },
-  'multiple-choice': {
-    options: [
-      { id: 'opt1', text: 'Option 1', order: 0, score: 1 },
-      { id: 'opt2', text: 'Option 2', order: 1, score: 2 },
-    ],
-    minSelections: 0,
-    maxSelections: undefined,
-  },
+  // 'single-choice': {
+  //   options: [
+  //     { id: 'opt1', text: 'Option 1', order: 0, score: 1 },
+  //     { id: 'opt2', text: 'Option 2', order: 1, score: 2 },
+  //   ],
+  // },
+  // 'multiple-choice': {
+  //   options: [
+  //     { id: 'opt1', text: 'Option 1', order: 0, score: 1 },
+  //     { id: 'opt2', text: 'Option 2', order: 1, score: 2 },
+  //   ],
+  //   minSelections: 0,
+  //   maxSelections: undefined,
+  // },
   'text': {
     maxLength: 500,
     placeholder: 'Enter your answer...',
@@ -127,12 +122,12 @@ export const DEFAULT_QUESTION_CONFIGS: Record<QuestionType, QuestionConfig> = {
     maxLength: 2000,
     placeholder: 'Enter your answer...',
   },
-  'dropdown': {
-    options: [
-      { id: 'opt1', text: 'Option 1', order: 0, score: 1 },
-      { id: 'opt2', text: 'Option 2', order: 1, score: 2 },
-    ],
-  },
+  // 'dropdown': {
+  //   options: [
+  //     { id: 'opt1', text: 'Option 1', order: 0, score: 1 },
+  //     { id: 'opt2', text: 'Option 2', order: 1, score: 2 },
+  //   ],
+  // },
 };
 
 // Validation helpers

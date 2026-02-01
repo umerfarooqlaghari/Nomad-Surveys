@@ -191,7 +191,11 @@ export default function CustomSurveyBuilder({
       ...prev,
       pages: prev.pages
         .filter((p) => p.id !== pageId)
-        .map((p, index) => ({ ...p, order: index })),
+        .map((p, index) => ({
+          ...p,
+          title: p.title.startsWith('Page ') ? `Page ${index + 1}` : p.title,
+          order: index
+        })),
     }));
     setHasUnsavedChanges(true);
     toast.success('Page deleted');
@@ -201,27 +205,33 @@ export default function CustomSurveyBuilder({
   const handleReorderPages = useCallback((reorderedPages: SurveyPage[]) => {
     setSurvey((prev) => ({
       ...prev,
-      pages: reorderedPages.map((p, index) => ({ ...p, order: index })),
+      pages: reorderedPages.map((p, index) => ({
+        ...p,
+        title: p.title.startsWith('Page ') ? `Page ${index + 1}` : p.title,
+        order: index
+      })),
     }));
     setHasUnsavedChanges(true);
   }, []);
 
   // Bulk import questions from library
   const handleBulkImportQuestions = useCallback((newQuestions: any[], startIndex?: number) => {
+    // Default to the specified index or the last page if not provided
+    const targetPageIndex = typeof startIndex === 'number' ? startIndex : survey.pages.length - 1;
+
     setSurvey((prev) => {
       const newPages = [...prev.pages];
-      const insertAt = typeof startIndex === 'number' ? startIndex + 1 : newPages.length;
 
-      const importedPages: SurveyPage[] = [];
+      if (targetPageIndex < 0 || targetPageIndex >= newPages.length) {
+        return prev;
+      }
 
-      newQuestions.forEach((q, index) => {
+      // Create new pages, one question per page
+      const importedPages: SurveyPage[] = newQuestions.map((q, qIndex) => {
         // Map backend type to frontend type
         const typeMap: any = {
           'Text': 'text',
           'Rating': 'rating',
-          'MultipleChoice': 'single-choice',
-          'Checkbox': 'multiple-choice',
-          'Dropdown': 'dropdown'
         };
         const mappedType = typeMap[q.QuestionType] || 'text';
 
@@ -231,11 +241,8 @@ export default function CustomSurveyBuilder({
         // Default config
         const defaults: any = {
           'rating': { ratingMin: 1, ratingMax: 5, ratingStep: 1, ratingLabels: { min: 'Never', max: 'Always' } },
-          'single-choice': { options: [{ id: 'opt1', value: 1, text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', value: 2, text: 'Option 2', order: 1, score: 2 }] },
-          'multiple-choice': { options: [{ id: 'opt1', value: 1, text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', value: 2, text: 'Option 2', order: 1, score: 2 }], minSelections: 0 },
           'text': { maxLength: 500, placeholder: 'Enter your answer...' },
           'textarea': { maxLength: 2000, placeholder: 'Enter your answer...' },
-          'dropdown': { options: [{ id: 'opt1', value: 1, text: 'Option 1', order: 0, score: 1 }, { id: 'opt2', value: 2, text: 'Option 2', order: 1, score: 2 }] },
         };
 
         let config = defaults[questionType] || {};
@@ -254,13 +261,13 @@ export default function CustomSurveyBuilder({
         }
 
         const newSurveyQuestion: Question = {
-          id: `q_${Date.now()}_${index}`,
-          name: `question_${Date.now()}_${index}`,
+          id: `q_${Date.now()}_${qIndex}_${Math.random().toString(36).substr(2, 9)}`,
+          name: `question_${Date.now()}_${qIndex}`,
           type: questionType,
           selfText: q.SelfQuestion,
           othersText: q.OthersQuestion,
           required: false,
-          order: 0,
+          order: 0, // Since it's the only question on the page
           config: config,
           showTo: 'everyone',
           importedFrom: {
@@ -270,33 +277,37 @@ export default function CustomSurveyBuilder({
           }
         };
 
-        const newPage: SurveyPage = {
+        return {
           id: generatePageId(),
-          name: `page_${Date.now()}_${index}`,
-          title: `Page ${newPages.length + 1}`,
+          name: `page_${Date.now()}_${qIndex}`,
+          title: `Page ${targetPageIndex + 1 + qIndex}`, // Will be recalculated below
           description: '',
-          order: newPages.length,
-          questions: [newSurveyQuestion]
+          questions: [newSurveyQuestion],
+          order: targetPageIndex + qIndex
         };
-
-        importedPages.push(newPage);
       });
 
-      // Insert all imported pages at the specified position
-      newPages.splice(insertAt, 0, ...importedPages);
+      // Special case: if the current page is empty, replace it with the first imported page
+      if (newPages[targetPageIndex].questions.length === 0) {
+        newPages.splice(targetPageIndex, 1, ...importedPages);
+      } else {
+        // Otherwise insert at the target index (shifting the current page down)
+        newPages.splice(targetPageIndex, 0, ...importedPages);
+      }
 
+      // Final pass to ensure all titles and orders are correct
       return {
         ...prev,
         pages: newPages.map((p, idx) => ({
           ...p,
           title: p.title.startsWith('Page ') ? `Page ${idx + 1}` : p.title,
           order: idx
-        }))
+        })),
       };
     });
 
     setHasUnsavedChanges(true);
-    toast.success(`Imported ${newQuestions.length} questions on ${newQuestions.length} new pages`);
+    toast.success(`Imported ${newQuestions.length} questions to Page ${targetPageIndex + 1}`);
   }, [tenantSettings]);
 
   // Helper to get all imported question IDs for "already imported" check
