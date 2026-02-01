@@ -249,16 +249,10 @@ export default function QuestionRenderer({
     switch (question.type) {
       case 'rating':
         return renderRating();
-      case 'single-choice':
-        return renderSingleChoice();
-      case 'multiple-choice':
-        return renderMultipleChoice();
       case 'text':
         return renderText();
       case 'textarea':
         return renderTextarea();
-      case 'dropdown':
-        return renderDropdown();
       default:
         return <p className="text-gray-500">Unsupported question type</p>;
     }
