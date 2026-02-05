@@ -17,6 +17,8 @@ public class EvaluationFormResponse
     public string SubjectName { get; set; } = string.Empty;
     public string EvaluatorName { get; set; } = string.Empty;
     public string RelationshipType { get; set; } = string.Empty;
+    public string? TenantName { get; set; }
+    public string? TenantLogoUrl { get; set; }
     public string Status { get; set; } = string.Empty;
     public JsonDocument? SavedResponseData { get; set; }
     public DateTime? StartedAt { get; set; }

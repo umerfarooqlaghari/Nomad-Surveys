@@ -266,7 +266,7 @@ export default function CustomSurveyBuilder({
           type: questionType,
           selfText: q.SelfQuestion,
           othersText: q.OthersQuestion,
-          required: false,
+          required: questionType === 'rating',
           order: 0, // Since it's the only question on the page
           config: config,
           showTo: 'everyone',
