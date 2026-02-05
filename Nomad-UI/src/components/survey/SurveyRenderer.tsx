@@ -13,6 +13,8 @@ interface SurveyRendererProps {
   onDataChange?: (data: Record<string, any>) => void;
   onSubmit?: () => void | Promise<void>;
   showHeader?: boolean; // Whether to show the survey title/description header
+  companyName?: string;
+  companyLogo?: string;
 }
 
 export default function SurveyRenderer({
@@ -23,9 +25,12 @@ export default function SurveyRenderer({
   onDataChange,
   onSubmit,
   showHeader = true,
+  companyName,
+  companyLogo,
 }: SurveyRendererProps) {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, any>>(initialData);
+  const [hasStarted, setHasStarted] = useState(false);
 
   const isSelf = relationshipType === 'Self';
 
@@ -173,6 +178,50 @@ export default function SurveyRenderer({
     return count;
   };
 
+  if (!hasStarted && !isPreview) {
+    return (
+      <div className="max-w-3xl mx-auto bg-white rounded-lg border border-gray-200 p-8 shadow-sm">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-6">
+          <div className="w-32 h-12 relative flex items-center">
+            <img src="/logos/ascendevelopment_logo.jpeg" alt="Ascend Logo" className="object-contain max-h-full max-w-full" />
+          </div>
+          {companyLogo && (
+            <div className="w-32 h-12 relative flex items-center justify-end">
+              <img src={companyLogo} alt="Company Logo" className="object-contain max-h-full max-w-full" />
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="space-y-6">
+          <div className="bg-gray-50 p-6 rounded-lg text-gray-800">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900 border-b border-gray-200 pb-2">
+              Welcome to {companyName || 'Company Name'}&apos;s 360° Feedback Survey. Some guidelines before you start:
+            </h2>
+            <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-700">
+              <li>Responding to each statement is mandatory and you can only select one answer choice.</li>
+              <li>In case you feel like you do not know the person adequately to respond to the given statement, you can select &quot;NA&quot;.</li>
+              <li>You will not be able to go back or revisit your responses once you have proceeded to the next question. Once the survey is complete, you can revisit your responses.</li>
+              <li>You can track your progress through the progress bar located on top of the screen.</li>
+              <li>If you are taking the survey on your phone, you might have to scroll right to view all the answer choices.</li>
+              <li>Ensure that you have a stable internet connection.</li>
+            </ol>
+          </div>
+
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setHasStarted(true)}
+              className="px-8 py-3 bg-blue-600 text-white font-semibold rounded-full hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
+            >
+              Start Survey
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={showHeader ? "max-w-3xl mx-auto" : ""}>
       {/* Survey Header */}
@@ -191,6 +240,7 @@ export default function SurveyRenderer({
           )}
         </div>
       )}
+
 
       {/* Progress Bar Area */}
       <div className={`${showHeader ? "bg-white rounded-lg border border-gray-200 p-6 mb-6" : "bg-white rounded-lg border border-gray-200 p-4 mb-6 shadow-sm sticky top-0 z-10"}`}>
@@ -271,10 +321,11 @@ export default function SurveyRenderer({
                 <button
                   key={index}
                   onClick={() => setCurrentPageIndex(index)}
+                  disabled={index > currentPageIndex && !isPageComplete()}
                   className={`w-8 h-8 rounded-full transition-colors text-sm ${index === currentPageIndex
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                    }`}
+                    } ${index > currentPageIndex && !isPageComplete() ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {index + 1}
                 </button>
@@ -318,7 +369,7 @@ export default function SurveyRenderer({
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }
 

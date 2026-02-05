@@ -255,6 +255,8 @@ public class ParticipantService : IParticipantService
                     .ThenInclude(se => se.Evaluator)
                         .ThenInclude(e => e.Employee)
                 .Include(ses => ses.Survey)
+                .Include(ses => ses.Tenant)
+                    .ThenInclude(t => t.Company)
                 .FirstOrDefaultAsync(ses => ses.Id == assignmentId && evaluatorIds.Contains(ses.SubjectEvaluator.EvaluatorId));
 
             if (assignment == null)
@@ -294,7 +296,9 @@ public class ParticipantService : IParticipantService
                 Status = submission?.Status ?? SurveySubmissionStatus.Pending,
                 SavedResponseData = submission?.ResponseData,
                 StartedAt = submission?.StartedAt,
-                CompletedAt = submission?.CompletedAt
+                CompletedAt = submission?.CompletedAt,
+                TenantName = assignment.Tenant.Name,
+                TenantLogoUrl = assignment.Tenant.Company?.LogoUrl
             };
         }
         catch (Exception ex)

@@ -28,6 +28,8 @@ export default function EvaluationForm({ params }: EvaluationFormProps) {
     SubjectName: string;
     SurveyTitle: string;
     RelationshipType: string;
+    TenantName: string;
+    TenantLogoUrl: string;
   } | null>(null);
   const [surveySchema, setSurveySchema] = useState<SurveySchema | null>(null);
   const [responses, setResponses] = useState<Record<string, any>>({});
@@ -73,6 +75,8 @@ export default function EvaluationForm({ params }: EvaluationFormProps) {
             SubjectName: data.SubjectName,
             SurveyTitle: data.SurveyTitle,
             RelationshipType: data.RelationshipType || '',
+            TenantName: data.TenantName || '',
+            TenantLogoUrl: data.TenantLogoUrl || '',
           });
 
           // Store schema and saved data in state
@@ -236,6 +240,8 @@ export default function EvaluationForm({ params }: EvaluationFormProps) {
                 onSubmit={handleSubmit}
                 isPreview={false}
                 showHeader={false}
+                companyName={evaluationData.TenantName}
+                companyLogo={evaluationData.TenantLogoUrl}
               />
             ) : (
               <div className="py-12 text-center">

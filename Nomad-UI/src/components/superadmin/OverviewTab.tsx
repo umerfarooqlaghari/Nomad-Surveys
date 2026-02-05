@@ -114,10 +114,10 @@ export default function OverviewTab() {
     return val.toLocaleString();
   };
 
-  const formatChange = (change: number | undefined): string => {
+  const formatChange = (change: number | undefined, changeType: string = 'increase'): string => {
     const val = change ?? 0;
-    const sign = val >= 0 ? '+' : '';
-    return `${sign}${val}%`;
+    const sign = changeType === 'increase' ? '+' : '-';
+    return `${sign}${Math.abs(val)}%`;
   };
 
   const getStatItem = (item: StatItem | undefined) => ({
@@ -131,7 +131,7 @@ export default function OverviewTab() {
     {
       name: 'Companies Registered',
       value: formatValue(getStatItem(dashboardData.companiesRegistered).value),
-      change: formatChange(getStatItem(dashboardData.companiesRegistered).change),
+      change: formatChange(getStatItem(dashboardData.companiesRegistered).change, getStatItem(dashboardData.companiesRegistered).changeType),
       changeType: getStatItem(dashboardData.companiesRegistered).changeType,
       label: getStatItem(dashboardData.companiesRegistered).label,
       icon: '/Icons/building-check.svg',
@@ -139,7 +139,7 @@ export default function OverviewTab() {
     {
       name: 'Users Registered',
       value: formatValue(getStatItem(dashboardData.usersRegistered).value),
-      change: formatChange(getStatItem(dashboardData.usersRegistered).change),
+      change: formatChange(getStatItem(dashboardData.usersRegistered).change, getStatItem(dashboardData.usersRegistered).changeType),
       changeType: getStatItem(dashboardData.usersRegistered).changeType,
       label: getStatItem(dashboardData.usersRegistered).label,
       icon: '/Icons/person-check.svg',
@@ -147,7 +147,7 @@ export default function OverviewTab() {
     {
       name: 'Surveys Completed',
       value: formatValue(getStatItem(dashboardData.surveysCompleted).value),
-      change: formatChange(getStatItem(dashboardData.surveysCompleted).change),
+      change: formatChange(getStatItem(dashboardData.surveysCompleted).change, getStatItem(dashboardData.surveysCompleted).changeType),
       changeType: getStatItem(dashboardData.surveysCompleted).changeType,
       label: getStatItem(dashboardData.surveysCompleted).label,
       icon: '/Icons/ui-checks.svg',
@@ -155,7 +155,7 @@ export default function OverviewTab() {
     {
       name: 'Survey Completion Rate',
       value: formatValue(getStatItem(dashboardData.surveyCompletionRate).value, true),
-      change: formatChange(getStatItem(dashboardData.surveyCompletionRate).change),
+      change: formatChange(getStatItem(dashboardData.surveyCompletionRate).change, getStatItem(dashboardData.surveyCompletionRate).changeType),
       changeType: getStatItem(dashboardData.surveyCompletionRate).changeType,
       label: getStatItem(dashboardData.surveyCompletionRate).label,
       icon: '/Icons/percent.svg',

@@ -220,7 +220,7 @@ export function createDefaultQuestion(type: QuestionType): Question {
     type,
     selfText: '',
     othersText: '',
-    required: false,
+    required: type === 'rating',
     order: 0,
     config: { ...DEFAULT_QUESTION_CONFIGS[type] },
   };
