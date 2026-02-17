@@ -695,7 +695,7 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                     }
                     else
                     {
-                        var dashboardLink = $"{frontendUrl}/{tenantSlug}/participant/forms";
+                        var dashboardLink = $"{frontendUrl}";
                         await _emailService.SendBulkFormAssignmentEmailAsync(email, data.Name, data.Count, formTitle, dashboardLink, tenantName, tenantSlug, passwordDisplay);
                     }
                 }
