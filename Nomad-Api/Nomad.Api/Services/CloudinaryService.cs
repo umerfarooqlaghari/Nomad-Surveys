@@ -58,7 +58,7 @@ public class CloudinaryService : ICloudinaryService
                 File = new FileDescription(file.FileName, stream),
                 Folder = folder ?? _defaultFolder,
                 UseFilename = true,
-                UniqueFilename = false,
+                UniqueFilename = true,
                 Overwrite = false
             };
 
@@ -164,7 +164,7 @@ public class CloudinaryService : ICloudinaryService
                 File = new FileDescription(finalFileName, ms),
                 Folder = folder ?? _defaultFolder,
                 UseFilename = true,
-                UniqueFilename = false,
+                UniqueFilename = true,
                 Overwrite = false
             };
 
@@ -317,7 +317,7 @@ public class CloudinaryService : ICloudinaryService
                     File = new FileDescription(file.FileName, stream),
                     Folder = folder ?? _defaultFolder,
                     UseFilename = true,
-                    UniqueFilename = false,
+                    UniqueFilename = true,
                     Overwrite = false
                 };
 
