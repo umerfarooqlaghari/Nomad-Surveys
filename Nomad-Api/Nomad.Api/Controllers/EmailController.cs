@@ -382,7 +382,7 @@ public class EmailController : ControllerBase
                                       BCrypt.Net.BCrypt.Verify(DefaultPassword, firstAssignment.SubjectEvaluator.Evaluator.PasswordHash);
                 var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
 
-                var dashboardLink = $"{frontendUrl}/{tenantSlug}/participant/dashboard";
+                var dashboardLink = $"{frontendUrl}";
 
                 var success = await _emailService.SendConsolidatedReminderEmailAsync(
                     evaluatorEmail,
@@ -469,7 +469,7 @@ public class EmailController : ControllerBase
                                       BCrypt.Net.BCrypt.Verify(DefaultPassword, firstAssignment.SubjectEvaluator.Evaluator.PasswordHash);
                 var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
 
-                var dashboardLink = $"{frontendUrl}/{tenantSlug}/participant/dashboard";
+                var dashboardLink = $"{frontendUrl}";
 
                 var success = await _emailService.SendConsolidatedAssignmentEmailAsync(
                     evaluatorEmail,
