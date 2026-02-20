@@ -163,7 +163,7 @@ builder.Services.AddCors(options =>
         {
             // Restrict origins in production
             var allowedOrigins = builder.Configuration.GetSection("CORS:AllowedOrigins").Get<string[]>()
-                ?? new[] { "https://nomad-surveys.vercel.app" };
+                ?? new[] { "https://nomad-surveys.vercel.app", "https://nomadsurveys.vercel.app" };
 
             policy.WithOrigins(allowedOrigins)
                   .AllowAnyMethod()
