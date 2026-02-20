@@ -263,27 +263,7 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
                 </button>
               </div>
 
-              {!isSuperAdmin && (
-                <div className={styles.linkSection}>
-                  <p className={styles.linkText}>
-                    Need SuperAdmin access?{' '}
-                    <Link href="/superadmin/login" className={styles.link}>
-                      SuperAdmin Login
-                    </Link>
-                  </p>
-                </div>
-              )}
-
-              {isSuperAdmin && (
-                <div className={styles.linkSection}>
-                  <p className={styles.linkText}>
-                    Regular user?{' '}
-                    <Link href="/login" className={styles.link}>
-                      User Login
-                    </Link>
-                  </p>
-                </div>
-              )}
+          
             </form>
           </div>
         </div>
