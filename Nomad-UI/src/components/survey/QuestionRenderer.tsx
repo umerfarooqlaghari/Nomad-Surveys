@@ -39,11 +39,10 @@ export default function QuestionRenderer({
                 <button
                   key={option.id}
                   onClick={() => onChange(optionValue)}
-                  disabled={isPreview}
                   className={`flex-1 min-w-[100px] py-2 sm:py-3 px-3 sm:px-6 border-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${value === optionValue
                     ? 'border-blue-600 bg-blue-50 text-blue-700'
                     : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
-                    } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
+                    } cursor-pointer`}
                 >
                   {option.text}
                 </button>
@@ -71,11 +70,10 @@ export default function QuestionRenderer({
               <button
                 key={option}
                 onClick={() => onChange(option)}
-                disabled={isPreview}
                 className={`flex-1 min-w-[40px] py-2 sm:py-3 px-2 sm:px-4 border-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${value === option
                   ? 'border-blue-600 bg-blue-50 text-blue-700'
                   : 'border-gray-300 bg-white text-gray-700 hover:border-blue-400'
-                  } ${isPreview ? 'cursor-default' : 'cursor-pointer'}`}
+                  } cursor-pointer`}
               >
                 {option}
               </button>
@@ -107,7 +105,7 @@ export default function QuestionRenderer({
               className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${value === optionValue
                 ? 'border-blue-600 bg-blue-50'
                 : 'border-gray-300 bg-white hover:border-blue-400'
-                } ${isPreview ? 'cursor-default' : ''}`}
+                }`}
             >
               <input
                 id={`q-${question.id}-opt-${option.id}`}
@@ -116,7 +114,6 @@ export default function QuestionRenderer({
                 value={String(optionValue)}
                 checked={value === optionValue}
                 onChange={() => onChange(optionValue)}
-                disabled={isPreview}
                 className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
               />
               <span className="text-gray-900">{option.text}</span>
@@ -148,16 +145,15 @@ export default function QuestionRenderer({
             <label
               key={option.id}
               onClick={() => handleToggle(optionValue)}
-              className={`flex items-center gap-3 p-3 border-2 rounded-lg transition-colors ${selectedValues.includes(optionValue)
+              className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${selectedValues.includes(optionValue)
                 ? 'border-blue-600 bg-blue-50'
                 : 'border-gray-300 bg-white hover:border-blue-400'
-                } ${isPreview ? 'cursor-default' : ''}`}
+                }`}
             >
               <input
                 type="checkbox"
                 checked={selectedValues.includes(optionValue)}
                 onChange={() => handleToggle(optionValue)}
-                disabled={isPreview}
                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
               />
               <span className="text-gray-900">{option.text}</span>
@@ -187,7 +183,6 @@ export default function QuestionRenderer({
         onChange={(e) => onChange(e.target.value)}
         placeholder={question.config.placeholder || 'Enter your answer...'}
         maxLength={question.config.maxLength}
-        disabled={isPreview}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
       />
     );
@@ -202,7 +197,6 @@ export default function QuestionRenderer({
           onChange={(e) => onChange(e.target.value)}
           placeholder={question.config.placeholder || 'Enter your answer...'}
           maxLength={question.config.maxLength}
-          disabled={isPreview}
           rows={4}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
         />
@@ -231,7 +225,6 @@ export default function QuestionRenderer({
             onChange(e.target.value);
           }
         }}
-        disabled={isPreview}
         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="">-- Select an option --</option>
@@ -244,7 +237,6 @@ export default function QuestionRenderer({
     );
   };
 
-  // Render appropriate input based on question type
   const renderInput = () => {
     switch (question.type) {
       case 'rating':
@@ -253,8 +245,9 @@ export default function QuestionRenderer({
         return renderText();
       case 'textarea':
         return renderTextarea();
+
       default:
-        return <p className="text-gray-500">Unsupported question type</p>;
+        return <p className="text-gray-500">Unsupported question type: {question.type}</p>;
     }
   };
 

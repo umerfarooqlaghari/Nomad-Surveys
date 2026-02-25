@@ -11,21 +11,35 @@ interface ProtectedRouteProps {
   redirectTo?: string;
 }
 
-export default function ProtectedRoute({ 
-  children, 
-  allowedRoles = [], 
-  redirectTo = '/login' 
+export default function ProtectedRoute({
+  children,
+  allowedRoles = [],
+  redirectTo = '/login'
 }: ProtectedRouteProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+
+  // Determine final redirect path if not explicitly provided
+  const getRedirectPath = () => {
+    if (redirectTo !== '/login') return redirectTo;
+
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      if (path.includes('/superadmin')) return '/superadmin/login';
+      if (path.includes('/participant')) return '/';
+    }
+    return redirectTo;
+  };
+
+  const finalRedirectTo = getRedirectPath();
 
   useEffect(() => {
     // console.log('ProtectedRoute - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'user:', user, 'allowedRoles:', allowedRoles);
 
     if (!isLoading) {
       if (!isAuthenticated) {
-        // console.log('Not authenticated, redirecting to:', redirectTo);
-        router.push(redirectTo);
+        // console.log('Not authenticated, redirecting to:', finalRedirectTo);
+        router.push(finalRedirectTo);
         return;
       }
 

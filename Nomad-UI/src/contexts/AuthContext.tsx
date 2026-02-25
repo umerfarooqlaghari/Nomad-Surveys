@@ -27,6 +27,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     isLoggingOut.current = true;
 
+    // Capture roles BEFORE clearing user state
+    const roles = user?.roles || user?.Roles || [];
+
     AuthService.clearAuth();
     setUser(null);
     setTenant(null);
@@ -38,13 +41,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLogoutTimer(null);
     setActivityTimer(null);
 
-    router.push('/login');
+    // Redirect based on captured user roles
+    if (roles.includes('SuperAdmin')) {
+      router.push('/superadmin/login');
+    } else {
+      router.push('/');
+    }
 
     // Reset the flag after a short delay to allow navigation to complete
     setTimeout(() => {
       isLoggingOut.current = false;
     }, 1000);
-  }, [router, logoutTimer, activityTimer]);
+  }, [router, logoutTimer, activityTimer, user]);
 
   const resetActivityTimer = useCallback(() => {
     // Don't reset timer if logout is in progress
@@ -52,10 +60,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (activityTimer) clearTimeout(activityTimer);
 
-    // Set 30-minute inactivity timer
+    // Set 1-hour inactivity timer
     const newTimer = setTimeout(() => {
       logout();
-    }, 60 * 60 * 1000); // 30 minutes
+    }, 60 * 60 * 1000); // 1 hour
 
     setActivityTimer(newTimer);
   }, [logout, activityTimer]);
@@ -119,7 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLogoutTimer(timer);
       }
 
-      // Set activity timer directly
+      // Set activity timer directly (1 hour)
       const activityTimer = setTimeout(() => {
         logout();
       }, 60 * 60 * 1000);
@@ -127,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Don't redirect here - let the route guards handle it
       // This prevents race conditions with state updates
-          } catch (error) {
+    } catch (error) {
       throw error;
     } finally {
       setIsLoading(false);
@@ -169,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLogoutTimer(timer);
       }
 
-      // Set activity timer directly
+      // Set activity timer directly (1 hour)
       const activityTimer = setTimeout(() => {
         logout();
       }, 60 * 60 * 1000);
@@ -200,32 +208,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(storedUser);
           if (storedTenant) setTenant(storedTenant);
 
-        // Setup auto-logout for existing session
-        const expiry = localStorage.getItem('tokenExpiry');
-        if (expiry) {
-          const expiryTime = new Date(parseInt(expiry)).getTime();
-          const currentTime = new Date().getTime();
-          const timeUntilExpiry = expiryTime - currentTime;
+          // Setup auto-logout for existing session
+          const expiry = localStorage.getItem('tokenExpiry');
+          if (expiry) {
+            const expiryTime = new Date(parseInt(expiry)).getTime();
+            const currentTime = new Date().getTime();
+            const timeUntilExpiry = expiryTime - currentTime;
 
-          if (timeUntilExpiry > 0) {
-            const timer = setTimeout(() => {
+            if (timeUntilExpiry > 0) {
+              const timer = setTimeout(() => {
+                logout();
+              }, timeUntilExpiry);
+              setLogoutTimer(timer);
+            } else {
               logout();
-            }, timeUntilExpiry);
-            setLogoutTimer(timer);
-          } else {
-            logout();
-            return;
+              return;
+            }
           }
-        }
 
-        // Set 30-minute inactivity timer
-        const activityTimer = setTimeout(() => {
-          logout();
-        }, 60 * 60 * 1000);
-        setActivityTimer(activityTimer);
-      } else {
-        AuthService.clearAuth();
-      }
+          // Set 1-hour inactivity timer
+          const activityTimer = setTimeout(() => {
+            logout();
+          }, 60 * 60 * 1000);
+          setActivityTimer(activityTimer);
+        } else {
+          AuthService.clearAuth();
+        }
       } catch (error) {
         console.error('Error initializing auth:', error);
         AuthService.clearAuth();
@@ -247,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (activityTimer) clearTimeout(activityTimer);
 
-      // Set 30-minute inactivity timer
+      // Set 1-hour inactivity timer
       const newTimer = setTimeout(() => {
         logout();
       }, 60 * 60 * 1000);
@@ -293,9 +301,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
   };
 
-//   return <AuthContext.Provider value={value}>   
-//    {isLoading ? null : children}
-// </AuthContext.Provider>;
+  //   return <AuthContext.Provider value={value}>   
+  //    {isLoading ? null : children}
+  // </AuthContext.Provider>;
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 
