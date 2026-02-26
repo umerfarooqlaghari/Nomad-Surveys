@@ -30,7 +30,7 @@ export default function SurveyRenderer({
 }: SurveyRendererProps) {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [responses, setResponses] = useState<Record<string, any>>(initialData);
-  const [hasStarted, setHasStarted] = useState(false);
+  const [hasStarted, setHasStarted] = useState(isPreview || Object.keys(initialData).length > 0);
 
   const isSelf = relationshipType === 'Self';
 
@@ -140,6 +140,24 @@ export default function SurveyRenderer({
       })
       .filter((idx): idx is number => idx !== null);
   };
+
+  // Find the first page index that has unanswered required questions
+  const findFirstUnansweredPageIndex = () => {
+    for (let i = 0; i < activePages.length; i++) {
+      const questions = getVisibleQuestionsForPage(activePages[i].questions);
+      const isPageIncomplete = questions.some(q => {
+        if (!q.required) return false;
+        const answer = responses[q.id];
+        if (answer === undefined || answer === null || answer === '') return true;
+        if (Array.isArray(answer) && answer.length === 0) return true;
+        return false;
+      });
+      if (isPageIncomplete) return i;
+    }
+    return -1;
+  };
+
+  const firstIncompleteIdx = findFirstUnansweredPageIndex();
 
   // Navigation handlers
   const handleNext = () => {
@@ -353,6 +371,23 @@ export default function SurveyRenderer({
             </button>
           )}
         </div>
+
+        {/* Jump to first unanswered - Show if current page is before the first incomplete one */}
+        {firstIncompleteIdx !== -1 && firstIncompleteIdx > currentPageIndex && (
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={() => setCurrentPageIndex(firstIncompleteIdx)}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-50 text-amber-700 border border-amber-200 rounded-full hover:bg-amber-100 transition-all text-sm font-medium animate-pulse"
+            >
+              <span>Fast Forward to unanswered questions</span>
+              <span className="flex items-center justify-center w-5 h-5 bg-amber-200 rounded-full">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3 h-3">
+                  <path fillRule="evenodd" d="M10.21 14.77a.75.75 0 01.02-1.06L12.92 11H3.75a.75.75 0 010-1.5h9.17l-2.69-2.71a.75.75 0 111.08-1.04l4 4.02a.75.75 0 010 1.06l-4 4.02a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                </svg>
+              </span>
+            </button>
+          </div>
+        )}
 
         {(!isEverythingComplete() && !isPreview) && (
           <div className="mt-3 text-center">
