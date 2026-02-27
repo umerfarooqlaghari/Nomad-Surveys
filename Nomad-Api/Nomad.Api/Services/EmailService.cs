@@ -215,11 +215,9 @@ public class EmailService : IEmailService
                             {loginInfo}
                             
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                Once you have entered your Username (Email) and Password and clicked on 'Sign In', you will be directed to your portal where you can see the surveys you have to complete.
+                                Once you have entered your Username (Email) and Password and clicked on 'Sign In', you will be directed to your portal where you can see the surveys you have to complete. If the generated password is not working, please reset your password manually to your preference.
                             </p>
-                            <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                In case you have accessed the link before and changed your password, your password will say omitted for privacy and you can continue using your new password.
-                            </p>
+
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
                                 Follow the instructions thereafter to complete your surveys.
                             </p>
@@ -323,7 +321,7 @@ public class EmailService : IEmailService
                             {loginInfo}
                             
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                In case you have accessed the link before and changed your password, your password will be your updated password
+                                In case you have accessed the link before and changed your password, your password will be your updated password. If the generated password is not working, please reset your password manually to your preference.
                             </p>
 
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
@@ -468,7 +466,7 @@ public class EmailService : IEmailService
                                     {loginInfo}
                                     
                                     <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                        In case you have accessed the link before and changed your password, your password will be your updated password.
+                                        In case you have accessed the link before and changed your password, your password will be your updated password. If the generated password is not working, please reset your password manually to your preference.
                                     </p>
                                     
                                     <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af;"">

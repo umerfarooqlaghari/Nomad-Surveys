@@ -241,8 +241,7 @@ public class EmailController : ControllerBase
             // Determine due date (if available)
             var dueDate =  "No specific deadline";
 
-            var isDefaultPassword = BCrypt.Net.BCrypt.Verify(DefaultPassword, assignment.SubjectEvaluator.Evaluator.PasswordHash);
-            var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
+            var passwordDisplay = DefaultPassword;
 
             // Send reminder email
             var success = await _emailService.SendFormReminderEmailAsync(
@@ -378,9 +377,7 @@ public class EmailController : ControllerBase
                 _logger.LogInformation("Bulk Reminders: Preparing to send consolidated email to {Email} with {PendingCount} forms.", 
                     evaluatorEmail, pendingItemsForEmail.Count);
 
-                var isDefaultPassword = firstAssignment.SubjectEvaluator.Evaluator.PasswordHash != null && 
-                                      BCrypt.Net.BCrypt.Verify(DefaultPassword, firstAssignment.SubjectEvaluator.Evaluator.PasswordHash);
-                var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
+                var passwordDisplay = DefaultPassword;
 
                 var dashboardLink = $"{frontendUrl}";
 
@@ -465,9 +462,7 @@ public class EmailController : ControllerBase
                     SubjectName: a.SubjectEvaluator.Subject.Employee.FullName
                 )).ToList();
 
-                var isDefaultPassword = firstAssignment.SubjectEvaluator.Evaluator.PasswordHash != null && 
-                                      BCrypt.Net.BCrypt.Verify(DefaultPassword, firstAssignment.SubjectEvaluator.Evaluator.PasswordHash);
-                var passwordDisplay = isDefaultPassword ? DefaultPassword : "omitted for privacy";
+                var passwordDisplay = DefaultPassword;
 
                 var dashboardLink = $"{frontendUrl}";
 
