@@ -7,6 +7,9 @@ namespace Nomad.Api.Services;
 public class PasswordGenerator : IPasswordGenerator
 {
     private readonly string _secret;
+    private const string UpperSet = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+    private const string LowerSet = "abcdefghijkmnopqrstuvwxyz";
+    private const string DigitSet = "23456789";
     private const string CharSet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"; // No ambiguous chars
 
     public PasswordGenerator(IConfiguration config)
@@ -22,15 +25,21 @@ public class PasswordGenerator : IPasswordGenerator
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_secret));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(emailLower));
 
-        // Create a 10-character password from the hash
         var password = new StringBuilder();
         for (int i = 0; i < 10; i++)
         {
-            // Use 2 bytes per character for better distribution
-            var index = BitConverter.ToUInt16(hash, i * 2) % CharSet.Length;
-            password.Append(CharSet[index]);
+            var index = BitConverter.ToUInt16(hash, i * 2);
 
-            // Add some "complexity" requirements
+            // Guarantee complexity to satisfy ASP.NET Core Identity requirements
+            if (i == 0)
+                password.Append(LowerSet[index % LowerSet.Length]);
+            else if (i == 1)
+                password.Append(UpperSet[index % UpperSet.Length]);
+            else if (i == 2)
+                password.Append(DigitSet[index % DigitSet.Length]);
+            else
+                password.Append(CharSet[index % CharSet.Length]);
+
             if (i == 3) password.Append('!');
             if (i == 7) password.Append('@');
         }

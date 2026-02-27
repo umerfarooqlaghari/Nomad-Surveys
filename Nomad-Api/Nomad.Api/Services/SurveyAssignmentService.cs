@@ -684,8 +684,7 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                 {
                     var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:3000";
                     var generatedPassword = _passwordGenerator.Generate(email);
-                    var isDefaultPassword = BCrypt.Net.BCrypt.Verify(generatedPassword, data.PasswordHash);
-                    var passwordDisplay = isDefaultPassword ? generatedPassword : "omitted for privacy";
+                    var passwordDisplay = generatedPassword;
                     
                     if (data.Count == 1)
                     {
