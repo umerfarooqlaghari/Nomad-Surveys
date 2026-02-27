@@ -116,8 +116,7 @@ public class ReminderBackgroundService : BackgroundService
                 
                 var passwordGenerator = scope.ServiceProvider.GetRequiredService<IPasswordGenerator>();
                 var generatedPassword = passwordGenerator.Generate(evaluatorEmail);
-                var isDefaultPassword = BCrypt.Net.BCrypt.Verify(generatedPassword, firstItem.EvaluatorPasswordHash);
-                var passwordDisplay = isDefaultPassword ? generatedPassword : "omitted for privacy";
+                var passwordDisplay = generatedPassword;
                 
                 var dashboardLink = $"{frontendUrl}/{firstItem.TenantSlug}/participant/dashboard";
 
