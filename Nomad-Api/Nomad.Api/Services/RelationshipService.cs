@@ -126,7 +126,7 @@ public class RelationshipService : IRelationshipService
         // Get existing relationships to avoid duplicates
         var existingRelationships = await _context.SubjectEvaluators
             .Where(se => se.SubjectId == subjectId && 
-                        existingEvaluators.Select(e => e.Id).Contains(se.EvaluatorId))
+                        _context.Evaluators.Where(e => evaluatorEmployeeIds.Contains(e.Employee.EmployeeId) && e.TenantId == tenantId).Select(e => e.Id).Contains(se.EvaluatorId))
             .Select(se => se.EvaluatorId)
             .ToListAsync();
 
@@ -273,7 +273,7 @@ public class RelationshipService : IRelationshipService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = "MIGRATED_TO_APP_USER",
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = tenantId
@@ -311,7 +311,7 @@ public class RelationshipService : IRelationshipService
         // Get ALL existing relationships (both active and inactive) to avoid duplicates and reactivate if needed
         var existingRelationships = await _context.SubjectEvaluators
             .Where(se => se.SubjectId == subjectId &&
-                        existingEvaluators.Select(e => e.Id).Contains(se.EvaluatorId))
+                        _context.Evaluators.Where(e => employeeIds.Contains(e.Employee.EmployeeId) && e.TenantId == tenantId).Select(e => e.Id).Contains(se.EvaluatorId))
             .ToListAsync();
 
         var existingRelationshipsByEvaluatorId = existingRelationships.ToDictionary(se => se.EvaluatorId);
@@ -427,7 +427,7 @@ public class RelationshipService : IRelationshipService
         // Get existing relationships to avoid duplicates
         var existingRelationships = await _context.SubjectEvaluators
             .Where(se => se.EvaluatorId == evaluatorId && 
-                        existingSubjects.Select(s => s.Id).Contains(se.SubjectId))
+                        _context.Subjects.Where(s => subjectEmployeeIds.Contains(s.Employee.EmployeeId) && s.TenantId == tenantId).Select(s => s.Id).Contains(se.SubjectId))
             .Select(se => se.SubjectId)
             .ToListAsync();
 
@@ -568,7 +568,7 @@ public class RelationshipService : IRelationshipService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = "MIGRATED_TO_APP_USER",
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = tenantId
@@ -606,7 +606,7 @@ public class RelationshipService : IRelationshipService
         // Get ALL existing relationships (both active and inactive) to avoid duplicates and reactivate if needed
         var existingRelationships = await _context.SubjectEvaluators
             .Where(se => se.EvaluatorId == evaluatorId &&
-                        existingSubjects.Select(s => s.Id).Contains(se.SubjectId))
+                        _context.Subjects.Where(s => employeeIds.Contains(s.Employee.EmployeeId) && s.TenantId == tenantId).Select(s => s.Id).Contains(se.SubjectId))
             .ToListAsync();
 
         var existingRelationshipsBySubjectId = existingRelationships.ToDictionary(se => se.SubjectId);
@@ -833,7 +833,7 @@ public class RelationshipService : IRelationshipService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = "MIGRATED_TO_APP_USER",
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = tenantId
@@ -870,7 +870,8 @@ public class RelationshipService : IRelationshipService
 
         // Load ALL existing relationships for this subject to these evaluators (both active and inactive)
         var existingRels = await _context.SubjectEvaluators
-            .Where(se => se.SubjectId == subjectId && evaluators.Select(e => e.Id).Contains(se.EvaluatorId))
+            .Where(se => se.SubjectId == subjectId && 
+                        _context.Evaluators.Where(e => incomingEmployeeIds.Contains(e.Employee.EmployeeId) && e.TenantId == tenantId).Select(e => e.Id).Contains(se.EvaluatorId))
             .Include(se => se.Evaluator)
                 .ThenInclude(e => e.Employee)
             .ToListAsync();
@@ -1102,7 +1103,7 @@ public class RelationshipService : IRelationshipService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = "MIGRATED_TO_APP_USER",
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = tenantId
@@ -1134,7 +1135,8 @@ public class RelationshipService : IRelationshipService
 
         // Load ALL existing relationships for this evaluator to these subjects (both active and inactive)
         var existingRels = await _context.SubjectEvaluators
-            .Where(se => se.EvaluatorId == evaluatorId && subjects.Select(s => s.Id).Contains(se.SubjectId))
+            .Where(se => se.EvaluatorId == evaluatorId && 
+                        _context.Subjects.Where(s => incomingEmployeeIds.Contains(s.Employee.EmployeeId) && s.TenantId == tenantId).Select(s => s.Id).Contains(se.SubjectId))
             .Include(se => se.Subject)
                 .ThenInclude(s => s.Employee)
             .ToListAsync();

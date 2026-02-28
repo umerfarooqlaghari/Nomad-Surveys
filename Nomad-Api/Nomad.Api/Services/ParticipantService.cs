@@ -49,12 +49,11 @@ public class ParticipantService : IParticipantService
             _logger.LogInformation("Getting dashboard for user {UserId}, employee {EmployeeId}", userId, user.EmployeeId);
 
             // Get all evaluators that reference this employee
-            var evaluatorIds = await _context.Evaluators
+            var evaluatorIds = _context.Evaluators
                 .Where(e => e.EmployeeId == user.EmployeeId)
-                .Select(e => e.Id)
-                .ToListAsync();
+                .Select(e => e.Id);
 
-            _logger.LogInformation("Found {Count} evaluator records for employee {EmployeeId}", evaluatorIds.Count, user.EmployeeId);
+            _logger.LogInformation("Found {Count} evaluator records for employee {EmployeeId}", await evaluatorIds.CountAsync(), user.EmployeeId);
 
             // Get all survey assignments where this employee is the evaluator
             var assignments = await _context.SubjectEvaluatorSurveys
@@ -141,12 +140,11 @@ public class ParticipantService : IParticipantService
             }
 
             // Get all evaluators that reference this employee
-            var evaluatorIds = await _context.Evaluators
+            var evaluatorIds = _context.Evaluators
                 .Where(e => e.EmployeeId == user.EmployeeId)
-                .Select(e => e.Id)
-                .ToListAsync();
+                .Select(e => e.Id);
 
-            if (!evaluatorIds.Any())
+            if (!await evaluatorIds.AnyAsync())
             {
                 _logger.LogWarning("No evaluator records found for employee {EmployeeId}", user.EmployeeId);
                 return new List<AssignedEvaluationResponse>();
@@ -235,12 +233,11 @@ public class ParticipantService : IParticipantService
             }
 
             // Get all evaluators that reference this employee
-            var evaluatorIds = await _context.Evaluators
+            var evaluatorIds = _context.Evaluators
                 .Where(e => e.EmployeeId == user.EmployeeId)
-                .Select(e => e.Id)
-                .ToListAsync();
+                .Select(e => e.Id);
 
-            if (!evaluatorIds.Any())
+            if (!await evaluatorIds.AnyAsync())
             {
                 return null;
             }
@@ -315,12 +312,11 @@ public class ParticipantService : IParticipantService
             }
 
             // Get all evaluators that reference this employee
-            var evaluatorIds = await _context.Evaluators
+            var evaluatorIds = _context.Evaluators
                 .Where(e => e.EmployeeId == user.EmployeeId)
-                .Select(e => e.Id)
-                .ToListAsync();
+                .Select(e => e.Id);
 
-            if (!evaluatorIds.Any())
+            if (!await evaluatorIds.AnyAsync())
             {
                 return false;
             }
@@ -395,12 +391,11 @@ public class ParticipantService : IParticipantService
             }
 
             // Get all evaluators that reference this employee
-            var evaluatorIds = await _context.Evaluators
+            var evaluatorIds = _context.Evaluators
                 .Where(e => e.EmployeeId == user.EmployeeId)
-                .Select(e => e.Id)
-                .ToListAsync();
+                .Select(e => e.Id);
 
-            if (!evaluatorIds.Any())
+            if (!await evaluatorIds.AnyAsync())
             {
                 return false;
             }
@@ -477,12 +472,11 @@ public class ParticipantService : IParticipantService
             }
 
             // Get all evaluators that reference this employee
-            var evaluatorIds = await _context.Evaluators
+            var evaluatorIds = _context.Evaluators
                 .Where(e => e.EmployeeId == user.EmployeeId)
-                .Select(e => e.Id)
-                .ToListAsync();
+                .Select(e => e.Id);
 
-            if (!evaluatorIds.Any())
+            if (!await evaluatorIds.AnyAsync())
             {
                 return new List<SubmissionHistoryResponse>();
             }
@@ -548,12 +542,11 @@ public class ParticipantService : IParticipantService
             }
 
             // Get all evaluators that reference this employee
-            var evaluatorIds = await _context.Evaluators
+            var evaluatorIds = _context.Evaluators
                 .Where(e => e.EmployeeId == user.EmployeeId)
-                .Select(e => e.Id)
-                .ToListAsync();
+                .Select(e => e.Id);
 
-            if (!evaluatorIds.Any())
+            if (!await evaluatorIds.AnyAsync())
             {
                 return null;
             }

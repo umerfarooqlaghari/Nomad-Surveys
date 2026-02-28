@@ -76,7 +76,7 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = "MIGRATED_TO_APP_USER",
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = subject.TenantId
@@ -230,7 +230,7 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = "MIGRATED_TO_APP_USER",
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = evaluator.TenantId

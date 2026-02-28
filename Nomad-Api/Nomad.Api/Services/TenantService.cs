@@ -216,7 +216,35 @@ public class TenantService : ITenantService
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Tenant {TenantId} updated successfully", tenantId);
+            // Update Tenant Admin details if provided
+            var company = await _context.Companies
+                .IgnoreQueryFilters()
+                .Include(c => c.ContactPerson)
+                .FirstOrDefaultAsync(c => c.TenantId == tenantId);
+
+            if (company?.ContactPerson != null)
+            {
+                var admin = company.ContactPerson;
+                admin.FirstName = request.TenantAdmin.FirstName;
+                admin.LastName = request.TenantAdmin.LastName;
+                admin.PhoneNumber = request.TenantAdmin.PhoneNumber;
+                admin.UpdatedAt = DateTime.UtcNow;
+
+                // Atomic password update if provided
+                if (!string.IsNullOrWhiteSpace(request.TenantAdmin.Password))
+                {
+                    var resetSuccess = await _authenticationService.ResetPasswordAsync(admin.Id, request.TenantAdmin.Password);
+                    if (!resetSuccess)
+                    {
+                        _logger.LogWarning("Failed to update password for Tenant Admin {AdminId} during tenant update", admin.Id);
+                        // We continue updating other profile fields even if password reset fails (policy mismatch etc)
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+            }
+
+            _logger.LogInformation("Tenant {TenantId} and Admin profile updated successfully", tenantId);
             return true;
         }
         catch (Exception ex)

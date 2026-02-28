@@ -272,7 +272,7 @@ public class MigrationController : ControllerBase
                     {
                         Id = Guid.NewGuid(),
                         EmployeeId = employee.Id,
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                        PasswordHash = "MIGRATED_TO_APP_USER",
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow,
                         TenantId = employee.TenantId,
@@ -294,7 +294,7 @@ public class MigrationController : ControllerBase
                     {
                         Id = Guid.NewGuid(),
                         EmployeeId = employee.Id,
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                        PasswordHash = "MIGRATED_TO_APP_USER",
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow,
                         TenantId = employee.TenantId,

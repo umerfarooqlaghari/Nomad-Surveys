@@ -231,6 +231,37 @@ public class AuthenticationService : IAuthenticationService
         }
     }
 
+    public async Task<bool> ResetPasswordAsync(Guid userId, string newPassword)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+            {
+                return false;
+            }
+
+            // Generate a reset token (atomic and safe way to update password without knowing old one)
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
+            
+            if (result.Succeeded)
+            {
+                _logger.LogInformation("Password reset successfully for user {UserId}", userId);
+                return true;
+            }
+
+            _logger.LogWarning("Password reset failed for user {UserId}: {Errors}", 
+                userId, string.Join(", ", result.Errors.Select(e => e.Description)));
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resetting password for user {UserId}", userId);
+            return false;
+        }
+    }
+
     public async Task<UserResponse?> GetUserByIdAsync(Guid userId)
     {
         try

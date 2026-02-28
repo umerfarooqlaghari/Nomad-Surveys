@@ -181,7 +181,7 @@ public class SubjectService : ISubjectService
             {
                 Id = Guid.NewGuid(),
                 EmployeeId = employee.Id,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                PasswordHash = "MIGRATED_TO_APP_USER",
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
                 TenantId = tenantId
@@ -370,7 +370,7 @@ public class SubjectService : ISubjectService
                         {
                             Id = Guid.NewGuid(),
                             EmployeeId = employee.Id,
-                            PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                            PasswordHash = "MIGRATED_TO_APP_USER",
                             IsActive = true,
                             CreatedAt = DateTime.UtcNow,
                             TenantId = tenantId

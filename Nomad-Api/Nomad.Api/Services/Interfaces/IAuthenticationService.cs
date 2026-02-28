@@ -9,6 +9,7 @@ public interface IAuthenticationService
     Task<UserResponse> CreateUserAsync(CreateUserRequest request, Guid? tenantId = null);
     Task<bool> AssignRoleAsync(AssignRoleRequest request, Guid? tenantId = null);
     Task<bool> ChangePasswordAsync(Guid userId, ChangePasswordRequest request);
+    Task<bool> ResetPasswordAsync(Guid userId, string newPassword);
     Task<UserResponse?> GetUserByIdAsync(Guid userId);
     Task<List<UserListResponse>> GetUsersAsync(Guid? tenantId = null);
     Task<bool> DeactivateUserAsync(Guid userId);
