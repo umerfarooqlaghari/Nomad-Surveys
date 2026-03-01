@@ -40,6 +40,13 @@ public class SubjectEvaluatorController : ControllerBase
     /// <param name="subjectId">Subject ID</param>
     /// <param name="request">Assignment request with evaluator IDs and relationships</param>
     /// <returns>Assignment result</returns>
+    private void ClearEmailingListCache(Guid tenantId)
+    {
+        var cacheKey = $"EmailingList_{tenantId}";
+        _cache.Remove(cacheKey);
+        _logger.LogInformation("Cleared emailing list cache for tenant {TenantId}", tenantId);
+    }
+
     [HttpPost("subjects/{subjectId}/evaluators")]
     [AuthorizeTenantAdmin]
     public async Task<ActionResult<AssignmentResponse>> AssignEvaluatorsToSubject(
@@ -74,6 +81,11 @@ public class SubjectEvaluatorController : ControllerBase
             if (!result.Success)
             {
                 return BadRequest(result);
+            }
+
+            if (currentTenantId.HasValue)
+            {
+                ClearEmailingListCache(currentTenantId.Value);
             }
 
             return Ok(result);
@@ -125,6 +137,11 @@ public class SubjectEvaluatorController : ControllerBase
             if (!result.Success)
             {
                 return BadRequest(result);
+            }
+
+            if (currentTenantId.HasValue)
+            {
+                ClearEmailingListCache(currentTenantId.Value);
             }
 
             return Ok(result);
@@ -187,6 +204,11 @@ public class SubjectEvaluatorController : ControllerBase
             _logger.LogInformation("Updated assignment between subject {SubjectId} and evaluator {EvaluatorId} to relationship {Relationship}",
                 subjectId, evaluatorId, request.Relationship);
 
+            if (currentTenantId.HasValue)
+            {
+                ClearEmailingListCache(currentTenantId.Value);
+            }
+
             return Ok(updated);
         }
         catch (Exception ex)
@@ -239,6 +261,11 @@ public class SubjectEvaluatorController : ControllerBase
             _logger.LogInformation("Removed assignment between subject {SubjectId} and evaluator {EvaluatorId}", 
                 subjectId, evaluatorId);
             
+            if (currentTenantId.HasValue)
+            {
+                ClearEmailingListCache(currentTenantId.Value);
+            }
+
             return NoContent();
         }
         catch (Exception ex)

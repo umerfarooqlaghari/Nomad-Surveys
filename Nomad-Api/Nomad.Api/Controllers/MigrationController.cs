@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Nomad.Api.Authorization;
 using Nomad.Api.Data;
 using Nomad.Api.Entities;
+using Nomad.Api.Services.Interfaces;
 
 namespace Nomad.Api.Controllers;
 
@@ -16,18 +17,20 @@ public class MigrationController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<TenantRole> _roleManager;
     private readonly ILogger<MigrationController> _logger;
-    private const string DefaultPassword = "Password@123";
+    private readonly IPasswordGenerator _passwordGenerator;
 
     public MigrationController(
         NomadSurveysDbContext context,
         UserManager<ApplicationUser> userManager,
         RoleManager<TenantRole> roleManager,
-        ILogger<MigrationController> logger)
+        ILogger<MigrationController> logger,
+        IPasswordGenerator passwordGenerator)
     {
         _context = context;
         _userManager = userManager;
         _roleManager = roleManager;
         _logger = logger;
+        _passwordGenerator = passwordGenerator;
     }
 
     /// <summary>
@@ -60,8 +63,7 @@ public class MigrationController : ControllerBase
                     rolesDeleted = cleanResult.RolesDeleted,
                     employeesMigrated = migrateResult.Created,
                     employeesFailed = migrateResult.Failed,
-                    totalEmployees = migrateResult.Total,
-                    defaultPassword = DefaultPassword
+                    totalEmployees = migrateResult.Total
                 };
 
                 _logger.LogInformation("✅ Migration completed: {Result}", result);
@@ -172,7 +174,8 @@ public class MigrationController : ControllerBase
                     UpdatedAt = DateTime.UtcNow
                 };
 
-                var result = await _userManager.CreateAsync(newUser, DefaultPassword);
+                var password = _passwordGenerator.Generate(employee.Email);
+                var result = await _userManager.CreateAsync(newUser, password);
                 if (result.Succeeded)
                 {
                     // Assign Participant role
@@ -278,7 +281,7 @@ public class MigrationController : ControllerBase
                     {
                         Id = Guid.NewGuid(),
                         EmployeeId = employee.Id,
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow,
                         TenantId = employee.TenantId,
@@ -300,7 +303,7 @@ public class MigrationController : ControllerBase
                     {
                         Id = Guid.NewGuid(),
                         EmployeeId = employee.Id,
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultPassword),
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(_passwordGenerator.Generate(employee.Email)),
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow,
                         TenantId = employee.TenantId,

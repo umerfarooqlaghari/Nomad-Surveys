@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Nomad.Api.DTOs.Common;
 using Nomad.Api.Data;
@@ -14,9 +15,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Nomad.Api.Migrations
 {
     [DbContext(typeof(NomadSurveysDbContext))]
-    partial class NomadSurveysDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260228010209_AddEmailAuditLog")]
+    partial class AddEmailAuditLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -320,6 +323,7 @@ namespace Nomad.Api.Migrations
                         .HasColumnType("character varying(20)");
 
                     b.Property<string>("ContactPersonRole")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
@@ -347,8 +351,8 @@ namespace Nomad.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
-                    b.Property<string>("NumberOfEmployees")
-                        .HasColumnType("text");
+                    b.Property<int>("NumberOfEmployees")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -668,170 +672,6 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Questions");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.ReportChartImage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ClusterName")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<string>("CompetencyName")
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("ImageType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("ImageUrl")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<Guid>("SurveyId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ImageType");
-
-                    b.HasIndex("TenantId");
-
-                    b.HasIndex("SurveyId", "TenantId");
-
-                    b.HasIndex("SurveyId", "ImageType", "ClusterName", "CompetencyName")
-                        .IsUnique();
-
-                    b.ToTable("ReportChartImages");
-                });
-
-            modelBuilder.Entity("Nomad.Api.Entities.ReportTemplate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<JsonDocument>("PlaceholderMappings")
-                        .HasColumnType("jsonb");
-
-                    b.Property<JsonDocument>("TemplateSchema")
-                        .IsRequired()
-                        .HasColumnType("jsonb");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("TenantId", "IsActive");
-
-                    b.ToTable("ReportTemplates");
-                });
-
-            modelBuilder.Entity("Nomad.Api.Entities.ReportTemplateSettings", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("CompanyLogoUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<string>("CompanyName")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("CoverImageUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("PrimaryColor")
-                        .HasMaxLength(7)
-                        .HasColumnType("character varying(7)");
-
-                    b.Property<string>("SecondaryColor")
-                        .HasMaxLength(7)
-                        .HasColumnType("character varying(7)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("TertiaryColor")
-                        .HasMaxLength(7)
-                        .HasColumnType("character varying(7)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    b.HasIndex("TenantId", "IsActive");
-
-                    b.HasIndex("TenantId", "IsDefault");
-
-                    b.ToTable("ReportTemplateSettings");
-                });
-
             modelBuilder.Entity("Nomad.Api.Entities.RolePermission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -965,9 +805,6 @@ namespace Nomad.Api.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
-
-                    b.Property<DateTime?>("LastReminderSentAt")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("SubjectEvaluatorId")
                         .HasColumnType("uuid");
@@ -1182,42 +1019,6 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Roles", (string)null);
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.TenantSettings", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<string>("DefaultQuestionType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<JsonDocument>("DefaultRatingOptions")
-                        .HasColumnType("jsonb");
-
-                    b.Property<int?>("NumberOfOptions")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId")
-                        .IsUnique();
-
-                    b.ToTable("TenantSettings");
-                });
-
             modelBuilder.Entity("Nomad.Api.Entities.UserTenantRole", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1427,47 +1228,6 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.ReportChartImage", b =>
-                {
-                    b.HasOne("Nomad.Api.Entities.Survey", "Survey")
-                        .WithMany()
-                        .HasForeignKey("SurveyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Survey");
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("Nomad.Api.Entities.ReportTemplate", b =>
-                {
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("Nomad.Api.Entities.ReportTemplateSettings", b =>
-                {
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
-                        .WithMany()
-                        .HasForeignKey("TenantId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Tenant");
-                });
-
             modelBuilder.Entity("Nomad.Api.Entities.RolePermission", b =>
                 {
                     b.HasOne("Nomad.Api.Entities.Permission", "Permission")
@@ -1627,17 +1387,6 @@ namespace Nomad.Api.Migrations
                         .WithMany("TenantRoles")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Tenant");
-                });
-
-            modelBuilder.Entity("Nomad.Api.Entities.TenantSettings", b =>
-                {
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
-                        .WithOne()
-                        .HasForeignKey("Nomad.Api.Entities.TenantSettings", "TenantId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("Tenant");
                 });
