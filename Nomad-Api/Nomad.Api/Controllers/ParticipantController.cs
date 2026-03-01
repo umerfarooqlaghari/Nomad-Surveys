@@ -3,6 +3,7 @@ using Nomad.Api.Authorization;
 using Nomad.Api.DTOs.Request;
 using Nomad.Api.DTOs.Response;
 using Nomad.Api.Services.Interfaces;
+using Microsoft.Extensions.Caching.Memory;
 using System.Security.Claims;
 
 namespace Nomad.Api.Controllers;
@@ -16,15 +17,27 @@ namespace Nomad.Api.Controllers;
 public class ParticipantController : ControllerBase
 {
     private readonly IParticipantService _participantService;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<ParticipantController> _logger;
 
     public ParticipantController(
         IParticipantService participantService,
+        IMemoryCache cache,
         ILogger<ParticipantController> logger)
     {
         _participantService = participantService;
+        _cache = cache;
         _logger = logger;
     }
+
+    private void ClearEmailingListCache(Guid tenantId)
+    {
+        var cacheKey = $"EmailingList_{tenantId}";
+        _cache.Remove(cacheKey);
+        _logger.LogInformation("Cleared emailing list cache for tenant {TenantId} from ParticipantController", tenantId);
+    }
+
+    private Guid? GetCurrentTenantId() => HttpContext.Items["TenantId"] as Guid?;
 
     /// <summary>
     /// Get current user ID from JWT claims
@@ -168,6 +181,12 @@ public class ParticipantController : ControllerBase
             if (!success)
             {
                 return NotFound(new { message = "Evaluation assignment not found" });
+            }
+
+            var tenantId = GetCurrentTenantId();
+            if (tenantId.HasValue)
+            {
+                ClearEmailingListCache(tenantId.Value);
             }
 
             return Ok(new { message = "Evaluation submitted successfully" });

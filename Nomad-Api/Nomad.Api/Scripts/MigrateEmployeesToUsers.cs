@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Nomad.Api.Data;
 using Nomad.Api.Entities;
+using Nomad.Api.Services.Interfaces;
 
 namespace Nomad.Api.Scripts;
 
@@ -15,18 +16,20 @@ public class MigrateEmployeesToUsers
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<TenantRole> _roleManager;
     private readonly ILogger<MigrateEmployeesToUsers> _logger;
-    private const string DefaultPassword = "Password@123";
+    private readonly IPasswordGenerator _passwordGenerator;
 
     public MigrateEmployeesToUsers(
         NomadSurveysDbContext context,
         UserManager<ApplicationUser> userManager,
         RoleManager<TenantRole> roleManager,
-        ILogger<MigrateEmployeesToUsers> logger)
+        ILogger<MigrateEmployeesToUsers> logger,
+        IPasswordGenerator passwordGenerator)
     {
         _context = context;
         _userManager = userManager;
         _roleManager = roleManager;
         _logger = logger;
+        _passwordGenerator = passwordGenerator;
     }
 
     public async Task ExecuteAsync()
@@ -148,7 +151,8 @@ public class MigrateEmployeesToUsers
                     UpdatedAt = DateTime.UtcNow
                 };
 
-                var result = await _userManager.CreateAsync(newUser, DefaultPassword);
+                var password = _passwordGenerator.Generate(employee.Email);
+                var result = await _userManager.CreateAsync(newUser, password);
                 if (result.Succeeded)
                 {
                     // Assign Participant role

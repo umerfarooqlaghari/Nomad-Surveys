@@ -38,5 +38,16 @@ public interface IEmailService
     /// Send a consolidated assignment email for multiple new evaluations
     /// </summary>
     Task<bool> SendConsolidatedAssignmentEmailAsync(string toEmail, string evaluatorName, int formCount, List<(string FormTitle, string SubjectName)> assignedItems, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay);
-}
 
+    /// <summary>
+    /// Get the HTML body for a form assignment email
+    /// </summary>
+    Task<string> GetFormAssignmentEmailBodyAsync(string evaluatorName, string evaluatorEmail, string subjectName, string formTitle, string formLink, string tenantName, string tenantSlug, string passwordDisplay);
+
+    /// <summary>
+    /// Get the HTML body for a bulk form assignment email
+    /// </summary>
+    Task<string> GetBulkFormAssignmentEmailBodyAsync(string evaluatorName, string evaluatorEmail, int formCount, string formTitle, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay);
+    Task<string> GetConsolidatedReminderEmailBodyAsync(string evaluatorName, string evaluatorEmail, int pendingCount, List<(string FormTitle, string SubjectName, string Link)> pendingItems, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay);
+    Task<string> GetConsolidatedAssignmentEmailBodyAsync(string evaluatorName, string evaluatorEmail, int assignedCount, List<(string FormTitle, string SubjectName)> assignedItems, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay);
+}

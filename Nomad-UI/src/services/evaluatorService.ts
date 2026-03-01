@@ -98,6 +98,8 @@ export interface EmailingListItem {
   EvaluatorName: string;
   EvaluatorEmail: string;
   SubjectCount: number;
+  CompletedCount: number;
+  PendingCount: number;
   SubjectNames: string[];
   LastReminderSentAt?: string;
   AssignmentEmailSentAt?: string;

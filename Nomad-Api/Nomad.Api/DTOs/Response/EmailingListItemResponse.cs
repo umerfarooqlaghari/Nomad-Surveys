@@ -11,6 +11,8 @@ public class EmailingListItemResponse
     public string EvaluatorName { get; set; } = string.Empty;
     public string EvaluatorEmail { get; set; } = string.Empty;
     public int SubjectCount { get; set; }
+    public int CompletedCount { get; set; }
+    public int PendingCount { get; set; }
     public List<string> SubjectNames { get; set; } = new();
     public DateTime? LastReminderSentAt { get; set; }
     public DateTime? AssignmentEmailSentAt { get; set; }

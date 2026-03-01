@@ -689,7 +689,8 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
                     EvaluatorName = ses.SubjectEvaluator.Evaluator.Employee.FullName,
                     EvaluatorEmail = ses.SubjectEvaluator.Evaluator.Employee.Email,
                     SubjectName = ses.SubjectEvaluator.Subject.Employee.FullName,
-                    ses.LastReminderSentAt
+                    ses.LastReminderSentAt,
+                    IsCompleted = _context.SurveySubmissions.Any(ss => ss.SubjectEvaluatorSurveyId == ses.Id && ss.Status == "Completed")
                 })
                 .ToListAsync();
 
@@ -709,6 +710,8 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
                     EvaluatorName = g.First().EvaluatorName,
                     EvaluatorEmail = g.First().EvaluatorEmail,
                     SubjectCount = g.Count(),
+                    CompletedCount = g.Count(a => a.IsCompleted),
+                    PendingCount = g.Count(a => !a.IsCompleted),
                     SubjectNames = g.Select(a => a.SubjectName).Distinct().ToList(),
                     LastReminderSentAt = g.Max(a => a.LastReminderSentAt),
                     AssignmentEmailSentAt = null,

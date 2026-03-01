@@ -15,18 +15,23 @@ public class EmailController : ControllerBase
     private readonly NomadSurveysDbContext _context;
     private readonly ILogger<EmailController> _logger;
     private readonly IConfiguration _configuration;
-    private const string DefaultPassword = "Password@123";
+    private readonly IPasswordGenerator _passwordGenerator;
+    private readonly IEmailAuditService _emailAuditService;
 
     public EmailController(
         IEmailService emailService,
         NomadSurveysDbContext context,
         ILogger<EmailController> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IPasswordGenerator passwordGenerator,
+        IEmailAuditService emailAuditService)
     {
         _emailService = emailService;
         _context = context;
         _logger = logger;
         _configuration = configuration;
+        _passwordGenerator = passwordGenerator;
+        _emailAuditService = emailAuditService;
     }
 
     /// <summary>
@@ -241,26 +246,34 @@ public class EmailController : ControllerBase
             // Determine due date (if available)
             var dueDate =  "No specific deadline";
 
-            var passwordDisplay = DefaultPassword;
+            var passwordDisplay = _passwordGenerator.Generate(assignment.SubjectEvaluator.Evaluator.Employee.Email);
 
-            // Send reminder email
-            var success = await _emailService.SendFormReminderEmailAsync(
-                assignment.SubjectEvaluator.Evaluator.Employee.Email,
+            // 1. Get the email body using existing methods
+            var body = await _emailService.GetFormAssignmentEmailBodyAsync(
                 assignment.SubjectEvaluator.Evaluator.Employee.FullName,
+                assignment.SubjectEvaluator.Evaluator.Employee.Email,
                 assignment.SubjectEvaluator.Subject.Employee.FullName,
                 assignment.Survey.Title,
                 formLink,
-                dueDate,
                 tenant.Name,
                 tenantSlug,
                 passwordDisplay
             );
 
-            if (!success)
+            // 2. Prepare the request for the audited loop
+            var emailRequests = new List<ParticipantEmailRequest>
             {
-                _logger.LogWarning("Failed to send reminder email for assignment {AssignmentId}", assignment.Id);
-                return StatusCode(500, new { message = "Failed to send reminder email" });
-            }
+                new ParticipantEmailRequest
+                {
+                    Email = assignment.SubjectEvaluator.Evaluator.Employee.Email,
+                    Subject = $"Survey Assignment: {assignment.SubjectEvaluator.Subject.Employee.FullName} - {assignment.Survey.Title}",
+                    Body = body,
+                    TenantId = tenant.Id
+                }
+            };
+
+            // 3. Trigger the audited and rate-limited loop (non-blocking for single, but consistent)
+            await _emailAuditService.ProcessEmailLoopAsync(emailRequests);
 
             return Ok(new { message = "Reminder email sent successfully" });
         }
@@ -338,22 +351,17 @@ public class EmailController : ControllerBase
             _logger.LogInformation("Bulk Reminders: Grouped into {Count} unique evaluator emails.", groups.Count);
 
             int sentCount = 0;
-            int delayMs = 1000;
+            var emailRequests = new List<ParticipantEmailRequest>();
 
             foreach (var group in groups)
             {
                 var evaluatorEmail = group.Key;
+                if (string.IsNullOrEmpty(evaluatorEmail)) continue;
 
-                if (string.IsNullOrEmpty(evaluatorEmail))
-                {
-                    _logger.LogWarning("Bulk Reminders: Skipping a group because the evaluator email is null or empty.");
-                    continue;
-                }
                 var evaluatorAssignments = group.ToList();
                 var firstAssignment = evaluatorAssignments.First();
                 var evaluatorName = firstAssignment.SubjectEvaluator.Evaluator.Employee.FullName;
                 
-                // Pre-fetch completed submissions for this evaluator's assignments
                 var assignmentIds = evaluatorAssignments.Select(a => a.Id).ToList();
                 var completedSubmissionIds = await _context.SurveySubmissions
                     .Where(ss => assignmentIds.Contains(ss.SubjectEvaluatorSurveyId) && ss.Status == "Completed")
@@ -365,25 +373,17 @@ public class EmailController : ControllerBase
                     .Select(a => (
                         FormTitle: a.Survey.Title,
                         SubjectName: a.SubjectEvaluator.Subject.Employee.FullName,
-                        Link: $"{frontendUrl}" // Or specific link if needed
+                        Link: $"{frontendUrl}"
                     )).ToList();
 
-                if (!pendingItemsForEmail.Any()) {
-                    _logger.LogInformation("Bulk Reminders: Skipping evaluator {Email} because all {Count} assignments are already completed.", 
-                        evaluatorEmail, evaluatorAssignments.Count);
-                    continue;
-                }
+                if (!pendingItemsForEmail.Any()) continue;
 
-                _logger.LogInformation("Bulk Reminders: Preparing to send consolidated email to {Email} with {PendingCount} forms.", 
-                    evaluatorEmail, pendingItemsForEmail.Count);
-
-                var passwordDisplay = DefaultPassword;
-
+                var passwordDisplay = _passwordGenerator.Generate(evaluatorEmail);
                 var dashboardLink = $"{frontendUrl}";
 
-                var success = await _emailService.SendConsolidatedReminderEmailAsync(
-                    evaluatorEmail,
+                var body = await _emailService.GetConsolidatedReminderEmailBodyAsync(
                     evaluatorName,
+                    evaluatorEmail,
                     pendingItemsForEmail.Count,
                     pendingItemsForEmail,
                     dashboardLink,
@@ -392,30 +392,48 @@ public class EmailController : ControllerBase
                     passwordDisplay
                 );
 
-                if (success)
+                emailRequests.Add(new ParticipantEmailRequest
                 {
-                    var processedIds = evaluatorAssignments
-                        .Where(a => !completedSubmissionIds.Contains(a.Id))
-                        .Select(a => a.Id)
-                        .ToList();
+                    Email = evaluatorEmail,
+                    Subject = $"Consolidated Reminder: {pendingItemsForEmail.Count} Pending Surveys",
+                    Body = body,
+                    TenantId = tenant.Id
+                });
 
-                    foreach (var id in processedIds)
-                    {
-                        var assignment = assignments.First(a => a.Id == id);
-                        assignment.LastReminderSentAt = DateTime.UtcNow;
-                    }
-                    sentCount++; // Counting evaluators notified
-                    await _context.SaveChangesAsync();
+                // Update last reminder sent timestamp for these assignments
+                var processedIds = evaluatorAssignments
+                    .Where(a => !completedSubmissionIds.Contains(a.Id))
+                    .Select(a => a.Id)
+                    .ToList();
+
+                foreach (var id in processedIds)
+                {
+                    var assignment = assignments.First(a => a.Id == id);
+                    assignment.LastReminderSentAt = DateTime.UtcNow;
+                }
+            }
+
+            if (emailRequests.Any())
+            {
+                await _context.SaveChangesAsync();
+                await _emailAuditService.ProcessEmailLoopAsync(emailRequests);
+                sentCount = emailRequests.Count;
+            }
+
+            string finalMessage = $"Successfully initiated consolidated reminders for {sentCount} evaluators.";
+            if (sentCount == 0)
+            {
+                if (!assignments.Any())
+                {
+                    finalMessage = "No valid pending assignments found for the selected IDs.";
                 }
                 else
                 {
-                    _logger.LogWarning("Reminders: Failed to send consolidated email to {Email}.", evaluatorEmail);
+                    finalMessage = "All selected assignments are already completed or evaluators have no email addresses. No reminders sent.";
                 }
-
-                await Task.Delay(delayMs);
             }
 
-            return Ok(new { message = $"Successfully sent consolidated reminders to {sentCount} evaluators." });
+            return Ok(new { message = finalMessage });
         }
         catch (Exception ex)
         {
@@ -448,11 +466,13 @@ public class EmailController : ControllerBase
                 .ToList();
 
             int sentCount = 0;
-            int delayMs = 1000;
+            var emailRequests = new List<ParticipantEmailRequest>();
 
             foreach (var group in groups)
             {
                 var evaluatorEmail = group.Key;
+                if (string.IsNullOrEmpty(evaluatorEmail)) continue;
+
                 var evaluatorAssignments = group.ToList();
                 var firstAssignment = evaluatorAssignments.First();
                 var evaluatorName = firstAssignment.SubjectEvaluator.Evaluator.Employee.FullName;
@@ -462,13 +482,12 @@ public class EmailController : ControllerBase
                     SubjectName: a.SubjectEvaluator.Subject.Employee.FullName
                 )).ToList();
 
-                var passwordDisplay = DefaultPassword;
-
+                var passwordDisplay = _passwordGenerator.Generate(evaluatorEmail);
                 var dashboardLink = $"{frontendUrl}";
 
-                var success = await _emailService.SendConsolidatedAssignmentEmailAsync(
-                    evaluatorEmail,
+                var body = await _emailService.GetConsolidatedAssignmentEmailBodyAsync(
                     evaluatorName,
+                    evaluatorEmail,
                     assignedItems.Count,
                     assignedItems,
                     dashboardLink,
@@ -477,15 +496,22 @@ public class EmailController : ControllerBase
                     passwordDisplay
                 );
 
-                if (success)
+                emailRequests.Add(new ParticipantEmailRequest
                 {
-                    sentCount++;
-                }
-
-                await Task.Delay(delayMs);
+                    Email = evaluatorEmail,
+                    Subject = $"New Survey Assignments: {assignedItems.Count} Surveys Assigned",
+                    Body = body,
+                    TenantId = tenant.Id
+                });
             }
 
-            return Ok(new { message = $"Successfully sent consolidated assignments to {sentCount} evaluators." });
+            if (emailRequests.Any())
+            {
+                await _emailAuditService.ProcessEmailLoopAsync(emailRequests);
+                sentCount = emailRequests.Count;
+            }
+
+            return Ok(new { message = $"Successfully initiated consolidated assignments for {sentCount} evaluators." });
         }
         catch (Exception ex)
         {
