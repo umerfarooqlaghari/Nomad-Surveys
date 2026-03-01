@@ -185,6 +185,8 @@ public class ExcelReportRepository : IExcelReportRepository
                     .ThenInclude(s => s.Employee)
                 .Include(ss => ss.SubjectEvaluatorSurvey)
                     .ThenInclude(ses => ses.SubjectEvaluator)
+                        .ThenInclude(se => se.Evaluator)
+                            .ThenInclude(e => e.Employee)
                 .Where(ss => ss.SurveyId == surveyId
                     && ss.TenantId == tenantId
                     && ss.Status == SurveySubmissionStatus.Completed
@@ -208,7 +210,10 @@ public class ExcelReportRepository : IExcelReportRepository
                     Designation = subject.Employee?.Designation ?? string.Empty,
                     BusinessUnit = !string.IsNullOrEmpty(subject.Employee?.Department) ? subject.Employee.Department : 
                                    (!string.IsNullOrEmpty(subject.Employee?.Designation) ? subject.Employee.Designation : string.Empty),
-                    Relationship = evaluator.Relationship
+                    Relationship = evaluator.Relationship,
+                    EvaluatorEmployeeId = evaluator.Evaluator?.Employee?.EmployeeId ?? string.Empty,
+                    EvaluatorFullName = evaluator.Evaluator?.FullName ?? string.Empty,
+                    EvaluatorEmail = evaluator.Evaluator?.Email ?? string.Empty
                 };
 
                 // Parse Answers

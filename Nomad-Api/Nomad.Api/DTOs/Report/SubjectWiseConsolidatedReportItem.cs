@@ -11,8 +11,13 @@ public class SubjectWiseConsolidatedReportItem
     public string Email { get; set; } = string.Empty;
     public string Department { get; set; } = string.Empty;
     public string Designation { get; set; } = string.Empty;
-    public string Relationship { get; set; } = string.Empty;
     public string BusinessUnit { get; set; } = string.Empty; // Added based on requirements
+    public string Relationship { get; set; } = string.Empty;
+
+    // Evaluator Details
+    public string EvaluatorEmployeeId { get; set; } = string.Empty;
+    public string EvaluatorFullName { get; set; } = string.Empty;
+    public string EvaluatorEmail { get; set; } = string.Empty;
 
     // Scores
     // QuestionId -> Score

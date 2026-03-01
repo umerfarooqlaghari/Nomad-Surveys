@@ -58,6 +58,15 @@ export default function ParticipantLayout({ children }: ParticipantLayoutProps) 
 
   const isActive = (href: string) => pathname === href;
 
+  const formatName = (name: string | undefined) => {
+    if (!name) return '';
+    return name
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar backdrop */}
@@ -96,7 +105,7 @@ export default function ParticipantLayout({ children }: ParticipantLayoutProps) 
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-black truncate">
-                {user?.FirstName} {user?.LastName}
+                {formatName(user?.FirstName)} {formatName(user?.LastName)}
               </p>
               <p className="text-xs text-gray-600 truncate">{user?.Email}</p>
             </div>
@@ -116,8 +125,8 @@ export default function ParticipantLayout({ children }: ParticipantLayoutProps) 
                   setSidebarOpen(false);
                 }}
                 className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${active
-                    ? 'bg-blue-600 text-white'
-                    : 'text-black hover:bg-gray-100'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-black hover:bg-gray-100'
                   }`}
               >
                 <Icon className="h-5 w-5 mr-3" />
