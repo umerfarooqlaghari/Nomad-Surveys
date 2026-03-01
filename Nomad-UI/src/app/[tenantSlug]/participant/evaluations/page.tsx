@@ -11,6 +11,7 @@ import {
   CheckCircleIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
+import { toTitleCase } from '@/lib/stringUtils';
 
 interface Evaluation {
   AssignmentId: string;
@@ -279,7 +280,7 @@ export default function AssignedEvaluations({ params }: AssignedEvaluationsProps
                       {filteredEvaluations.map((evaluation) => (
                         <tr key={evaluation.AssignmentId} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-black">{evaluation.SubjectName}</div>
+                            <div className="text-sm font-medium text-black">{toTitleCase(evaluation.SubjectName)}</div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="text-sm text-black">{evaluation.SurveyTitle}</div>
@@ -327,7 +328,7 @@ export default function AssignedEvaluations({ params }: AssignedEvaluationsProps
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="text-sm font-bold text-black">{evaluation.SurveyTitle}</h3>
-                          <p className="text-xs text-gray-500 mt-0.5">Subject: {evaluation.SubjectName}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Subject: {toTitleCase(evaluation.SubjectName)}</p>
                         </div>
                         {getStatusBadge(evaluation.Status)}
                       </div>
