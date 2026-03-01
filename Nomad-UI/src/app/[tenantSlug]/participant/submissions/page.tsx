@@ -13,6 +13,7 @@ import {
   IdentificationIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
+import { toTitleCase } from '@/lib/stringUtils';
 
 interface Submission {
   SubmissionId: string;
@@ -184,7 +185,7 @@ export default function MySubmissions({ params }: MySubmissionsProps) {
                       {filteredSubmissions.map((submission) => (
                         <tr key={submission.SubmissionId} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-black">{submission.SubjectName}</div>
+                            <div className="text-sm font-medium text-black">{toTitleCase(submission.SubjectName)}</div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="text-sm text-black">{submission.SurveyTitle}</div>
@@ -218,7 +219,7 @@ export default function MySubmissions({ params }: MySubmissionsProps) {
                         <h3 className="text-sm font-bold text-black">{submission.SurveyTitle}</h3>
                         <div className="flex items-center text-xs text-gray-500 mt-1">
                           <UserIcon className="h-3 w-3 mr-1" />
-                          <span>Subject: {submission.SubjectName}</span>
+                          <span>Subject: {toTitleCase(submission.SubjectName)}</span>
                         </div>
                       </div>
 

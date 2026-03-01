@@ -10,6 +10,7 @@ import { ArrowLeftIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import SurveyRenderer from '@/components/survey/SurveyRenderer';
 import { SurveySchema } from '@/types/survey';
 import toast from 'react-hot-toast';
+import { toTitleCase } from '@/lib/stringUtils';
 
 interface EvaluationFormProps {
   params: Promise<{ tenantSlug: string; id: string }>;
@@ -79,8 +80,28 @@ export default function EvaluationForm({ params }: EvaluationFormProps) {
             TenantLogoUrl: data.TenantLogoUrl || '',
           });
 
+          // Parse and transform survey schema to apply Title Case to embedded names
+          let schemaString = typeof data.SurveySchema === 'string'
+            ? data.SurveySchema
+            : JSON.stringify(data.SurveySchema);
+
+          // replace raw names with Title Case versions in the schema text
+          const subjectTitleCase = toTitleCase(data.SubjectName);
+          const evaluatorTitleCase = toTitleCase(data.EvaluatorName || data.Evaluator?.Name);
+
+          if (data.SubjectName && data.SubjectName !== subjectTitleCase) {
+            schemaString = schemaString.split(data.SubjectName).join(subjectTitleCase);
+          }
+          if (data.EvaluatorName && data.EvaluatorName !== evaluatorTitleCase) {
+            schemaString = schemaString.split(data.EvaluatorName).join(evaluatorTitleCase);
+          } else if (data.Evaluator?.Name && data.Evaluator.Name !== evaluatorTitleCase) {
+            schemaString = schemaString.split(data.Evaluator.Name).join(evaluatorTitleCase);
+          }
+
+          const transformedSchema: SurveySchema = JSON.parse(schemaString);
+
           // Store schema and saved data in state
-          setSurveySchema(data.SurveySchema);
+          setSurveySchema(transformedSchema);
           setResponses(data.SavedResponseData || {});
 
         } catch (error) {
@@ -213,7 +234,7 @@ export default function EvaluationForm({ params }: EvaluationFormProps) {
               <>
                 <h1 className="text-2xl font-bold text-black">{evaluationData.SurveyTitle}</h1>
                 <p className="text-sm text-black mt-1">
-                  Evaluating: <span className="font-semibold">{evaluationData.SubjectName}</span>
+                  Evaluating: <span className="font-semibold">{toTitleCase(evaluationData.SubjectName)}</span>
                   {evaluationData.RelationshipType && (
                     <span className="ml-2 text-gray-600">
                       ({evaluationData.RelationshipType})
