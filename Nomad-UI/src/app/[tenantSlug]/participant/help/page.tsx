@@ -125,7 +125,7 @@ export default function HelpSupport() {
           </div>
 
           {/* Contact Support Section */}
-          <div className="bg-white rounded-lg border border-gray-200">
+          {/* <div className="bg-white rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
               <div className="flex items-center">
                 <EnvelopeIcon className="h-6 w-6 text-blue-600 mr-2" />
@@ -181,7 +181,7 @@ export default function HelpSupport() {
                 </button>
               </form>
             </div>
-          </div>
+          </div> */}
         </div>
       </ParticipantLayout>
     </ProtectedRoute>
