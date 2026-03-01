@@ -333,12 +333,15 @@ public class ExcelReportService : IExcelReportService
 
             // --- Section 1: Metadata ---
             var metaHeaders = new[] { 
-                "Employee Code", 
+                "Evaluators employee id",
+                "evaluators email",
+                "evaluators name",
+                "Subject's Employee Code", 
                 "Subject's Email Address", 
                 "Subject's Full Name", 
                 "Subject Business Unit", 
                 "Designation", 
-                "Relationship Name" 
+                "Relationship Name"
             };
             
             for (int i = 0; i < metaHeaders.Length; i++)
@@ -469,6 +472,9 @@ public class ExcelReportService : IExcelReportService
                 int dataCol = 1;
                 
                 // Metadata
+                worksheet.Cell(row, dataCol++).Value = item.EvaluatorEmployeeId;
+                worksheet.Cell(row, dataCol++).Value = item.EvaluatorEmail;
+                worksheet.Cell(row, dataCol++).Value = item.EvaluatorFullName;
                 worksheet.Cell(row, dataCol++).Value = item.EmployeeId;
                 worksheet.Cell(row, dataCol++).Value = item.Email;
                 worksheet.Cell(row, dataCol++).Value = item.FullName;

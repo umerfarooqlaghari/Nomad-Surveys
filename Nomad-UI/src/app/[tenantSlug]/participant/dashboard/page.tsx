@@ -88,6 +88,15 @@ export default function ParticipantDashboard({ params }: ParticipantDashboardPro
     return 'Good Evening';
   };
 
+  const formatName = (name: string | undefined) => {
+    if (!name) return '';
+    return name
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   return (
     <ProtectedRoute allowedRoles={['Participant']}>
       <ParticipantLayout>
@@ -95,7 +104,7 @@ export default function ParticipantDashboard({ params }: ParticipantDashboardPro
           {/* Greeting */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-black">
-              {getGreeting()}, {user?.FirstName}!
+              {getGreeting()}, {formatName(user?.FirstName)}!
             </h1>
             <p className="text-sm text-black mt-1">
               Here&apos;s an overview of your evaluation tasks
