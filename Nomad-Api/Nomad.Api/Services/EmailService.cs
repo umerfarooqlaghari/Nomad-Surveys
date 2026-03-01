@@ -40,6 +40,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendFormAssignmentEmailAsync(string toEmail, string evaluatorName, string subjectName, string formTitle, string formLink, string tenantName, string tenantSlug, string passwordDisplay)
     {
+        evaluatorName = ToTitleCase(evaluatorName);
         var subject = $"New Form Assigned: {formTitle}";
         var htmlBody = GenerateFormAssignmentEmailHtml(evaluatorName, subjectName, formTitle, formLink, tenantName, toEmail, tenantSlug, passwordDisplay);
 
@@ -48,6 +49,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendFormReminderEmailAsync(string toEmail, string evaluatorName, string subjectName, string formTitle, string formLink, string dueDate, string tenantName, string tenantSlug, string passwordDisplay)
     {
+        evaluatorName = ToTitleCase(evaluatorName);
         var subject = $"Reminder: Complete {formTitle}";
         var htmlBody = GenerateFormReminderEmailHtml(evaluatorName, subjectName, formTitle, formLink, dueDate, tenantName, toEmail, tenantSlug, passwordDisplay);
 
@@ -190,10 +192,10 @@ public class EmailService : IEmailService
                                 Ascend Consulting is approaching you as an independent organization to seek your participation in a 360° Feedback Survey. Ascend is a leading consulting firm based in Pakistan with expertise in multi-source feedback, organizational transformation, executive search and experiential learning.
                             </p>
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                The purpose of the survey is to foster culture of learning at Ascend, where you and your colleagues can exchange feedback to develop self-awareness, identify key strengths and development areas to work on, towards the journey of personal and professional growth.
+                                The purpose of the survey is to foster culture of learning at {tenantName}, where you and your colleagues can exchange feedback to develop self-awareness, identify key strengths and development areas to work on, towards the journey of personal and professional growth.
                             </p>
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                As part of the program, you have been nominated to share feedback for your following colleagues:
+                                As part of the program, you have been nominated to share feedback
                             </p>
                             
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #111827; font-weight: 600;"">
@@ -228,11 +230,11 @@ public class EmailService : IEmailService
                                     <li>Please make sure that you have a stable internet connection while responding to surveys.</li>
                                     <li>The survey can be accessed 24/7. You can complete your surveys at intervals.</li>
                                     <li>The survey can be accessed on desktop/laptop and mobile phone.</li>
-                                    <li>The survey(s) should be completed latest by 8th January 2026.</li>
+                                    <li>The survey(s) should be completed latest by 9th March 2026.</li>
                                 </ul>
                             </p>
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                If you are facing any technical difficulty in accessing or completing the survey, please refer to our User Manual. In case you are unable to find an answer to your query, feel free to contact us at hello@ascendevelopment.com.
+                                If you are facing any technical difficulty in accessing or completing the survey, please contact us directly at hello@ascendevelopment.com and our team will assist you.
                             </p>
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
                                 Thank you for your participation.
@@ -297,7 +299,7 @@ public class EmailService : IEmailService
                                 Dear {evaluatorName},
                             </p>
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                Ascend Consulting is approaching you as an independent organization to seek your participation in a 360° Feedback Survey. This is to remind you that your feedback for one or more survey(s) is pending. The deadline to complete the survey was till 8th January 2026.
+                                Ascend Consulting is approaching you as an independent organization to seek your participation in a 360° Feedback Survey. This is to remind you that your feedback for one or more survey(s) is pending. The deadline to complete the survey was till 9th March 2026.
                             </p>
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
                                 As a participant you have been nominated to provide feedback for your following colleague(s) and/or complete a self-evaluation:
@@ -325,7 +327,7 @@ public class EmailService : IEmailService
                             </p>
 
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                If you are facing any technical difficulty in accessing or completing the survey, please refer to our User Manual. In case you are unable to find an answer to your query, feel free to contact us at hello@ascendevelopment.com.
+                                If you are facing any technical difficulty in accessing or completing the survey, please contact us directly at hello@ascendevelopment.com and our team will assist you.
                             </p>
                             
                             <p style=""margin: 0; font-size: 15px; line-height: 24px; color: #6b7280;"">
@@ -352,6 +354,7 @@ public class EmailService : IEmailService
     }
     public async Task<bool> SendBulkFormAssignmentEmailAsync(string toEmail, string evaluatorName, int formCount, string formTitle, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay)
     {
+        evaluatorName = ToTitleCase(evaluatorName);
         var subject = $"You Have {formCount} New Forms Assigned: {formTitle}";
         var htmlBody = GenerateBulkFormAssignmentEmailHtml(evaluatorName, formCount, formTitle, dashboardLink, tenantName, toEmail, tenantSlug, passwordDisplay);
 
@@ -360,6 +363,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendConsolidatedReminderEmailAsync(string toEmail, string evaluatorName, int pendingCount, List<(string FormTitle, string SubjectName, string Link)> pendingItems, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay)
     {
+        evaluatorName = ToTitleCase(evaluatorName);
         var subject = $"Action Required: You have {pendingCount} pending evaluations";
         var htmlBody = GenerateConsolidatedReminderEmailHtml(evaluatorName, pendingCount, pendingItems, dashboardLink, tenantName, toEmail, tenantSlug, passwordDisplay);
 
@@ -427,7 +431,7 @@ public class EmailService : IEmailService
                                         Dear {evaluatorName},
                                     </p>
                                     <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                        Ascend Consulting is approaching you as an independent organization to seek your participation in a 360° Feedback Survey. This is to remind you that your feedback for one or more survey(s) is pending. The deadline to complete the survey was till 8th January 2026.
+                                        Ascend Consulting is approaching you as an independent organization to seek your participation in a 360° Feedback Survey. This is to remind you that your feedback for one or more survey(s) is pending. The deadline to complete the survey was till 9th March 2026.
                                     </p>
                                     
                                     <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
@@ -475,7 +479,7 @@ public class EmailService : IEmailService
                                     </p>
                                     
                                     <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                        If you are facing any technical difficulty in accessing or completing the survey, please refer to our User Manual. In case you are unable to find an answer to your query, feel free to contact us at hello@ascendevelopment.com.
+                                       If you are facing any technical difficulty in accessing or completing the survey, please contact us directly at hello@ascendevelopment.com and our team will assist you.
                                     </p>
                                     
                                     <p style=""margin: 0; font-size: 15px; line-height: 24px; color: #6b7280;"">
@@ -598,6 +602,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendConsolidatedAssignmentEmailAsync(string toEmail, string evaluatorName, int formCount, List<(string FormTitle, string SubjectName)> assignedItems, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay)
     {
+        evaluatorName = ToTitleCase(evaluatorName);
         var subject = $"New Forms Assigned: You have {formCount} new evaluations";
         var htmlBody = GenerateConsolidatedAssignmentEmailHtml(evaluatorName, formCount, assignedItems, dashboardLink, tenantName, toEmail, tenantSlug, passwordDisplay);
 
@@ -715,7 +720,46 @@ public class EmailService : IEmailService
         </tr>
     </table>
 </body>
-</html>";
+        </html>";
+    }
+
+    public Task<string> GetFormAssignmentEmailBodyAsync(string evaluatorName, string evaluatorEmail, string subjectName, string formTitle, string formLink, string tenantName, string tenantSlug, string passwordDisplay)
+    {
+        evaluatorName = ToTitleCase(evaluatorName);
+        return Task.FromResult(GenerateFormAssignmentEmailHtml(evaluatorName, subjectName, formTitle, formLink, tenantName, evaluatorEmail, tenantSlug, passwordDisplay));
+    }
+
+    public Task<string> GetBulkFormAssignmentEmailBodyAsync(string evaluatorName, string evaluatorEmail, int formCount, string formTitle, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay)
+    {
+        evaluatorName = ToTitleCase(evaluatorName);
+        return Task.FromResult(GenerateBulkFormAssignmentEmailHtml(evaluatorName, formCount, formTitle, dashboardLink, tenantName, evaluatorEmail, tenantSlug, passwordDisplay));
+    }
+
+    public Task<string> GetConsolidatedReminderEmailBodyAsync(string evaluatorName, string evaluatorEmail, int pendingCount, List<(string FormTitle, string SubjectName, string Link)> pendingItems, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay)
+    {
+        evaluatorName = ToTitleCase(evaluatorName);
+        return Task.FromResult(GenerateConsolidatedReminderEmailHtml(evaluatorName, pendingCount, pendingItems, dashboardLink, tenantName, evaluatorEmail, tenantSlug, passwordDisplay));
+    }
+
+    public Task<string> GetConsolidatedAssignmentEmailBodyAsync(string evaluatorName, string evaluatorEmail, int assignedCount, List<(string FormTitle, string SubjectName)> assignedItems, string dashboardLink, string tenantName, string tenantSlug, string passwordDisplay)
+    {
+        evaluatorName = ToTitleCase(evaluatorName);
+        return Task.FromResult(GenerateConsolidatedAssignmentEmailHtml(evaluatorName, assignedCount, assignedItems, dashboardLink, tenantName, evaluatorEmail, tenantSlug, passwordDisplay));
+    }
+
+    private string ToTitleCase(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return name;
+        
+        var words = name.ToLower().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < words.Length; i++)
+        {
+            if (words[i].Length > 0)
+            {
+                words[i] = char.ToUpper(words[i][0]) + words[i].Substring(1);
+            }
+        }
+        return string.Join(" ", words);
     }
 }
 

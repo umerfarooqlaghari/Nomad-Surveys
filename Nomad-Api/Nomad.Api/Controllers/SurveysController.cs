@@ -3,6 +3,7 @@ using Nomad.Api.Authorization;
 using Nomad.Api.DTOs.Request;
 using Nomad.Api.DTOs.Response;
 using Nomad.Api.Services.Interfaces;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Nomad.Api.Controllers;
 
@@ -13,16 +14,26 @@ public class SurveysController : ControllerBase
 {
     private readonly ISurveyService _surveyService;
     private readonly ISurveyAssignmentService _surveyAssignmentService;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<SurveysController> _logger;
 
     public SurveysController(
         ISurveyService surveyService,
         ISurveyAssignmentService surveyAssignmentService,
+        IMemoryCache cache,
         ILogger<SurveysController> logger)
     {
         _surveyService = surveyService;
         _surveyAssignmentService = surveyAssignmentService;
+        _cache = cache;
         _logger = logger;
+    }
+
+    private void ClearEmailingListCache(Guid tenantId)
+    {
+        var cacheKey = $"EmailingList_{tenantId}";
+        _cache.Remove(cacheKey);
+        _logger.LogInformation("Cleared emailing list cache for tenant {TenantId} from SurveysController", tenantId);
     }
 
     private Guid? GetCurrentTenantId() => HttpContext.Items["TenantId"] as Guid?;
@@ -260,6 +271,11 @@ public class SurveysController : ControllerBase
                 return NotFound(new { error = result.Message });
             }
 
+            if (tenantId.HasValue)
+            {
+                ClearEmailingListCache(tenantId.Value);
+            }
+
             return Ok(result);
         }
         catch (Exception ex)
@@ -307,6 +323,11 @@ public class SurveysController : ControllerBase
                 return BadRequest(new { error = result.Message, details = result.Errors });
             }
 
+            if (tenantId.HasValue)
+            {
+                ClearEmailingListCache(tenantId.Value);
+            }
+
             return Ok(result);
         }
         catch (Exception ex)
@@ -343,6 +364,12 @@ public class SurveysController : ControllerBase
             }
 
             var result = await _surveyAssignmentService.UnassignSurveyFromRelationshipsAsync(id, request);
+
+            if (tenantId.HasValue)
+            {
+                ClearEmailingListCache(tenantId.Value);
+            }
+
             return Ok(result);
         }
         catch (Exception ex)

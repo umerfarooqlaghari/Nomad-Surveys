@@ -1111,8 +1111,9 @@ EMP001,EMP003,Peer`;
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Survey Name</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Evaluator Name</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Number of Subjects</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reminder email time</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subjects</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Reminder</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -1145,7 +1146,7 @@ EMP001,EMP003,Peer`;
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600" onClick={(e) => e.stopPropagation()}>
                               <div className="group relative inline-block cursor-help border-b border-dotted border-gray-400">
-                                {item.SubjectCount}
+                                {item.SubjectCount} Subjects
                                 <div className="invisible group-hover:visible absolute z-[9999] w-64 p-3 mt-2 text-sm bg-gray-900 text-white rounded-lg shadow-xl -left-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                                   <p className="font-semibold mb-2 border-b border-gray-700 pb-1">Assigned Subjects:</p>
                                   <ul className="list-disc list-inside space-y-1 text-wrap">
@@ -1156,6 +1157,17 @@ EMP001,EMP003,Peer`;
                                   <div className="absolute -top-2 left-24 border-8 border-transparent border-b-gray-900"></div>
                                 </div>
                               </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              {item.PendingCount === 0 ? (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                  Fully Completed
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  {item.CompletedCount}/{item.SubjectCount} Completed
+                                </span>
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                               {item.LastReminderSentAt ? new Date(item.LastReminderSentAt).toLocaleString() : '-'}

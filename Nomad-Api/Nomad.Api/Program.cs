@@ -131,6 +131,9 @@ builder.Services.AddScoped<IRelationshipService, RelationshipService>();
 builder.Services.AddScoped<ISurveyService, SurveyService>();
 builder.Services.AddScoped<ISurveyAssignmentService, SurveyAssignmentService>();
 builder.Services.AddScoped<ITenantSettingsService, TenantSettingsService>();
+builder.Services.AddScoped<IEmailAuditService, EmailAuditService>();
+
+// Add cluster, competency, question services
 builder.Services.AddScoped<IClusterService, ClusterService>();
 builder.Services.AddScoped<ICompetencyService, CompetencyService>();
 builder.Services.AddScoped<IClusterSeedingService, ClusterSeedingService>();

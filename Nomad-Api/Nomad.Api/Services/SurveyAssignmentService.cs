@@ -16,18 +16,25 @@ public class SurveyAssignmentService : ISurveyAssignmentService
     private readonly IConfiguration _configuration;
     private readonly IPasswordGenerator _passwordGenerator;
 
+    private readonly IEmailAuditService _emailAuditService;
+    private readonly IServiceScopeFactory _scopeFactory;
+
     public SurveyAssignmentService(
         NomadSurveysDbContext context,
         ILogger<SurveyAssignmentService> logger,
         IEmailService emailService,
         IConfiguration configuration,
-        IPasswordGenerator passwordGenerator)
+        IPasswordGenerator passwordGenerator,
+        IEmailAuditService emailAuditService,
+        IServiceScopeFactory scopeFactory)
     {
         _context = context;
         _logger = logger;
         _emailService = emailService;
         _configuration = configuration;
         _passwordGenerator = passwordGenerator;
+        _emailAuditService = emailAuditService;
+        _scopeFactory = scopeFactory;
     }
 
     public async Task<SurveyAssignmentResponse> AssignSurveyToRelationshipsAsync(Guid surveyId, AssignSurveyRequest request)
@@ -673,37 +680,62 @@ public class SurveyAssignmentService : ISurveyAssignmentService
 
     private void NotifyEvaluators(Dictionary<string, (string Name, string LastSubject, int Count, Guid LastId, string PasswordHash)> notifications, string formTitle, string tenantSlug, string tenantName)
     {
-        foreach (var entry in notifications)
-        {
-            var email = entry.Key;
-            var data = entry.Value;
+        if (notifications.Count == 0) return;
 
-            _ = Task.Run(async () =>
+        // Pre-resolve TenantId to avoid using disposed context in task
+        var tenantId = _context.Tenants.FirstOrDefault(t => t.Slug == tenantSlug)?.Id;
+
+        // Run in background to not block the request
+        _ = Task.Run(async () =>
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var scopedAuditService = scope.ServiceProvider.GetRequiredService<IEmailAuditService>();
+            var scopedEmailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+            
+            try
             {
-                try
+                var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:3000";
+                var emailRequests = new List<ParticipantEmailRequest>();
+
+                foreach (var entry in notifications)
                 {
-                    var frontendUrl = _configuration["FrontendUrl"] ?? "http://localhost:3000";
+                    var email = entry.Key;
+                    var data = entry.Value;
                     var generatedPassword = _passwordGenerator.Generate(email);
-                    var passwordDisplay = generatedPassword;
-                    
+
+                    string subject;
+                    string body;
+
                     if (data.Count == 1)
                     {
-                        // var formLink = $"{frontendUrl}/{tenantSlug}/participant/forms/{data.LastId}";
-                                                var formLink = $"{frontendUrl}";
-                        await _emailService.SendFormAssignmentEmailAsync(email, data.Name, data.LastSubject, formTitle, formLink, tenantName, tenantSlug, passwordDisplay);
+                        var formLink = $"{frontendUrl}";
+                        subject = $"Survey Assignment: {data.LastSubject} - {formTitle}";
+                        body = await scopedEmailService.GetFormAssignmentEmailBodyAsync(data.Name, email, data.LastSubject, formTitle, formLink, tenantName, tenantSlug, generatedPassword);
                     }
                     else
                     {
                         var dashboardLink = $"{frontendUrl}";
-                        await _emailService.SendBulkFormAssignmentEmailAsync(email, data.Name, data.Count, formTitle, dashboardLink, tenantName, tenantSlug, passwordDisplay);
+                        subject = $"New Survey Assignments: {data.Count} Surveys Assigned";
+                        body = await scopedEmailService.GetBulkFormAssignmentEmailBodyAsync(data.Name, email, data.Count, formTitle, dashboardLink, tenantName, tenantSlug, generatedPassword);
                     }
+
+                    emailRequests.Add(new ParticipantEmailRequest
+                    {
+                        Email = email,
+                        Subject = subject,
+                        Body = body,
+                        TenantId = tenantId
+                    });
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Failed to send assignment notification to {Email}", email);
-                }
-            });
-        }
+
+                // Use the Scoped Audit Service to process the loop
+                await scopedAuditService.ProcessEmailLoopAsync(emailRequests);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to initiate audited email loop for assignment notifications");
+            }
+        });
     }
 }
 

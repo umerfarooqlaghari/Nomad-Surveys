@@ -63,7 +63,7 @@ public class ReminderBackgroundService : BackgroundService
         {
             var context = scope.ServiceProvider.GetRequiredService<NomadSurveysDbContext>();
             var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-            var frontendUrl = _configuration["FrontendUrl"] ?? "https://nomad-surveys.vercel.app/";
+            var frontendUrl = _configuration["FrontendUrl"] ?? "https://nomadvirtual.com";
 
             // 1. Identify pending assignments that need reminders
             // Criteria:

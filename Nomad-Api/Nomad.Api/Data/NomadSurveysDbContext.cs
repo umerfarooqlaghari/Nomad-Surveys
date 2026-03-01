@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Nomad.Api.Entities;
+using Nomad.Api.Enums;
 
 namespace Nomad.Api.Data;
 
@@ -49,6 +50,7 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
     public DbSet<Cluster> Clusters { get; set; }
     public DbSet<Competency> Competencies { get; set; }
     public DbSet<Question> Questions { get; set; }
+    public DbSet<EmailAuditLog> EmailAuditLogs { get; set; }
 
     // Report template entity
     public DbSet<ReportTemplate> ReportTemplates { get; set; }
@@ -66,7 +68,23 @@ public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRo
         ConfigureParticipantRelationships(modelBuilder);
         ConfigureSurveyRelationships(modelBuilder);
         ConfigureClusterCompetencyQuestionRelationships(modelBuilder);
+        ConfigureEmailAuditLog(modelBuilder);
         ConfigureGlobalQueryFilters(modelBuilder);
+    }
+
+    private void ConfigureEmailAuditLog(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<EmailAuditLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.Status)
+                .HasConversion<string>()
+                .IsRequired();
+            entity.Property(e => e.AwsMessageId).HasMaxLength(255);
+            entity.Property(e => e.ErrorMessage).HasColumnType("text");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
+        });
     }
 
     private void ConfigureIdentityTables(ModelBuilder modelBuilder)
