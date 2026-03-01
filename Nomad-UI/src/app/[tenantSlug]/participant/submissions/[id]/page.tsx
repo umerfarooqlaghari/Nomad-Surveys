@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeftIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { SurveySchema } from '@/types/survey';
 import QuestionRenderer from '@/components/survey/QuestionRenderer';
+import { toTitleCase } from '@/lib/stringUtils';
 
 interface SubmissionDetailProps {
   params: Promise<{ tenantSlug: string; id: string }>;
@@ -57,10 +58,23 @@ export default function SubmissionDetail({ params }: SubmissionDetailProps) {
         CompletedDate: data.CompletedAt || data.SubmittedAt,
       });
 
-      // Parse the custom survey schema
-      const schema: SurveySchema = typeof data.SurveySchema === 'string'
-        ? JSON.parse(data.SurveySchema)
-        : data.SurveySchema;
+      // Parse and transform survey schema to apply Title Case to embedded names
+      let schemaString = typeof data.SurveySchema === 'string'
+        ? data.SurveySchema
+        : JSON.stringify(data.SurveySchema);
+
+      // replace raw names with Title Case versions in the schema text
+      const subjectTitleCase = toTitleCase(data.SubjectName);
+      const evaluatorTitleCase = toTitleCase(data.EvaluatorName);
+
+      if (data.SubjectName && data.SubjectName !== subjectTitleCase) {
+        schemaString = schemaString.split(data.SubjectName).join(subjectTitleCase);
+      }
+      if (data.EvaluatorName && data.EvaluatorName !== evaluatorTitleCase) {
+        schemaString = schemaString.split(data.EvaluatorName).join(evaluatorTitleCase);
+      }
+
+      const schema: SurveySchema = JSON.parse(schemaString);
 
       setSurveySchema(schema);
       setRelationshipType(data.RelationshipType || 'Self');
@@ -102,16 +116,16 @@ export default function SubmissionDetail({ params }: SubmissionDetailProps) {
                 <h1 className="text-2xl font-bold text-black">{submissionData.SurveyTitle}</h1>
                 <div className="flex items-center gap-4 mt-2">
                   <p className="text-sm text-black">
-                    Subject: <span className="font-semibold">{submissionData.SubjectName}</span>
+                    Subject: <span className="font-semibold">{toTitleCase(submissionData.SubjectName)}</span>
                   </p>
                   <div className="flex items-center text-sm text-black">
                     <CalendarIcon className="h-4 w-4 mr-1 text-gray-400" />
                     Submitted: {submissionData.CompletedDate
                       ? new Date(submissionData.CompletedDate).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })
                       : 'N/A'}
                   </div>
                 </div>
@@ -159,19 +173,19 @@ export default function SubmissionDetail({ params }: SubmissionDetailProps) {
                       {/* Questions */}
                       <div className="space-y-6">
                         <div className="text-black">
-                        {visibleQuestions.map((question, index) => (
-                          <QuestionRenderer
-                            key={question.id}
-                            question={question}
-                            questionNumber={index + 1}
-                            isSelf={isSelf}
-                            value={responseData[question.id]}
-                            onChange={() => {}} // Read-only, no changes allowed
-                            isPreview={true} // Set to preview mode (read-only)
-                          />
-                        ))}
+                          {visibleQuestions.map((question, index) => (
+                            <QuestionRenderer
+                              key={question.id}
+                              question={question}
+                              questionNumber={index + 1}
+                              isSelf={isSelf}
+                              value={responseData[question.id]}
+                              onChange={() => { }} // Read-only, no changes allowed
+                              isPreview={true} // Set to preview mode (read-only)
+                            />
+                          ))}
+                        </div>
                       </div>
-                    </div>
                     </div>
                   );
                 })}

@@ -11,6 +11,7 @@ import {
   ClockIcon,
   ArrowRightIcon,
 } from '@heroicons/react/24/outline';
+import { toTitleCase } from '@/lib/stringUtils';
 
 interface DashboardStats {
   PendingCount: number;
@@ -203,7 +204,7 @@ export default function ParticipantDashboard({ params }: ParticipantDashboardPro
                       <div className="flex-1">
                         <h3 className="text-sm font-semibold text-black">{evaluation.SurveyTitle}</h3>
                         <p className="text-sm text-black mt-1">
-                          Subject: <span className="font-medium text-black">{evaluation.SubjectName}</span>
+                          Subject: <span className="font-medium text-black">{toTitleCase(evaluation.SubjectName)}</span>
                         </p>
                         <p className="text-sm text-black mt-1">
                           Relationship: <span className="font-medium text-black capitalize">{evaluation.RelationshipType}</span>

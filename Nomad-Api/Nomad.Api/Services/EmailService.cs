@@ -195,7 +195,7 @@ public class EmailService : IEmailService
                                 The purpose of the survey is to foster culture of learning at {tenantName}, where you and your colleagues can exchange feedback to develop self-awareness, identify key strengths and development areas to work on, towards the journey of personal and professional growth.
                             </p>
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #6b7280;"">
-                                As part of the program, you have been nominated to share feedback
+                                As part of the program, you have been nominated to share feedback for:
                             </p>
                             
                             <p style=""margin: 0 0 24px; font-size: 15px; line-height: 24px; color: #111827; font-weight: 600;"">
