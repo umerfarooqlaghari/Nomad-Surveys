@@ -183,7 +183,7 @@ export default function QuestionRenderer({
         onChange={(e) => onChange(e.target.value)}
         placeholder={question.config.placeholder || 'Enter your answer...'}
         maxLength={question.config.maxLength}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white placeholder-gray-400"
       />
     );
   };
@@ -198,7 +198,7 @@ export default function QuestionRenderer({
           placeholder={question.config.placeholder || 'Enter your answer...'}
           maxLength={question.config.maxLength}
           rows={4}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white placeholder-gray-400"
         />
         {question.config.maxLength && (
           <p className="text-sm text-gray-500 mt-1 text-right">
@@ -225,7 +225,7 @@ export default function QuestionRenderer({
             onChange(e.target.value);
           }
         }}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white"
       >
         <option value="">-- Select an option --</option>
         {options.map((option) => (

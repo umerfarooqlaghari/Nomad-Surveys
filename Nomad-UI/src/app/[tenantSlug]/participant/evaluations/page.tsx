@@ -196,7 +196,7 @@ export default function AssignedEvaluations({ params }: AssignedEvaluationsProps
                     placeholder="Search by subject or survey title..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm text-black bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -208,7 +208,7 @@ export default function AssignedEvaluations({ params }: AssignedEvaluationsProps
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value as FilterStatus)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="All">All Status</option>
                     <option value="Pending">Pending</option>
@@ -220,7 +220,7 @@ export default function AssignedEvaluations({ params }: AssignedEvaluationsProps
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-black bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="date">Sort by Date</option>
                   <option value="subject">Sort by Subject</option>

@@ -171,6 +171,7 @@
   align-items: center;
 }
 
+.formCard .input,
 .input {
   width: 100%;
   background: transparent !important;
@@ -188,7 +189,7 @@
 }
 
 .input::placeholder {
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.25) !important;
   font-weight: 300;
 }
 
@@ -202,6 +203,10 @@
 }
 
 /* Chrome / Safari / Edge autofill fix - completely transparent, no background box */
+.formCard .input:-webkit-autofill,
+.formCard .input:-webkit-autofill:hover,
+.formCard .input:-webkit-autofill:focus,
+.formCard .input:-webkit-autofill:active,
 .input:-webkit-autofill,
 .input:-webkit-autofill:hover,
 .input:-webkit-autofill:focus,

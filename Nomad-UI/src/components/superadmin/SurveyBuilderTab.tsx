@@ -79,7 +79,7 @@ export default function SurveyBuilderTab() {
                 </label>
                 <input
                   type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white placeholder-gray-400"
                   placeholder="Enter survey title"
                 />
               </div>
@@ -87,7 +87,7 @@ export default function SurveyBuilderTab() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Category *
                 </label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white">
                   <option value="">Select Category</option>
                   <option value="hr">HR & Employee Relations</option>
                   <option value="leadership">Leadership Assessment</option>
@@ -105,7 +105,7 @@ export default function SurveyBuilderTab() {
               </label>
               <textarea
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white placeholder-gray-400"
                 placeholder="Brief description of the survey purpose and scope"
               />
             </div>

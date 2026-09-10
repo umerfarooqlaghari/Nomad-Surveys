@@ -264,7 +264,7 @@ export default function ImportQuestionModal({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder=" Search clusters, competencies, or questions..."
-                    className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400"
+                    className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white placeholder-gray-400"
                   />
                   <svg
                     className="absolute left-3 top-3.5 w-5 h-5 text-gray-400"

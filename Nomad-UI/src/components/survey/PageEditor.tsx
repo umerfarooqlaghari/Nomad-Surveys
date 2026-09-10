@@ -187,7 +187,7 @@ export default function PageEditor({
                   if (e.key === 'Enter') setIsEditingTitle(false);
                 }}
                 autoFocus
-                className="flex-1 px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-2 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               />
             ) : (
               <h3

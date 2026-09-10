@@ -579,7 +579,7 @@ export default function CustomSurveyBuilder({
                   value={survey.title}
                   onChange={(e) => handleTitleChange(e.target.value)}
                   placeholder="Enter survey title..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white placeholder-gray-400"
                 />
               </div>
 
@@ -592,7 +592,7 @@ export default function CustomSurveyBuilder({
                   onChange={(e) => handleDescriptionChange(e.target.value)}
                   placeholder="Enter survey description..."
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black placeholder-gray-400"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-black bg-white placeholder-gray-400"
                 />
               </div>
 

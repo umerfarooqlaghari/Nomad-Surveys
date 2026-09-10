@@ -39,13 +39,39 @@ input[type="checkbox"]:disabled {
   opacity: 0.5;
 }
 
-/* Prevent browser autofill background color overrides */
+/* Base form control typography and colors across the application */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+textarea,
+select {
+  color: #111827;
+  background-color: #ffffff;
+}
+
+/* Ensure placeholder text is readable gray */
+input::placeholder,
+textarea::placeholder,
+::placeholder {
+  color: #9ca3af !important;
+  opacity: 1;
+}
+
+/* Prevent browser autofill background color overrides and ensure text is clearly visible */
 input:-webkit-autofill,
 input:-webkit-autofill:hover, 
 input:-webkit-autofill:focus, 
-input:-webkit-autofill:active {
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:active {
+  -webkit-text-fill-color: #111827 !important;
+  caret-color: #111827 !important;
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
   transition: background-color 5000000s ease-in-out 0s !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff !important;
-  background-color: transparent !important;
 }
+
