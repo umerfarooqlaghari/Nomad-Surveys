@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Nomad.Api.DTOs.Response;
+namespace Alpha.Api.DTOs.Response;
 
 /// <summary>
 /// Response DTO for evaluation form (survey to fill out)

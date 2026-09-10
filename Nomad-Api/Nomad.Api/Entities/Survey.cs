@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
-namespace Nomad.Api.Entities;
+namespace Alpha.Api.Entities;
 
 /// <summary>
 /// Survey entity for storing dynamic survey schemas created with SurveyJS

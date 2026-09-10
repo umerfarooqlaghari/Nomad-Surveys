@@ -85,6 +85,12 @@ export default function SurveySettingsTab({ tenantSlug, token: tokenProp }: Tena
           setRatingOptions(transformedSettings.defaultRatingOptions || DEFAULT_TENANT_SETTINGS.defaultRatingOptions || []);
           setNumberOfOptions(transformedSettings.numberOfOptions || 5);
         }
+      } else if (response.status === 404) {
+        // No custom settings saved yet - gracefully fallback to defaults
+        setSettings(null);
+        setDefaultQuestionType(DEFAULT_TENANT_SETTINGS.defaultQuestionType);
+        setRatingOptions(DEFAULT_TENANT_SETTINGS.defaultRatingOptions || []);
+        setNumberOfOptions(DEFAULT_TENANT_SETTINGS.numberOfOptions || 5);
       } else {
         toast.error('Failed to load tenant settings');
       }

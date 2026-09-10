@@ -1,4 +1,4 @@
-# Render Deployment Guide for Nomad Surveys API
+# Render Deployment Guide for Alpha Surveys API
 
 ## Prerequisites
 - GitHub repository with your code
@@ -31,7 +31,7 @@
 - **Name**: `nomad-surveys-api`
 - **Region**: Same as your database
 - **Branch**: `main` (or your deployment branch)
-- **Root Directory**: `Nomad-Surveys/Nomad-Api`
+- **Root Directory**: `Alpha-Surveys/Alpha-Api`
 - **Runtime**: `Docker`
 
 ### Build Settings
@@ -47,8 +47,8 @@ ASPNETCORE_ENVIRONMENT=Production
 ASPNETCORE_URLS=http://+:8080
 ConnectionStrings__DefaultConnection=<YOUR_POSTGRES_CONNECTION_STRING>
 Jwt__Key=<YOUR_JWT_SECRET_KEY>
-Jwt__Issuer=NomadSurveys
-Jwt__Audience=NomadSurveysUsers
+Jwt__Issuer=AlphaSurveys
+Jwt__Audience=AlphaSurveysUsers
 Jwt__ExpiryInHours=24
 ```
 
@@ -105,7 +105,7 @@ After deployment, test your API:
    - Check Dockerfile syntax
    - Verify all dependencies are restored
    - Check build logs in Render dashboard
-   - Ensure Dockerfile is in the root directory (`Nomad-Surveys/Nomad-Api/`)
+   - Ensure Dockerfile is in the root directory (`Alpha-Surveys/Alpha-Api/`)
    - Verify file paths in Dockerfile match your project structure
 
 ### Monitoring

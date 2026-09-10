@@ -51,6 +51,14 @@ class ApiClient {
         };
       }
 
+      // Treat 404 Not Found gracefully as empty data rather than a fatal error
+      if (response.status === 404) {
+        return {
+          data: [] as any,
+          status: 404,
+        };
+      }
+
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
@@ -84,7 +92,7 @@ class ApiClient {
       // Handle empty responses (like 204 No Content)
       if (response.status === 204 || response.headers.get('content-length') === '0') {
         return {
-          data: undefined as T,
+          data: [] as any as T,
           status: response.status,
         };
       }
@@ -193,13 +201,18 @@ export { ApiClient };
 export function handleApiResponse<T>(
   response: ApiResponse<T>
 ): { data: T; error: null } | { data: null; error: string } {
+  // Gracefully handle 404 Not Found (no data created yet)
+  if (response.status === 404) {
+    return { data: (response.data !== undefined ? response.data : [] as any) as T, error: null };
+  }
+
   if (response.error) {
     return { data: null, error: response.error };
   }
 
-  // For 204 No Content responses, return success with empty object
+  // For 204 No Content responses, return success with empty array/object
   if (response.status === 204 || response.data === undefined) {
-    return { data: {} as T, error: null };
+    return { data: [] as any as T, error: null };
   }
 
   return { data: response.data, error: null };

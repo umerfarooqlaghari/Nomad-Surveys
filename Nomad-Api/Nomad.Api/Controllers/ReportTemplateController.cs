@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
-using Nomad.Api.Services;
+using Alpha.Api.Services;
 
-namespace Nomad.Api.Controllers;
+namespace Alpha.Api.Controllers;
 
 [ApiController]
 public class ReportTemplateController : ControllerBase

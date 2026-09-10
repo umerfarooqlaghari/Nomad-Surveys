@@ -1,29 +1,29 @@
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 using System.Text.Json;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 /// <summary>
 /// Service for managing report templates and generating reports
 /// </summary>
 public class TemplateService : ITemplateService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly IReportingService _reportingService;
     private readonly IPlaceholderReplacementService _placeholderService;
     private readonly IPdfGenerationService _pdfService;
     private readonly ILogger<TemplateService> _logger;
 
     public TemplateService(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         IReportingService reportingService,
         IPlaceholderReplacementService placeholderService,
         IPdfGenerationService pdfService,

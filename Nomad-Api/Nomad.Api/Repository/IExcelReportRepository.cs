@@ -1,6 +1,6 @@
-using Nomad.Api.DTOs.Report;
+using Alpha.Api.DTOs.Report;
 
-namespace Nomad.Api.Repository;
+namespace Alpha.Api.Repository;
 
 public interface IExcelReportRepository
 {

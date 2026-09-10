@@ -1,4 +1,4 @@
-namespace Nomad.Api.Configuration;
+namespace Alpha.Api.Configuration;
 
 public class EmailSettings
 {

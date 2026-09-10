@@ -1,4 +1,4 @@
-﻿namespace Nomad.Api.Tests;
+﻿namespace Alpha.Api.Tests;
 
 public class UnitTest1
 {

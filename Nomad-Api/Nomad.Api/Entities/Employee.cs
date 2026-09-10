@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using Nomad.Api.DTOs.Common;
+using Alpha.Api.DTOs.Common;
 
-namespace Nomad.Api.Entities;
+namespace Alpha.Api.Entities;
 
 public class Employee
 {

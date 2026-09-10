@@ -34,8 +34,10 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
   const [assignmentCounts, setAssignmentCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    fetchSurveys();
-  }, []);
+    if (token && projectSlug) {
+      fetchSurveys();
+    }
+  }, [token, projectSlug]);
 
   const fetchSurveys = async () => {
     try {
@@ -46,15 +48,23 @@ export default function ProjectSurveysTab({ projectSlug }: ProjectSurveysTabProp
         },
       });
 
+      if (response.status === 404) {
+        setSurveys([]);
+        return;
+      }
+
       if (!response.ok) {
         throw new Error('Failed to fetch surveys');
       }
 
       const data = await response.json();
-      setSurveys(data);
+      const surveyList = Array.isArray(data) ? data : [];
+      setSurveys(surveyList);
 
       // Fetch assignment counts for all surveys
-      await fetchAssignmentCounts(data);
+      if (surveyList.length > 0) {
+        await fetchAssignmentCounts(surveyList);
+      }
     } catch (error) {
       console.error('Error fetching surveys:', error);
       toast.error('Failed to load surveys');

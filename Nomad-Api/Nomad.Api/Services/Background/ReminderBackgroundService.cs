@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Services.Background;
+namespace Alpha.Api.Services.Background;
 
 public class ReminderBackgroundService : BackgroundService
 {
@@ -61,7 +61,7 @@ public class ReminderBackgroundService : BackgroundService
     {
         using (var scope = _serviceProvider.CreateScope())
         {
-            var context = scope.ServiceProvider.GetRequiredService<NomadSurveysDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<AlphaSurveysDbContext>();
             var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
             var frontendUrl = _configuration["FrontendUrl"] ?? "https://nomadvirtual.com";
 

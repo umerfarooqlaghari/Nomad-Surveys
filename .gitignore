@@ -1,9 +1,46 @@
-Nomad-Api/Nomad.Api/appsettings.Development.json
-Nomad-Api/Nomad.Api/bin/Debug/net9.0/appsettings.Development.json
-Nomad-Api/Nomad.Api/bin/Debug/net9.0/appsettings.Development.json
-Nomad-Api/Nomad.Api/bin/Debug/net9.0/Nomad.Api.dll
-Nomad-Api/Nomad.Api/bin/Debug/net9.0/Nomad.Api.exe
-Nomad-Api/Nomad.Api/bin/Debug/net9.0/Nomad.Api.pdb
-Nomad-Api/Nomad.Api/obj/Nomad.Api.csproj.nuget.dgspec.json
-Nomad-Api/Nomad.Api/obj/Debug/net9.0/Nomad.Api.csproj.CoreCompileInputs.cache
-Nomad-Api/Nomad.Api/obj/Debug/net9.0/Nomad.Api.csproj.AssemblyReference.cache
+# Build results & binaries (.NET)
+[Bb]in/
+[Oo]bj/
+**/[Bb]in/
+**/[Oo]bj/
+**/bin/**
+**/obj/**
+[Dd]ebug/
+[Rr]elease/
+*.dll
+*.exe
+*.pdb
+*.cache
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Configuration with credentials / secrets
+**/appsettings.Development.json
+appsettings.Development.json
+.env*.local
+
+# Node & Next.js
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+.turbo/
+out/
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# OS & Editor files
+.DS_Store
+Thumbs.db
+.vs/
+.idea/
+rename.js

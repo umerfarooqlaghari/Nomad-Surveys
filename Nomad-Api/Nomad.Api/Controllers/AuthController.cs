@@ -1,12 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Nomad.Api.Authorization;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Authorization;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Services.Interfaces;
 using System.Security.Claims;
 
-namespace Nomad.Api.Controllers;
+namespace Alpha.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

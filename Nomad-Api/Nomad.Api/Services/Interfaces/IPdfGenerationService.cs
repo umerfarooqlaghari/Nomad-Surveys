@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Nomad.Api.Services.Interfaces;
+namespace Alpha.Api.Services.Interfaces;
 
 /// <summary>
 /// Service for generating PDFs from processed templates

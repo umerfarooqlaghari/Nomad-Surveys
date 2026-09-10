@@ -1,18 +1,18 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.Services.Interfaces;
-using Nomad.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.Services.Interfaces;
+using Alpha.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
-namespace Nomad.Api.Controllers;
+namespace Alpha.Api.Controllers;
 
 [ApiController]
 [Route("{tenantSlug}/api/[controller]")]
 public class EmailController : ControllerBase
 {
     private readonly IEmailService _emailService;
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<EmailController> _logger;
     private readonly IConfiguration _configuration;
     private readonly IPasswordGenerator _passwordGenerator;
@@ -20,7 +20,7 @@ public class EmailController : ControllerBase
 
     public EmailController(
         IEmailService emailService,
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         ILogger<EmailController> logger,
         IConfiguration configuration,
         IPasswordGenerator passwordGenerator,
@@ -167,7 +167,7 @@ public class EmailController : ControllerBase
             }
 
             // Reset password using UserManager
-            var userManager = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Nomad.Api.Entities.ApplicationUser>>();
+            var userManager = HttpContext.RequestServices.GetRequiredService<Microsoft.AspNetCore.Identity.UserManager<Alpha.Api.Entities.ApplicationUser>>();
             var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
             var result = await userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
 
@@ -291,7 +291,7 @@ public class EmailController : ControllerBase
         try
         {
             var backgroundService = HttpContext.RequestServices.GetServices<IHostedService>()
-                .OfType<Nomad.Api.Services.Background.ReminderBackgroundService>()
+                .OfType<Alpha.Api.Services.Background.ReminderBackgroundService>()
                 .FirstOrDefault();
 
             if (backgroundService == null)
@@ -302,7 +302,7 @@ public class EmailController : ControllerBase
             // We can't directly call the protected/private methods easily without reflection or exposing them.
             // For a quick verification, we'll use reflection to invoke 'ProcessRemindersAsync'.
             
-            var methodInfo = typeof(Nomad.Api.Services.Background.ReminderBackgroundService)
+            var methodInfo = typeof(Alpha.Api.Services.Background.ReminderBackgroundService)
                 .GetMethod("ProcessRemindersAsync", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             
             if (methodInfo == null)

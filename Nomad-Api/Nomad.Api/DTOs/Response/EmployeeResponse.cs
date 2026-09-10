@@ -1,6 +1,6 @@
-using Nomad.Api.DTOs.Common;
+using Alpha.Api.DTOs.Common;
 
-namespace Nomad.Api.DTOs.Response;
+namespace Alpha.Api.DTOs.Response;
 
 public class EmployeeResponse
 {

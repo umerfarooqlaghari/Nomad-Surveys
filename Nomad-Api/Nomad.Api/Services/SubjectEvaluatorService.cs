@@ -1,16 +1,16 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class SubjectEvaluatorService : ISubjectEvaluatorService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly IMapper _mapper;
     private readonly ILogger<SubjectEvaluatorService> _logger;
     private readonly ISubjectService _subjectService;
@@ -18,7 +18,7 @@ public class SubjectEvaluatorService : ISubjectEvaluatorService
     private readonly IPasswordGenerator _passwordGenerator;
 
     public SubjectEvaluatorService(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         IMapper mapper,
         ILogger<SubjectEvaluatorService> logger,
         ISubjectService subjectService,

@@ -3,16 +3,16 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Nomad.Api.Authorization;
-using Nomad.Api.Data;
-using Nomad.Api.Entities;
-using Nomad.Api.Mappings;
-using Nomad.Api.Middleware;
-using Nomad.Api.Services;
-using Nomad.Api.Services.Interfaces;
-using Nomad.Api.Services.Background; // Added for background service
+using Alpha.Api.Authorization;
+using Alpha.Api.Data;
+using Alpha.Api.Entities;
+using Alpha.Api.Mappings;
+using Alpha.Api.Middleware;
+using Alpha.Api.Services;
+using Alpha.Api.Services.Interfaces;
+using Alpha.Api.Services.Background; // Added for background service
 using System.Text;
-using Nomad.Api.Repository;
+using Alpha.Api.Repository;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,7 +53,7 @@ dataSourceBuilder.EnableDynamicJson();
 var dataSource = dataSourceBuilder.Build();
 
 // Add Entity Framework with configured data source
-builder.Services.AddDbContext<NomadSurveysDbContext>(options =>
+builder.Services.AddDbContext<AlphaSurveysDbContext>(options =>
     options.UseNpgsql(dataSource, npgsqlOptions => 
     {
         npgsqlOptions.EnableRetryOnFailure(
@@ -81,7 +81,7 @@ builder.Services.AddIdentity<ApplicationUser, TenantRole>(options =>
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.AllowedForNewUsers = true;
 })
-.AddEntityFrameworkStores<NomadSurveysDbContext>()
+.AddEntityFrameworkStores<AlphaSurveysDbContext>()
 .AddDefaultTokenProviders();
 
 // Add JWT Authentication
@@ -116,7 +116,7 @@ builder.Services.AddAuthorization(AuthorizationPolicies.AddPolicies);
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 
 // Configure Email Settings
-builder.Services.Configure<Nomad.Api.Configuration.EmailSettings>(
+builder.Services.Configure<Alpha.Api.Configuration.EmailSettings>(
     builder.Configuration.GetSection("Email"));
 
 // Add application services
@@ -144,7 +144,7 @@ builder.Services.AddScoped<IReportingService, ReportingService>();
 builder.Services.AddScoped<IReportTemplateService, ReportTemplateService>();
 builder.Services.AddScoped<IReportTemplateSettingsService, ReportTemplateSettingsService>();
 builder.Services.AddSingleton<ICloudinaryService, CloudinaryService>();
-builder.Services.AddScoped<Nomad.Api.Repository.ReportAnalyticsRepository>();
+builder.Services.AddScoped<Alpha.Api.Repository.ReportAnalyticsRepository>();
 builder.Services.AddScoped<IExcelReportService, ExcelReportService>();
 builder.Services.AddScoped<IExcelReportRepository, ExcelReportRepository>(); // Added registration for ExcelReportRepository
 builder.Services.AddScoped<IPasswordGenerator, PasswordGenerator>();
@@ -185,7 +185,7 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Nomad Surveys API",
+        Title = "Alpha Surveys API",
         Version = "v1",
         Description = "Multi-tenant survey management API with RBAC"
     });
@@ -241,7 +241,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Nomad Surveys API V1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Alpha Surveys API V1");
         c.RoutePrefix = "swagger";
     });
 }

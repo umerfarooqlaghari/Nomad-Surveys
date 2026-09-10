@@ -1,10 +1,10 @@
 using AutoMapper;
-using Nomad.Api.Domain.Models;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
+using Alpha.Api.Domain.Models;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
 
-namespace Nomad.Api.Mappings;
+namespace Alpha.Api.Mappings;
 
 public class MappingProfile : Profile
 {

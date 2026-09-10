@@ -2,23 +2,23 @@ using Amazon;
 using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
 using Microsoft.Extensions.Options;
-using Nomad.Api.Configuration;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.Entities;
-using Nomad.Api.Enums;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Configuration;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.Entities;
+using Alpha.Api.Enums;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class EmailAuditService : IEmailAuditService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly EmailSettings _emailSettings;
     private readonly ILogger<EmailAuditService> _logger;
 
     public EmailAuditService(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         IOptions<EmailSettings> emailSettings,
         ILogger<EmailAuditService> logger)
     {

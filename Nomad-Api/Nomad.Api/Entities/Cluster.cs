@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Nomad.Api.Entities;
+namespace Alpha.Api.Entities;
 
 /// <summary>
 /// Cluster entity - top level of the hierarchical structure

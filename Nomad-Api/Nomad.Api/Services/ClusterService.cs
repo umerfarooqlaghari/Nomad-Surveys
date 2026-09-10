@@ -1,18 +1,18 @@
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class ClusterService : IClusterService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<ClusterService> _logger;
 
-    public ClusterService(NomadSurveysDbContext context, ILogger<ClusterService> logger)
+    public ClusterService(AlphaSurveysDbContext context, ILogger<ClusterService> logger)
     {
         _context = context;
         _logger = logger;

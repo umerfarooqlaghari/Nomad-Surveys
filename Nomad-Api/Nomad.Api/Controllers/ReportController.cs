@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using Nomad.Api.Authorization;
-using Nomad.Api.Services.Interfaces;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.Services;
+using Alpha.Api.Authorization;
+using Alpha.Api.Services.Interfaces;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.Services;
 
-namespace Nomad.Api.Controllers;
+namespace Alpha.Api.Controllers;
 
 /// <summary>
 /// Controller for generating reports from HTML templates

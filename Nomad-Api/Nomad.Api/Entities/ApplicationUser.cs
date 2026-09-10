@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using System.ComponentModel.DataAnnotations;
 
-namespace Nomad.Api.Entities;
+namespace Alpha.Api.Entities;
 
 public class ApplicationUser : IdentityUser<Guid>
 {

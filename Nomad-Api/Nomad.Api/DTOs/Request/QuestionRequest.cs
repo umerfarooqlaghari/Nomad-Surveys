@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Nomad.Api.DTOs.Request;
+namespace Alpha.Api.DTOs.Request;
 
 /// <summary>
 /// Request DTO for creating a new question

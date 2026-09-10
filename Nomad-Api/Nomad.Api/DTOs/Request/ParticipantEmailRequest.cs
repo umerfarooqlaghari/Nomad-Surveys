@@ -1,4 +1,4 @@
-namespace Nomad.Api.DTOs.Request;
+namespace Alpha.Api.DTOs.Request;
 
 public class ParticipantEmailRequest
 {

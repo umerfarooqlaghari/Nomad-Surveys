@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using Nomad.Api.Enums;
+using Alpha.Api.Enums;
 
-namespace Nomad.Api.Entities;
+namespace Alpha.Api.Entities;
 
 public class EmailAuditLog
 {

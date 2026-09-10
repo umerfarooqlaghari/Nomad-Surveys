@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This report documents the comprehensive testing of the Participants API system for the Nomad Survey Builder application. The testing focused on validating the tenant-aware routing, authentication mechanisms, CRUD operations, bulk operations with 207 Multi-Status responses, and edge case handling.
+This report documents the comprehensive testing of the Participants API system for the Alpha Survey Builder application. The testing focused on validating the tenant-aware routing, authentication mechanisms, CRUD operations, bulk operations with 207 Multi-Status responses, and edge case handling.
 
 ## Key Findings
 

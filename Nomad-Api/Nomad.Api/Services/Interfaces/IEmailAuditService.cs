@@ -1,6 +1,6 @@
-using Nomad.Api.DTOs.Request;
+using Alpha.Api.DTOs.Request;
 
-namespace Nomad.Api.Services.Interfaces;
+namespace Alpha.Api.Services.Interfaces;
 
 public interface IEmailAuditService
 {

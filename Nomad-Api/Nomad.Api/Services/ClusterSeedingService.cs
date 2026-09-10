@@ -1,19 +1,19 @@
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
-using static Nomad.Api.Data.ClusterDataBank;
+using Alpha.Api.Data;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
+using static Alpha.Api.Data.ClusterDataBank;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class ClusterSeedingService : IClusterSeedingService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<ClusterSeedingService> _logger;
     private readonly IWebHostEnvironment _environment;
 
     public ClusterSeedingService(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         ILogger<ClusterSeedingService> logger,
         IWebHostEnvironment environment)
     {
@@ -30,8 +30,10 @@ public class ClusterSeedingService : IClusterSeedingService
 
             // Get existing clusters for this tenant to ensure idempotency
             var existingClusters = await _context.Clusters
+                .IgnoreQueryFilters()
                 .Where(c => c.TenantId == tenantId)
                 .Include(c => c.Competencies)
+                    .ThenInclude(c => c.Questions)
                 .ToListAsync();
 
             foreach (var clusterDef in ClusterDataBank.Clusters)
@@ -72,20 +74,13 @@ public class ClusterSeedingService : IClusterSeedingService
                             CreatedAt = DateTime.UtcNow
                         };
                         _context.Competencies.Add(competency);
-                    }
-
-                    // For questions, check if we need to add them
-                    bool isNewCompetency = _context.Entry(competency).State == EntityState.Added;
-
-                    if (!isNewCompetency)
-                    {
-                         await _context.Entry(competency).Collection(c => c.Questions).LoadAsync();
+                        cluster.Competencies.Add(competency);
                     }
 
                     foreach (var qDef in competencyDef.Questions)
                     {
                         // Avoid adding duplicate question text
-                        if (!isNewCompetency && competency.Questions.Any(eq => eq.OthersQuestion == qDef.OthersQuestion && eq.SelfQuestion == qDef.SelfQuestion))
+                        if (competency.Questions.Any(eq => eq.OthersQuestion == qDef.OthersQuestion && eq.SelfQuestion == qDef.SelfQuestion))
                         {
                             continue;
                         }
@@ -102,6 +97,7 @@ public class ClusterSeedingService : IClusterSeedingService
                         };
 
                         _context.Questions.Add(question);
+                        competency.Questions.Add(question);
                     }
                 }
             }
@@ -112,9 +108,7 @@ public class ClusterSeedingService : IClusterSeedingService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error seeding clusters for tenant {TenantId}", tenantId);
-            throw; // Re-throw to be caught by the caller logic if needed, or handle here. 
-                   // Given caller wraps this, re-throw ensures caller knows it failed? 
-                   // Actually caller logs. Let's just throw.
+            throw;
         }
     }
 }

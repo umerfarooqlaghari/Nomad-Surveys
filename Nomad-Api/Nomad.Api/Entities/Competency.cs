@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Nomad.Api.Entities;
+namespace Alpha.Api.Entities;
 
 /// <summary>
 /// Competency entity - middle level of the hierarchical structure

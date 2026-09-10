@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-namespace Nomad.Api.Data;
+namespace Alpha.Api.Data;
 
 public static class ClusterDataBank
 {

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Nomad.Api.Authorization;
+using Alpha.Api.Authorization;
 
-namespace Nomad.Api.Controllers;
+namespace Alpha.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]

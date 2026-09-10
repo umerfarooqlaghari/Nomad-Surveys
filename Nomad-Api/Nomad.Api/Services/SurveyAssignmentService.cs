@@ -1,16 +1,16 @@
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 using BCrypt.Net;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class SurveyAssignmentService : ISurveyAssignmentService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<SurveyAssignmentService> _logger;
     private readonly IEmailService _emailService;
     private readonly IConfiguration _configuration;
@@ -20,7 +20,7 @@ public class SurveyAssignmentService : ISurveyAssignmentService
     private readonly IServiceScopeFactory _scopeFactory;
 
     public SurveyAssignmentService(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         ILogger<SurveyAssignmentService> logger,
         IEmailService emailService,
         IConfiguration configuration,
@@ -56,7 +56,7 @@ public class SurveyAssignmentService : ISurveyAssignmentService
             }
 
             var tenant = await _context.Tenants.FindAsync(survey.TenantId);
-            var tenantName = tenant?.Name ?? "Nomad Surveys";
+            var tenantName = tenant?.Name ?? "Alpha Surveys";
             var tenantSlug = tenant?.Slug ?? "";
 
             var assignedCount = 0;
@@ -188,7 +188,7 @@ public class SurveyAssignmentService : ISurveyAssignmentService
                 }
 
                 var tenant = await _context.Tenants.FindAsync(survey.TenantId);
-                var tenantName = tenant?.Name ?? "Nomad Surveys";
+                var tenantName = tenant?.Name ?? "Alpha Surveys";
                 var tenantSlug = tenant?.Slug ?? "";
 
                 var now = DateTime.UtcNow;

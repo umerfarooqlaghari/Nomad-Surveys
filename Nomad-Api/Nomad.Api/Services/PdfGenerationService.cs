@@ -1,10 +1,10 @@
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Services.Interfaces;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 using System.Text.Json;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 /// <summary>
 /// Service for generating PDFs from processed templates using QuestPDF

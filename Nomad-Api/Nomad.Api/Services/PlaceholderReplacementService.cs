@@ -1,9 +1,9 @@
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Services.Interfaces;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 /// <summary>
 /// Service for replacing placeholders in templates with actual data

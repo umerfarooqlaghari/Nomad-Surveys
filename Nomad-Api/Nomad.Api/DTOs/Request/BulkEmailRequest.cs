@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Nomad.Api.DTOs.Request;
+namespace Alpha.Api.DTOs.Request;
 
 public class BulkEmailRequest
 {

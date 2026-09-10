@@ -59,6 +59,7 @@ export default function ProjectParticipantsTab({ projectSlug }: ProjectParticipa
   const [employees, setEmployees] = useState<EmployeeListResponse[]>([]);
 
   useEffect(() => {
+    if (!token) return;
     if (activeSubTab === 'evaluators' && evaluators.length === 0) {
       loadEvaluators();
     } else if (activeSubTab === 'subjects' && subjects.length === 0) {
@@ -69,7 +70,7 @@ export default function ProjectParticipantsTab({ projectSlug }: ProjectParticipa
     if (employees.length === 0) {
       loadEmployees();
     }
-  }, [projectSlug, activeSubTab]);
+  }, [projectSlug, activeSubTab, token]);
 
   // Evaluators functions
   const loadEvaluators = async () => {

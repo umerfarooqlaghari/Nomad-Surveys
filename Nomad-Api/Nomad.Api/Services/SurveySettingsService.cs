@@ -1,20 +1,20 @@
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Common;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Common;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 using System.Text.Json;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class TenantSettingsService : ITenantSettingsService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<TenantSettingsService> _logger;
 
-    public TenantSettingsService(NomadSurveysDbContext context, ILogger<TenantSettingsService> logger)
+    public TenantSettingsService(AlphaSurveysDbContext context, ILogger<TenantSettingsService> logger)
     {
         _context = context;
         _logger = logger;

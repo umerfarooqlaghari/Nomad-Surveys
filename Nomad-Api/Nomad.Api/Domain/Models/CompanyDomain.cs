@@ -1,4 +1,4 @@
-namespace Nomad.Api.Domain.Models;
+namespace Alpha.Api.Domain.Models;
 
 public class CompanyDomain
 {

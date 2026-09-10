@@ -1,9 +1,9 @@
 using ClosedXML.Excel;
-using Nomad.Api.DTOs.Report;
-using Nomad.Api.Repository;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.DTOs.Report;
+using Alpha.Api.Repository;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public interface IExcelReportService
 {
