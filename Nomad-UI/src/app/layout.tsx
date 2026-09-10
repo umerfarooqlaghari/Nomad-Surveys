@@ -14,7 +14,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 // });
 
 export const metadata: Metadata = {
-  title: "Nomad Surveys",
+  title: "Alpha Surveys",
   description: "Multi-tenant survey builder platform",
 };
 

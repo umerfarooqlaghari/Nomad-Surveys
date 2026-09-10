@@ -1,23 +1,23 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Authorization;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
+using Alpha.Api.Authorization;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
 
-namespace Nomad.Api.Controllers;
+namespace Alpha.Api.Controllers;
 
 [ApiController]
 [Route("{tenantSlug}/api/surveys/{surveyId}/chart-images")]
 [AuthorizeTenant]
 public class ReportChartImagesController : ControllerBase
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<ReportChartImagesController> _logger;
 
     public ReportChartImagesController(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         ILogger<ReportChartImagesController> logger)
     {
         _context = context;

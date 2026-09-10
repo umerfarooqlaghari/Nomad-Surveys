@@ -1,6 +1,6 @@
-using Nomad.Api.DTOs.Report;
+using Alpha.Api.DTOs.Report;
 
-namespace Nomad.Api.DTOs.Report;
+namespace Alpha.Api.DTOs.Report;
 
 public class SubjectWiseConsolidatedReportItem
 {

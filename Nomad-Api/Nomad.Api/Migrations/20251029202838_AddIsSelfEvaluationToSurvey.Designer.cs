@@ -6,15 +6,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Nomad.Api.DTOs.Common;
-using Nomad.Api.Data;
+using Alpha.Api.DTOs.Common;
+using Alpha.Api.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Nomad.Api.Migrations
+namespace Alpha.Api.Migrations
 {
-    [DbContext(typeof(NomadSurveysDbContext))]
+    [DbContext(typeof(AlphaSurveysDbContext))]
     [Migration("20251029202838_AddIsSelfEvaluationToSurvey")]
     partial class AddIsSelfEvaluationToSurvey
     {
@@ -131,7 +131,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("UserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.ApplicationUser", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -261,7 +261,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Users", (string)null);
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Company", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Company", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -332,7 +332,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Companies");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Employee", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Employee", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -419,7 +419,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Employees");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Evaluator", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Evaluator", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -468,7 +468,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Evaluators");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Permission", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Permission", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -509,7 +509,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Permissions");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.RolePermission", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.RolePermission", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -538,7 +538,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("RolePermissions");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Subject", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Subject", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -587,7 +587,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Subjects");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.SubjectEvaluator", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.SubjectEvaluator", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -629,7 +629,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("SubjectEvaluators");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Survey", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Survey", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -674,7 +674,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Surveys");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Tenant", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Tenant", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -713,7 +713,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Tenants");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.TenantRole", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.TenantRole", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -760,7 +760,7 @@ namespace Nomad.Api.Migrations
                     b.ToTable("Roles", (string)null);
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.UserTenantRole", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.UserTenantRole", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -799,7 +799,7 @@ namespace Nomad.Api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.TenantRole", null)
+                    b.HasOne("Alpha.Api.Entities.TenantRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -808,7 +808,7 @@ namespace Nomad.Api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.ApplicationUser", null)
+                    b.HasOne("Alpha.Api.Entities.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -817,7 +817,7 @@ namespace Nomad.Api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.ApplicationUser", null)
+                    b.HasOne("Alpha.Api.Entities.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -826,13 +826,13 @@ namespace Nomad.Api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.TenantRole", null)
+                    b.HasOne("Alpha.Api.Entities.TenantRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Nomad.Api.Entities.ApplicationUser", null)
+                    b.HasOne("Alpha.Api.Entities.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -841,21 +841,21 @@ namespace Nomad.Api.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.ApplicationUser", null)
+                    b.HasOne("Alpha.Api.Entities.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.ApplicationUser", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.ApplicationUser", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.Employee", "Employee")
+                    b.HasOne("Alpha.Api.Entities.Employee", "Employee")
                         .WithMany("Users")
                         .HasForeignKey("EmployeeId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                    b.HasOne("Alpha.Api.Entities.Tenant", "Tenant")
                         .WithMany("Users")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -865,16 +865,16 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Company", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Company", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.ApplicationUser", "ContactPerson")
+                    b.HasOne("Alpha.Api.Entities.ApplicationUser", "ContactPerson")
                         .WithMany()
                         .HasForeignKey("ContactPersonId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                    b.HasOne("Alpha.Api.Entities.Tenant", "Tenant")
                         .WithOne("Company")
-                        .HasForeignKey("Nomad.Api.Entities.Company", "TenantId")
+                        .HasForeignKey("Alpha.Api.Entities.Company", "TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -883,9 +883,9 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Employee", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Employee", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                    b.HasOne("Alpha.Api.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -894,21 +894,21 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Evaluator", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Evaluator", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.Employee", "Employee")
+                    b.HasOne("Alpha.Api.Entities.Employee", "Employee")
                         .WithOne("Evaluator")
-                        .HasForeignKey("Nomad.Api.Entities.Evaluator", "EmployeeId")
+                        .HasForeignKey("Alpha.Api.Entities.Evaluator", "EmployeeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                    b.HasOne("Alpha.Api.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Nomad.Api.Entities.ApplicationUser", "User")
+                    b.HasOne("Alpha.Api.Entities.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -920,15 +920,15 @@ namespace Nomad.Api.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.RolePermission", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.RolePermission", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.Permission", "Permission")
+                    b.HasOne("Alpha.Api.Entities.Permission", "Permission")
                         .WithMany("RolePermissions")
                         .HasForeignKey("PermissionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Nomad.Api.Entities.TenantRole", "Role")
+                    b.HasOne("Alpha.Api.Entities.TenantRole", "Role")
                         .WithMany("RolePermissions")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -939,21 +939,21 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Subject", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Subject", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.Employee", "Employee")
+                    b.HasOne("Alpha.Api.Entities.Employee", "Employee")
                         .WithOne("Subject")
-                        .HasForeignKey("Nomad.Api.Entities.Subject", "EmployeeId")
+                        .HasForeignKey("Alpha.Api.Entities.Subject", "EmployeeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                    b.HasOne("Alpha.Api.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Nomad.Api.Entities.ApplicationUser", "User")
+                    b.HasOne("Alpha.Api.Entities.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -965,21 +965,21 @@ namespace Nomad.Api.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.SubjectEvaluator", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.SubjectEvaluator", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.Evaluator", "Evaluator")
+                    b.HasOne("Alpha.Api.Entities.Evaluator", "Evaluator")
                         .WithMany("SubjectEvaluators")
                         .HasForeignKey("EvaluatorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Nomad.Api.Entities.Subject", "Subject")
+                    b.HasOne("Alpha.Api.Entities.Subject", "Subject")
                         .WithMany("SubjectEvaluators")
                         .HasForeignKey("SubjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                    b.HasOne("Alpha.Api.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -992,9 +992,9 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Survey", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Survey", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                    b.HasOne("Alpha.Api.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1003,9 +1003,9 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.TenantRole", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.TenantRole", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                    b.HasOne("Alpha.Api.Entities.Tenant", "Tenant")
                         .WithMany("TenantRoles")
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -1013,20 +1013,20 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Tenant");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.UserTenantRole", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.UserTenantRole", b =>
                 {
-                    b.HasOne("Nomad.Api.Entities.TenantRole", "Role")
+                    b.HasOne("Alpha.Api.Entities.TenantRole", "Role")
                         .WithMany("UserTenantRoles")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Nomad.Api.Entities.Tenant", "Tenant")
+                    b.HasOne("Alpha.Api.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("Nomad.Api.Entities.ApplicationUser", "User")
+                    b.HasOne("Alpha.Api.Entities.ApplicationUser", "User")
                         .WithMany("UserTenantRoles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1039,12 +1039,12 @@ namespace Nomad.Api.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.ApplicationUser", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.ApplicationUser", b =>
                 {
                     b.Navigation("UserTenantRoles");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Employee", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Employee", b =>
                 {
                     b.Navigation("Evaluator");
 
@@ -1053,22 +1053,22 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Users");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Evaluator", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Evaluator", b =>
                 {
                     b.Navigation("SubjectEvaluators");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Permission", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Permission", b =>
                 {
                     b.Navigation("RolePermissions");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Subject", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Subject", b =>
                 {
                     b.Navigation("SubjectEvaluators");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.Tenant", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.Tenant", b =>
                 {
                     b.Navigation("Company");
 
@@ -1077,7 +1077,7 @@ namespace Nomad.Api.Migrations
                     b.Navigation("Users");
                 });
 
-            modelBuilder.Entity("Nomad.Api.Entities.TenantRole", b =>
+            modelBuilder.Entity("Alpha.Api.Entities.TenantRole", b =>
                 {
                     b.Navigation("RolePermissions");
 

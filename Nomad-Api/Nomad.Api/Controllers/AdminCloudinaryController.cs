@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Nomad.Api.Authorization;
-using Nomad.Api.Services;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Authorization;
+using Alpha.Api.Services;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Controllers;
+namespace Alpha.Api.Controllers;
 
 [ApiController]
 [Route("api/admin/cloudinary")]

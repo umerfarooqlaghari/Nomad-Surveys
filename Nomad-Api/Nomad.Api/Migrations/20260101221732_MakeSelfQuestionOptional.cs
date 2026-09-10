@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace Nomad.Api.Migrations
+namespace Alpha.Api.Migrations
 {
     /// <inheritdoc />
     public partial class MakeSelfQuestionOptional : Migration

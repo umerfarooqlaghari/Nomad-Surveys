@@ -1,4 +1,4 @@
-# 🔐 Authentication Guide - Nomad Surveys Multi-Tenant RBAC API
+# 🔐 Authentication Guide - Alpha Surveys Multi-Tenant RBAC API
 
 ## Quick Start - Getting Your Bearer Token
 

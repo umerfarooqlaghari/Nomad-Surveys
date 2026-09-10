@@ -54,9 +54,35 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
   const [questionForm, setQuestionForm] = useState({ SelfQuestion: '', OthersQuestion: '', CompetencyId: '' });
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const [questionBankBlobUrl, setQuestionBankBlobUrl] = useState<string | null>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const tenantSlug = projectSlug;
+
+  const handleSeedDefaultQuestions = async () => {
+    if (!token) {
+      toast.error('Authentication required');
+      return;
+    }
+
+    setIsSeeding(true);
+    const loadingToast = toast.loading('Seeding standard question bank...');
+    try {
+      const res = await questionService.seedDefaultQuestions(tenantSlug, token);
+      toast.dismiss(loadingToast);
+      if (res.error) {
+        toast.error(`Failed to seed questions: ${res.error}`);
+      } else {
+        toast.success('Question bank seeded successfully!');
+        await loadAllData();
+      }
+    } catch (err: any) {
+      toast.dismiss(loadingToast);
+      toast.error(err.message || 'Failed to seed questions');
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   useEffect(() => {
     if (token) {
@@ -552,6 +578,12 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
                       </svg>
                       Download Question Bank
                     </button>
+                    <button onClick={handleSeedDefaultQuestions} disabled={isSeeding} className={styles.dropdownItem}>
+                      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className={styles.menuIcon}>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      {isSeeding ? 'Seeding...' : 'Seed Default Question Bank'}
+                    </button>
                   </div>
                 )}
               </div>
@@ -607,7 +639,22 @@ export default function ProjectQuestionsTab({ projectSlug }: ProjectQuestionsTab
         {clusters.length === 0 && !isAddingCluster ? (
           <div className={styles.emptyState}>
             <h3>No Clusters Yet</h3>
-            <p>Get started by creating your first cluster</p>
+            <p>Get started by seeding the standard question bank or adding your first cluster.</p>
+            <div className="flex gap-3 justify-center mt-4">
+              <button
+                onClick={handleSeedDefaultQuestions}
+                disabled={isSeeding}
+                className="px-4 py-2 bg-black text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50 transition shadow-sm"
+              >
+                {isSeeding ? 'Seeding Questions...' : 'Seed Standard Question Bank'}
+              </button>
+              <button
+                onClick={handleAddCluster}
+                className="px-4 py-2 bg-white text-gray-800 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition shadow-sm"
+              >
+                + Add Cluster Manually
+              </button>
+            </div>
           </div>
         ) : (
           <div className={styles.clustersList}>

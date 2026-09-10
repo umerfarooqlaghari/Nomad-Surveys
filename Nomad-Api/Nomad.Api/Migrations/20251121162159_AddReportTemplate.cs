@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Nomad.Api.Migrations
+namespace Alpha.Api.Migrations
 {
     /// <inheritdoc />
     public partial class AddReportTemplate : Migration

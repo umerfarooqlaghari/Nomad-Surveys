@@ -1,17 +1,17 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
+using Alpha.Api.Data;
 
-namespace Nomad.Api.Controllers;
+namespace Alpha.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 public class HealthController : ControllerBase
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<HealthController> _logger;
 
-    public HealthController(NomadSurveysDbContext context, ILogger<HealthController> logger)
+    public HealthController(AlphaSurveysDbContext context, ILogger<HealthController> logger)
     {
         _context = context;
         _logger = logger;

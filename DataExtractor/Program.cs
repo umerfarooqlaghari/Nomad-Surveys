@@ -54,7 +54,7 @@ foreach (var row in rows)
 // Generate C# Code
 var sb = new StringBuilder();
 sb.AppendLine("using System.Collections.Generic;");
-sb.AppendLine("namespace Nomad.Api.Data;");
+sb.AppendLine("namespace Alpha.Api.Data;");
 sb.AppendLine();
 sb.AppendLine("public static class ClusterDataBank");
 sb.AppendLine("{");

@@ -1,4 +1,4 @@
-namespace Nomad.Api.DTOs.Common;
+namespace Alpha.Api.DTOs.Common;
 
 public class RatingOptionDto
 {

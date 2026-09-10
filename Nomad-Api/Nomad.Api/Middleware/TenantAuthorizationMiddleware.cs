@@ -1,6 +1,6 @@
 using System.Security.Claims;
 
-namespace Nomad.Api.Middleware;
+namespace Alpha.Api.Middleware;
 
 public class TenantAuthorizationMiddleware
 {

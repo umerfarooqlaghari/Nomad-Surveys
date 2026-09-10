@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Authorization;
-using Nomad.Api.Data;
+using Alpha.Api.Authorization;
+using Alpha.Api.Data;
 
-namespace Nomad.Api.Controllers;
+namespace Alpha.Api.Controllers;
 
 /// <summary>
 /// Controller for SuperAdmin analytics and dashboard data
@@ -13,11 +13,11 @@ namespace Nomad.Api.Controllers;
 [AuthorizeSuperAdmin]
 public class SuperAdminAnalyticsController : ControllerBase
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<SuperAdminAnalyticsController> _logger;
 
     public SuperAdminAnalyticsController(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         ILogger<SuperAdminAnalyticsController> logger)
     {
         _context = context;

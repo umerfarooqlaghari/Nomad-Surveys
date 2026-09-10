@@ -1,26 +1,30 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.Entities;
+using Alpha.Api.Data;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class SeedDataService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<TenantRole> _roleManager;
+    private readonly IClusterSeedingService _clusterSeedingService;
     private readonly ILogger<SeedDataService> _logger;
 
     public SeedDataService(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         UserManager<ApplicationUser> userManager,
         RoleManager<TenantRole> roleManager,
+        IClusterSeedingService clusterSeedingService,
         ILogger<SeedDataService> logger)
     {
         _context = context;
         _userManager = userManager;
         _roleManager = roleManager;
+        _clusterSeedingService = clusterSeedingService;
         _logger = logger;
     }
 
@@ -41,6 +45,7 @@ public class SeedDataService
             await SeedRolesAsync();
             await SeedSuperAdminAsync();
             await SeedSampleTenantAsync();
+            await SeedTenantQuestionsAsync();
 
             _logger.LogInformation("Database seeding completed successfully");
         }
@@ -49,6 +54,23 @@ public class SeedDataService
             _logger.LogError(ex, "Error during database seeding");
             // Don't throw - allow application to start even if seeding fails
             _logger.LogWarning("Application will continue without seeding data");
+        }
+    }
+
+    private async Task SeedTenantQuestionsAsync()
+    {
+        var tenants = await _context.Tenants.IgnoreQueryFilters().ToListAsync();
+        foreach (var tenant in tenants)
+        {
+            try
+            {
+                _logger.LogInformation("Seeding questions bank for tenant {TenantSlug} ({TenantId})", tenant.Slug, tenant.Id);
+                await _clusterSeedingService.SeedClustersAsync(tenant.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to seed questions for tenant {TenantSlug}", tenant.Slug);
+            }
         }
     }
 

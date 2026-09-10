@@ -1,17 +1,17 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class TenantService : ITenantService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly IMapper _mapper;
     private readonly IAuthenticationService _authenticationService;
     private readonly UserManager<ApplicationUser> _userManager;
@@ -19,7 +19,7 @@ public class TenantService : ITenantService
     private readonly IClusterSeedingService _clusterSeedingService;
 
     public TenantService(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         IMapper mapper,
         IAuthenticationService authenticationService,
         UserManager<ApplicationUser> userManager,

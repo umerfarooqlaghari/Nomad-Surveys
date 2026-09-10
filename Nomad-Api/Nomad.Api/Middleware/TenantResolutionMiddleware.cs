@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.Entities;
+using Alpha.Api.Data;
+using Alpha.Api.Entities;
 
-namespace Nomad.Api.Middleware;
+namespace Alpha.Api.Middleware;
 
 public class TenantResolutionMiddleware
 {
@@ -15,7 +15,7 @@ public class TenantResolutionMiddleware
         _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context, NomadSurveysDbContext dbContext)
+    public async Task InvokeAsync(HttpContext context, AlphaSurveysDbContext dbContext)
     {
         try
         {

@@ -2,10 +2,10 @@ using Amazon;
 using Amazon.SimpleEmail;
 using Amazon.SimpleEmail.Model;
 using Microsoft.Extensions.Options;
-using Nomad.Api.Configuration;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Configuration;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class EmailService : IEmailService
 {
@@ -32,7 +32,7 @@ public class EmailService : IEmailService
 
     public async Task<bool> SendPasswordResetOtpEmailAsync(string toEmail, string toName, string otp, string tenantName)
     {
-        var subject = "Reset Your Password - Nomad Surveys";
+        var subject = "Reset Your Password - Alpha Surveys";
         var htmlBody = GeneratePasswordResetOtpEmailHtml(toName, otp, tenantName);
 
         return await SendEmailAsync(toEmail, subject, htmlBody, toName);
@@ -141,7 +141,7 @@ public class EmailService : IEmailService
                     <tr>
                         <td style=""padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;"">
                             <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af; text-align: center;"">
-                                This is an automated message from Nomad Surveys. Please do not reply to this email.
+                                This is an automated message from Alpha Surveys. Please do not reply to this email.
                             </p>
                         </td>
                     </tr>
@@ -250,7 +250,7 @@ public class EmailService : IEmailService
                     <tr>
                         <td style=""padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;"">
                             <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af; text-align: center;"">
-                                This is an automated message from Nomad Surveys. Please do not reply to this email.
+                                This is an automated message from Alpha Surveys. Please do not reply to this email.
                             </p>
                         </td>
                     </tr>
@@ -341,7 +341,7 @@ public class EmailService : IEmailService
                     <tr>
                         <td style=""padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;"">
                             <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af; text-align: center;"">
-                                This is an automated message from Nomad Surveys. Please do not reply to this email.
+                                This is an automated message from Alpha Surveys. Please do not reply to this email.
                             </p>
                         </td>
                     </tr>
@@ -492,7 +492,7 @@ public class EmailService : IEmailService
                             <tr>
                                 <td style=""padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;"">
                                     <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af; text-align: center;"">
-                                        This is an automated message from Nomad Surveys. Please do not reply to this email.
+                                        This is an automated message from Alpha Surveys. Please do not reply to this email.
                                     </p>
                                 </td>
                             </tr>
@@ -588,7 +588,7 @@ public class EmailService : IEmailService
                         <tr>
                             <td style=""padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;"">
                                 <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af; text-align: center;"">
-                                    This is an automated message from Nomad Surveys. Please do not reply to this email.
+                                    This is an automated message from Alpha Surveys. Please do not reply to this email.
                                 </p>
                             </td>
                         </tr>
@@ -711,7 +711,7 @@ public class EmailService : IEmailService
                     <tr>
                         <td style=""padding: 30px 40px; background-color: #f9fafb; border-top: 1px solid #e5e7eb; border-radius: 0 0 8px 8px;"">
                             <p style=""margin: 0; font-size: 13px; line-height: 20px; color: #9ca3af; text-align: center;"">
-                                This is an automated message from Nomad Surveys. Please do not reply to this email.
+                                This is an automated message from Alpha Surveys. Please do not reply to this email.
                             </p>
                         </td>
                     </tr>

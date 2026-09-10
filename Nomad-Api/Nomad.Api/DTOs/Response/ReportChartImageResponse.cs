@@ -1,4 +1,4 @@
-namespace Nomad.Api.DTOs.Response;
+namespace Alpha.Api.DTOs.Response;
 
 /// <summary>
 /// Response DTO for a report chart image

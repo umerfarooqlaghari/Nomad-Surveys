@@ -1,4 +1,4 @@
-namespace Nomad.Api.Enums;
+namespace Alpha.Api.Enums;
 
 public enum AuditLogStatus
 {

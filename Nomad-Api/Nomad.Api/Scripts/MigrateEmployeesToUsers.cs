@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Scripts;
+namespace Alpha.Api.Scripts;
 
 /// <summary>
 /// Migration script to clean Users table and migrate all employees to Users
@@ -12,14 +12,14 @@ namespace Nomad.Api.Scripts;
 /// </summary>
 public class MigrateEmployeesToUsers
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<TenantRole> _roleManager;
     private readonly ILogger<MigrateEmployeesToUsers> _logger;
     private readonly IPasswordGenerator _passwordGenerator;
 
     public MigrateEmployeesToUsers(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         UserManager<ApplicationUser> userManager,
         RoleManager<TenantRole> roleManager,
         ILogger<MigrateEmployeesToUsers> logger,

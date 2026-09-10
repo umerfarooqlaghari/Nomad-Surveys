@@ -109,7 +109,7 @@ export default function ProjectDashboard() {
               <div className="flex items-center">
                 <Image
                   src="/logos/logo-small.png"
-                  alt="Nomad Surveys"
+                  alt="Alpha Surveys"
                   width={150}
                   height={60}
                   className="h-12 w-auto"

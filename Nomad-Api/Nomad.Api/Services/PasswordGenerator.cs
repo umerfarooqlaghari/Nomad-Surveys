@@ -1,8 +1,8 @@
 using System.Security.Cryptography;
 using System.Text;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class PasswordGenerator : IPasswordGenerator
 {
@@ -14,12 +14,12 @@ public class PasswordGenerator : IPasswordGenerator
 
     public PasswordGenerator(IConfiguration config)
     {
-        _secret = config["PasswordSecret"] ?? "Nomad-Default-Secret-2026-Secure-Salt";
+        _secret = config["PasswordSecret"] ?? "Alpha-Default-Secret-2026-Secure-Salt";
     }
 
     public string Generate(string email)
     {
-        if (string.IsNullOrEmpty(email)) return "Nomad@2026!";
+        if (string.IsNullOrEmpty(email)) return "Alpha@2026!";
 
         var emailLower = email.ToLower().Trim();
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(_secret));

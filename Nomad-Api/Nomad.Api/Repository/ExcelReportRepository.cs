@@ -1,20 +1,20 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Report;
-using Nomad.Api.Entities;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Report;
+using Alpha.Api.Entities;
 using System.Text.Json;
 using System.Globalization;
 
-namespace Nomad.Api.Repository;
+namespace Alpha.Api.Repository;
 
 public class ExcelReportRepository : IExcelReportRepository
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<ExcelReportRepository> _logger;
 
     public ExcelReportRepository(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         ILogger<ExcelReportRepository> logger)
     {
         _context = context;

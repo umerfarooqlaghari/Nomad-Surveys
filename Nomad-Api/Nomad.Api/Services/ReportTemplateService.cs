@@ -2,12 +2,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
-using Nomad.Api.Repository;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
+using Alpha.Api.Repository;
+using Alpha.Api.Services.Interfaces;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -17,7 +17,7 @@ using PuppeteerSharp;
 using PuppeteerSharp.Media;
 
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class ReportTemplateService : IReportTemplateService
 {
@@ -25,7 +25,7 @@ public class ReportTemplateService : IReportTemplateService
     private readonly IReportTemplateSettingsService? _templateSettingsService;
     private readonly ISubjectService? _subjectService;
     private readonly ReportAnalyticsRepository? _reportAnalyticsRepository;
-    private readonly NomadSurveysDbContext? _dbContext;
+    private readonly AlphaSurveysDbContext? _dbContext;
     private readonly ILogger<ReportTemplateService> _logger;
     private readonly string _templatePath;
 
@@ -72,7 +72,7 @@ public class ReportTemplateService : IReportTemplateService
         // Get DbContext for chart images (optional dependency)
         try
         {
-            _dbContext = serviceProvider.GetService<NomadSurveysDbContext>();
+            _dbContext = serviceProvider.GetService<AlphaSurveysDbContext>();
         }
         catch
         {

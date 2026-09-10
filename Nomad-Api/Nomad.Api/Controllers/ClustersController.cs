@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
-using Nomad.Api.Authorization;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Authorization;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Controllers;
+namespace Alpha.Api.Controllers;
 
 [ApiController]
 [Route("{tenantSlug}/api/[controller]")]
@@ -12,13 +12,16 @@ namespace Nomad.Api.Controllers;
 public class ClustersController : ControllerBase
 {
     private readonly IClusterService _clusterService;
+    private readonly IClusterSeedingService _clusterSeedingService;
     private readonly ILogger<ClustersController> _logger;
 
     public ClustersController(
         IClusterService clusterService,
+        IClusterSeedingService clusterSeedingService,
         ILogger<ClustersController> logger)
     {
         _clusterService = clusterService;
+        _clusterSeedingService = clusterSeedingService;
         _logger = logger;
     }
 
@@ -222,6 +225,33 @@ public class ClustersController : ControllerBase
         {
             _logger.LogError(ex, "Error deleting cluster {ClusterId}", id);
             return StatusCode(500, new { error = "An error occurred while deleting the cluster" });
+        }
+    }
+
+    /// <summary>
+    /// Seed or re-seed the default question bank for the current tenant
+    /// </summary>
+    [HttpPost("seed")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult> SeedQuestions()
+    {
+        try
+        {
+            var tenantId = GetCurrentTenantId();
+            if (tenantId == null)
+            {
+                return Unauthorized(new { error = "Tenant context not found" });
+            }
+
+            await _clusterSeedingService.SeedClustersAsync(tenantId.Value);
+            return Ok(new { message = "Question bank successfully seeded" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error seeding questions bank");
+            return StatusCode(500, new { error = "An error occurred while seeding the question bank" });
         }
     }
 }

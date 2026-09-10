@@ -1,4 +1,4 @@
-namespace Nomad.Api.DTOs.Report;
+namespace Alpha.Api.DTOs.Report;
 
 /// <summary>
 /// Result for hierarchical cluster-competency summary (Part 2 dynamic pages)

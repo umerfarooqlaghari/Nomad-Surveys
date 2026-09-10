@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 
-namespace Nomad.Api.Authorization;
+namespace Alpha.Api.Authorization;
 
 public static class AuthorizationPolicies
 {

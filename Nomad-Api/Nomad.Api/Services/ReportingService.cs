@@ -1,22 +1,22 @@
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 using System.Text.Json;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 /// <summary>
 /// Service for generating survey reports and analytics
 /// </summary>
 public class ReportingService : IReportingService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<ReportingService> _logger;
 
     public ReportingService(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         ILogger<ReportingService> logger)
     {
         _context = context;

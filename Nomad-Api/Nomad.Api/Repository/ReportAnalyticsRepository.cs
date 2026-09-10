@@ -1,20 +1,20 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.Entities;
+using Alpha.Api.Data;
+using Alpha.Api.Entities;
 
-namespace Nomad.Api.Repository;
+namespace Alpha.Api.Repository;
 
 /// <summary>
 /// Repository for computing analytics data for reports
 /// </summary>
 public class ReportAnalyticsRepository
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<ReportAnalyticsRepository> _logger;
 
     public ReportAnalyticsRepository(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         ILogger<ReportAnalyticsRepository> logger)
     {
         _context = context;
@@ -1459,13 +1459,13 @@ public class ReportAnalyticsRepository
                             }
                         }
 
-                        // 1. Extract ratingOptions (Nomad custom for Rating type)
+                        // 1. Extract ratingOptions (Alpha custom for Rating type)
                         if (hasConfig && config.TryGetProperty("ratingOptions", out var ratingOptions) && ratingOptions.ValueKind == JsonValueKind.Array)
                         {
                             ExtractOptionsScores(ratingOptions);
                         }
                         
-                        // 2. Extract options (Nomad custom for Choice types)
+                        // 2. Extract options (Alpha custom for Choice types)
                         if (hasConfig && config.TryGetProperty("options", out var standardOptions) && standardOptions.ValueKind == JsonValueKind.Array)
                         {
                             ExtractOptionsScores(standardOptions);

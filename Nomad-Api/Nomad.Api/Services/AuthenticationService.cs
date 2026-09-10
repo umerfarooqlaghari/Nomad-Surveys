@@ -2,23 +2,23 @@ using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class AuthenticationService : IAuthenticationService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<TenantRole> _roleManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly IMapper _mapper;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthenticationService> _logger;
@@ -27,7 +27,7 @@ public class AuthenticationService : IAuthenticationService
         UserManager<ApplicationUser> userManager,
         RoleManager<TenantRole> roleManager,
         SignInManager<ApplicationUser> signInManager,
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         IMapper mapper,
         IConfiguration configuration,
         ILogger<AuthenticationService> logger)

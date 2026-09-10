@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public interface ICloudinaryService
 {

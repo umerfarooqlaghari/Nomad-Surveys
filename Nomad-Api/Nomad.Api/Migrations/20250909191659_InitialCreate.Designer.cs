@@ -4,14 +4,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using Nomad.Api.Data;
+using Alpha.Api.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace Nomad.Api.Migrations
+namespace Alpha.Api.Migrations
 {
-    [DbContext(typeof(NomadSurveysDbContext))]
+    [DbContext(typeof(AlphaSurveysDbContext))]
     [Migration("20250909191659_InitialCreate")]
     partial class InitialCreate
     {
@@ -25,7 +25,7 @@ namespace Nomad.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Nomad.Api.Models.Survey", b =>
+            modelBuilder.Entity("Alpha.Api.Models.Survey", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()

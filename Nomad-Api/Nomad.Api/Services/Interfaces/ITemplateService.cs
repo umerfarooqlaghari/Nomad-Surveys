@@ -1,7 +1,7 @@
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
 
-namespace Nomad.Api.Services.Interfaces;
+namespace Alpha.Api.Services.Interfaces;
 
 /// <summary>
 /// Service for managing report templates

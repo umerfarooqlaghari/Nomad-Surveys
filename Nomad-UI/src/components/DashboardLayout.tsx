@@ -29,43 +29,43 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b border-blue-700">
+      <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
-               <Image
+              <Image
                 src="/logos/logo-small.png"
-                alt="Nomad Surveys"
+                alt="Alpha Surveys"
                 width={150}
                 height={60}
-                className="h-12 w-auto"
+                className="h-10 w-auto"
               />
-              <div className="ml-6">
-                <h1 className="text-xl font-semibold text-black">Nomad</h1>
-                <h1 className="text-sm text-black opacity-90">By Ascend Development</h1>
+              <div className="ml-5">
+                <h1 className="text-lg font-bold text-gray-900 leading-tight">Alpha</h1>
+                <p className="text-xs text-gray-500">By Alpha Development</p>
               </div>
             </div>
 
             <div className="flex items-center space-x-4">
-              <div className="text-sm text-black">
-                <span className="font-medium">{user?.fullName || user?.FullName || 'User'}</span>
+              <div className="text-sm text-gray-700">
+                <span className="font-medium text-gray-900">{user?.fullName || user?.FullName || 'User'}</span>
                 {tenant && (
-                  <span className="ml-2 text-white opacity-75">({tenant.name})</span>
+                  <span className="ml-2 text-gray-500">({tenant.name})</span>
                 )}
               </div>
               {tenant && (
                 <Link
                   href={`/${tenant.slug}/admin/report-template`}
-                  className="bg-gray-800 hover:bg-gray-900 text-white px-3 py-2 rounded-md text-sm font-medium"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium transition-colors"
                 >
                   Edit Template
                 </Link>
               )}
               <button
                 onClick={handleLogoutClick}
-                className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                className="bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 px-4 py-2 rounded-md text-sm font-medium transition-colors cursor-pointer"
               >
                 Logout
               </button>

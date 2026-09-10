@@ -2,16 +2,16 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Xunit;
 
-namespace Nomad.Api.Tests.Integration;
+namespace Alpha.Api.Tests.Integration;
 
 public class BasicApiTests : IClassFixture<WebApplicationFactory<Program>>
 {
@@ -27,12 +27,12 @@ public class BasicApiTests : IClassFixture<WebApplicationFactory<Program>>
             {
                 // Remove the existing DbContext registration
                 var descriptor = services.SingleOrDefault(
-                    d => d.ServiceType == typeof(DbContextOptions<NomadSurveysDbContext>));
+                    d => d.ServiceType == typeof(DbContextOptions<AlphaSurveysDbContext>));
                 if (descriptor != null)
                     services.Remove(descriptor);
 
                 // Add in-memory database for testing
-                services.AddDbContext<NomadSurveysDbContext>(options =>
+                services.AddDbContext<AlphaSurveysDbContext>(options =>
                 {
                     options.UseInMemoryDatabase("TestDb_" + Guid.NewGuid().ToString());
                 });
@@ -46,7 +46,7 @@ public class BasicApiTests : IClassFixture<WebApplicationFactory<Program>>
     private void SeedTestData()
     {
         using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<NomadSurveysDbContext>();
+        var context = scope.ServiceProvider.GetRequiredService<AlphaSurveysDbContext>();
         
         context.Database.EnsureCreated();
         

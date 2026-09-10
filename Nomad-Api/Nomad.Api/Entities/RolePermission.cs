@@ -1,4 +1,4 @@
-namespace Nomad.Api.Entities;
+namespace Alpha.Api.Entities;
 
 public class RolePermission
 {

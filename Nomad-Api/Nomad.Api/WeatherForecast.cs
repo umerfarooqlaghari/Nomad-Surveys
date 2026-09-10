@@ -1,4 +1,4 @@
-namespace Nomad.Api;
+namespace Alpha.Api;
 
 public class WeatherForecast
 {

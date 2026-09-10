@@ -1,6 +1,6 @@
-# Nomad Surveys API
+# Alpha Surveys API
 
-ASP.NET 8 Web API for the Nomad Survey Builder application with Entity Framework Core and PostgreSQL.
+ASP.NET 8 Web API for the Alpha Survey Builder application with Entity Framework Core and PostgreSQL.
 
 ## Features
 
@@ -26,22 +26,22 @@ The application is configured to connect to a PostgreSQL database hosted on Rend
 ## Project Structure
 
 ```
-Nomad.Api/
+Alpha.Api/
 ├── Controllers/
 │   ├── SurveysController.cs    # CRUD operations for surveys
 │   ├── HealthController.cs     # Health check endpoints
 │   └── WeatherForecastController.cs
 ├── Data/
-│   └── NomadSurveysDbContext.cs # Entity Framework DbContext
+│   └── AlphaSurveysDbContext.cs # Entity Framework DbContext
 ├── Models/
 │   └── Survey.cs               # Survey entity model
 ├── Migrations/                 # EF Core migrations
 ├── Program.cs                  # Application startup
 └── appsettings.json           # Configuration
 
-Nomad.Api.Tests/
+Alpha.Api.Tests/
 ├── UnitTest1.cs               # Sample unit test
-└── Nomad.Api.Tests.csproj     # Test project file
+└── Alpha.Api.Tests.csproj     # Test project file
 ```
 
 ## Getting Started
@@ -60,12 +60,12 @@ Nomad.Api.Tests/
 
 2. **Run database migrations:**
    ```bash
-   dotnet ef database update --project Nomad.Api
+   dotnet ef database update --project Alpha.Api
    ```
 
 3. **Start the API:**
    ```bash
-   dotnet run --project Nomad.Api
+   dotnet run --project Alpha.Api
    ```
 
 4. **Access the API:**
@@ -109,8 +109,8 @@ dotnet test
 ### Adding New Migrations
 
 ```bash
-dotnet ef migrations add MigrationName --project Nomad.Api
-dotnet ef database update --project Nomad.Api
+dotnet ef migrations add MigrationName --project Alpha.Api
+dotnet ef database update --project Alpha.Api
 ```
 
 ### Package Dependencies

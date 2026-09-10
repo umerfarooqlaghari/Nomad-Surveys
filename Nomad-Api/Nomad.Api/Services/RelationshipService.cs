@@ -1,11 +1,11 @@
-using Nomad.Api.Data;
-using Nomad.Api.Entities;
+using Alpha.Api.Data;
+using Alpha.Api.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public interface IRelationshipService
 {
@@ -70,11 +70,11 @@ public class RelationshipResult
 
 public class RelationshipService : IRelationshipService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly ILogger<RelationshipService> _logger;
     private readonly IPasswordGenerator _passwordGenerator;
 
-    public RelationshipService(NomadSurveysDbContext context, ILogger<RelationshipService> logger, IPasswordGenerator passwordGenerator)
+    public RelationshipService(AlphaSurveysDbContext context, ILogger<RelationshipService> logger, IPasswordGenerator passwordGenerator)
     {
         _context = context;
         _logger = logger;

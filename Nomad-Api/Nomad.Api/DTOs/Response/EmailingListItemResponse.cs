@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Nomad.Api.DTOs.Response;
+namespace Alpha.Api.DTOs.Response;
 
 public class EmailingListItemResponse
 {

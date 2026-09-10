@@ -1,17 +1,17 @@
 using AutoMapper;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Data;
-using Nomad.Api.DTOs.Request;
-using Nomad.Api.DTOs.Response;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Data;
+using Alpha.Api.DTOs.Request;
+using Alpha.Api.DTOs.Response;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 using BCrypt.Net;
 
-namespace Nomad.Api.Services;
+namespace Alpha.Api.Services;
 
 public class EvaluatorService : IEvaluatorService
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly IMapper _mapper;
     private readonly ILogger<EvaluatorService> _logger;
     private readonly IAuthenticationService _authenticationService;
@@ -19,7 +19,7 @@ public class EvaluatorService : IEvaluatorService
     private readonly IPasswordGenerator _passwordGenerator;
 
     public EvaluatorService(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         IMapper mapper,
         ILogger<EvaluatorService> logger,
         IAuthenticationService authenticationService,

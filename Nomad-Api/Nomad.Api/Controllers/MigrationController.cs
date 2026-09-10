@@ -2,25 +2,25 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Authorization;
-using Nomad.Api.Data;
-using Nomad.Api.Entities;
-using Nomad.Api.Services.Interfaces;
+using Alpha.Api.Authorization;
+using Alpha.Api.Data;
+using Alpha.Api.Entities;
+using Alpha.Api.Services.Interfaces;
 
-namespace Nomad.Api.Controllers;
+namespace Alpha.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 public class MigrationController : ControllerBase
 {
-    private readonly NomadSurveysDbContext _context;
+    private readonly AlphaSurveysDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<TenantRole> _roleManager;
     private readonly ILogger<MigrationController> _logger;
     private readonly IPasswordGenerator _passwordGenerator;
 
     public MigrationController(
-        NomadSurveysDbContext context,
+        AlphaSurveysDbContext context,
         UserManager<ApplicationUser> userManager,
         RoleManager<TenantRole> roleManager,
         ILogger<MigrationController> logger,

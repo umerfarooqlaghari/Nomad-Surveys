@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
-namespace Nomad.Api.Entities;
+namespace Alpha.Api.Entities;
 
 /// <summary>
 /// Report template entity for storing customizable report templates

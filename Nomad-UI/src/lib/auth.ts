@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { LoginRequest, SuperAdminLoginRequest, LoginResponse } from '@/types/auth';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5231/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5232/api';
 
 export class AuthService {
   static async login(credentials: LoginRequest): Promise<LoginResponse> {

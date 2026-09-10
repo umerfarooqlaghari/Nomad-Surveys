@@ -395,6 +395,21 @@ class QuestionService {
       return { error: error.message || 'Failed to download template' };
     }
   }
+
+  /**
+   * Seed the default question bank from backend
+   */
+  async seedDefaultQuestions(
+    tenantSlug: string,
+    token: string
+  ): Promise<{ data: any | null; error: string | null }> {
+    try {
+      const response = await apiClient.post(`/${tenantSlug}/clusters/seed`, {}, token);
+      return handleApiResponse(response);
+    } catch (error: any) {
+      return { data: null, error: error.message || 'Failed to seed questions' };
+    }
+  }
 }
 
 export const questionService = new QuestionService();

@@ -1,16 +1,16 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Nomad.Api.Entities;
-using Nomad.Api.Enums;
+using Alpha.Api.Entities;
+using Alpha.Api.Enums;
 
-namespace Nomad.Api.Data;
+namespace Alpha.Api.Data;
 
-public class NomadSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRole, Guid>
+public class AlphaSurveysDbContext : IdentityDbContext<ApplicationUser, TenantRole, Guid>
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public NomadSurveysDbContext(DbContextOptions<NomadSurveysDbContext> options, IHttpContextAccessor httpContextAccessor)
+    public AlphaSurveysDbContext(DbContextOptions<AlphaSurveysDbContext> options, IHttpContextAccessor httpContextAccessor)
         : base(options)
     {
         _httpContextAccessor = httpContextAccessor;

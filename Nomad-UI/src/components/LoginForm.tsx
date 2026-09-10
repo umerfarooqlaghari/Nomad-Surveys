@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
 import toast, { Toaster } from 'react-hot-toast';
 import styles from './LoginForm.module.css';
-import Link from 'next/link';
 import ForgotPasswordModal from './modals/ForgotPasswordModal';
 import VerifyOtpModal from './modals/VerifyOtpModal';
 
@@ -83,160 +82,212 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#363636',
+            background: '#18181b',
             color: '#fff',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(10px)',
           },
           success: {
             duration: 3000,
             style: {
-              background: '#10B981',
+              background: 'rgba(16, 185, 129, 0.9)',
             },
           },
           error: {
             duration: 5000,
             style: {
-              background: '#EF4444',
+              background: 'rgba(239, 68, 68, 0.9)',
             },
           },
         }}
       />
+
       <div className={styles.container}>
-        {/* Left Side - Background Image with Logo */}
-        <div className={styles.leftSide}>
-          {/* Background Image */}
-          <div className={styles.backgroundImage}>
-            <Image
-              src="/Background/LoginScreenBackground.jpg"
-              alt="Login Background"
-              fill
-              style={{ objectFit: 'cover' }}
-              priority
-            />
-            <div className={styles.backgroundOverlay}></div>
-          </div>
-
-          {/* Content */}
-          <div className={styles.content}>
-            {/* Large Logo */}
-            <div className={styles.logoContainer}>
-              <div className={styles.logoText}>
-                NOM<span className={styles.logoAccent}>A</span>D
-              </div>
-            </div>
-
-            {/* Tagline */}
-            <h1 className={styles.tagline}>
-              Insight-driven decisions for people and organizations
-            </h1>
-
-            {/* Description */}
-            <p className={styles.description}>
-              Nomad is a people insights platform that helps organizations gather structured, confidential input to support leadership development, engagement, and talent decisions. Built to deliver clarity, accuracy, and trust at every stage.
-            </p>
-          </div>
+        {/* Background Image & Overlay */}
+        <div className={styles.backgroundImageWrapper}>
+          <Image
+            src="/Background/LoginScreenBackground.png"
+            alt="Login Background"
+            fill
+            sizes="100vw"
+            className={styles.backgroundImage}
+            priority
+          />
+          <div className={styles.backgroundOverlay} />
         </div>
 
-        {/* Right Side - Login Form */}
-        <div className={styles.rightSide}>
-          <div className={styles.formContainer}>
-            <div className={styles.header}>
-              <h2>Sign In</h2>
-              <p>
-                {isSuperAdmin
-                  ? 'Access the SuperAdmin dashboard'
-                  : 'Access your account dashboard'
-                }
+        {/* Main Split Layout */}
+        <div className={styles.mainLayout}>
+          {/* Left Side: Clean Typography Hero */}
+          <div className={styles.leftSide}>
+            <div className={styles.heroContent}>
+              <h1 className={styles.heroTitle}>
+                Welcome to<br />Alpha Surveys
+              </h1>
+              <p className={styles.heroSubtitle}>
+                Access your surveys, manage responses, and unlock deep analytical insights in one unified workspace.
               </p>
             </div>
+          </div>
 
-            <form className={styles.form} onSubmit={handleSubmit}>
-              <div className={styles.formFields}>
-                <div className={styles.fieldGroup}>
-                  <label htmlFor="email" className={styles.label}>
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    required
-                    className={styles.input}
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-
-                <div className={styles.fieldGroup}>
-                  <label htmlFor="password" className={styles.label}>
-                    Password
-                  </label>
-                  <div className={styles.passwordContainer}>
-                    <input
-                      id="password"
-                      name="password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="current-password"
-                      required
-                      className={styles.passwordInput}
-                      placeholder="Password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                    <button
-                      type="button"
-                      className={styles.passwordToggle}
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
-                        </svg>
-                      ) : (
-                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {!isSuperAdmin && (
-                  <div className={styles.fieldGroup}>
-                    <label htmlFor="tenantSlug" className={styles.label}>
-                      Company Code
-                    </label>
-                    <input
-                      id="tenantSlug"
-                      name="tenantSlug"
-                      type="text"
-                      required
-                      className={styles.input}
-                      placeholder="Company Code"
-                      value={tenantSlug}
-                      onChange={(e) => setTenantSlug(e.target.value)}
-                    />
-                  </div>
+          {/* Right Side: Frosted Glass Login Panel */}
+          <div className={styles.rightSide}>
+            <div className={styles.formCard}>
+              <div className={styles.header}>
+                <h2 className={styles.title}>Sign In</h2>
+                {isSuperAdmin && (
+                  <p className={styles.subtitle}>SuperAdmin Management Portal</p>
                 )}
               </div>
 
-              <div className={styles.rememberForgot}>
-                <div className={styles.rememberContainer}>
-                  <input
-                    id="remember-me"
-                    name="remember-me"
-                    type="checkbox"
-                    className={styles.checkbox}
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                  />
-                  <label htmlFor="remember-me" className={styles.checkboxLabel}>
-                    Remember me
+              <form className={styles.form} onSubmit={handleSubmit}>
+                <div className={styles.fieldsWrapper}>
+                  {/* Email Field */}
+                  <div className={styles.fieldGroup}>
+                    <label htmlFor="email" className={styles.label}>
+                      Email
+                    </label>
+                    <div className={styles.inputWrapper}>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        className={styles.input}
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                      <span className={styles.icon}>
+                        {/* Mail icon */}
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Company Code Field (Tenant Slug) */}
+                  {!isSuperAdmin && (
+                    <div className={styles.fieldGroup}>
+                      <label htmlFor="tenantSlug" className={styles.label}>
+                        Company Code
+                      </label>
+                      <div className={styles.inputWrapper}>
+                        <input
+                          id="tenantSlug"
+                          name="tenantSlug"
+                          type="text"
+                          required
+                          className={styles.input}
+                          placeholder="Enter your company code"
+                          value={tenantSlug}
+                          onChange={(e) => setTenantSlug(e.target.value)}
+                        />
+                        <span className={styles.icon}>
+                          {/* Organization / Building Icon */}
+                          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                            />
+                          </svg>
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Password Field */}
+                  <div className={styles.fieldGroup}>
+                    <label htmlFor="password" className={styles.label}>
+                      Password
+                    </label>
+                    <div className={styles.inputWrapper}>
+                      <input
+                        id="password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        required
+                        className={styles.input}
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className={styles.iconButton}
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        title={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        {showPassword ? (
+                          /* Eye Off */
+                          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
+                            />
+                          </svg>
+                        ) : (
+                          /* Lock icon */
+                          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Checkbox Row */}
+                <div className={styles.checkboxRow}>
+                  <label className={styles.checkboxContainer} htmlFor="remember-me">
+                    <input
+                      id="remember-me"
+                      name="remember-me"
+                      type="checkbox"
+                      className={styles.checkbox}
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                    />
+                    <span className={styles.checkboxLabel}>Remember me</span>
                   </label>
                 </div>
-                <div>
+
+                {/* Error Banner */}
+                {error && (
+                  <div className={styles.errorMessage}>
+                    {error}
+                  </div>
+                )}
+
+                {/* Actions Row */}
+                <div className={styles.actionsRow}>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={styles.submitButton}
+                  >
+                    <span>{isLoading ? 'Signing in...' : 'Sign In'}</span>
+                    <span className={styles.arrowIcon}>&gt;</span>
+                  </button>
+
                   <a
                     href="#"
                     className={styles.forgotLink}
@@ -245,26 +296,8 @@ export default function LoginForm({ isSuperAdmin = false }: LoginFormProps) {
                     Reset Password?
                   </a>
                 </div>
-              </div>
-
-              {error && (
-                <div className={styles.errorMessage}>
-                  <div className={styles.errorText}>{error}</div>
-                </div>
-              )}
-
-              <div>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className={styles.submitButton}
-                >
-                  {isLoading ? 'Signing in...' : 'Sign In'}
-                </button>
-              </div>
-
-          
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       </div>

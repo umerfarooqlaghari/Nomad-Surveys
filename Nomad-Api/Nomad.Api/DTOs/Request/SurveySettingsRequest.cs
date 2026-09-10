@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using Nomad.Api.DTOs.Common;
+using Alpha.Api.DTOs.Common;
 
-namespace Nomad.Api.DTOs.Request;
+namespace Alpha.Api.DTOs.Request;
 
 public class CreateTenantSettingsRequest
 {

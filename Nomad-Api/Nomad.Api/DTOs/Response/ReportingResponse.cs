@@ -1,4 +1,4 @@
-namespace Nomad.Api.DTOs.Response;
+namespace Alpha.Api.DTOs.Response;
 
 /// <summary>
 /// Question score information

@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Nomad.Api.DTOs.Request;
+namespace Alpha.Api.DTOs.Request;
 
 /// <summary>
 /// Request DTO for saving draft response

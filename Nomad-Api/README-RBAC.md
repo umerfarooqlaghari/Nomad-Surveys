@@ -1,4 +1,4 @@
-# Multi-Tenant RBAC System for Nomad Surveys
+# Multi-Tenant RBAC System for Alpha Surveys
 
 ## Overview
 
@@ -109,8 +109,8 @@ PUT /{tenantSlug}/api/company
 {
   "Jwt": {
     "Key": "YourSecretKeyHere",
-    "Issuer": "NomadSurveys",
-    "Audience": "NomadSurveysUsers",
+    "Issuer": "AlphaSurveys",
+    "Audience": "AlphaSurveysUsers",
     "ExpiryInHours": 24
   }
 }
@@ -204,10 +204,10 @@ curl -X GET "http://localhost:5231/acme-corp/api/users" \
 
 ### Running the Application
 ```bash
-cd Nomad-Surveys/Nomad-Api
+cd Alpha-Surveys/Alpha-Api
 dotnet restore
 dotnet ef database update
-dotnet run --project Nomad.Api
+dotnet run --project Alpha.Api
 ```
 
 ### Testing Endpoints

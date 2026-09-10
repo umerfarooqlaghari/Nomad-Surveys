@@ -1,4 +1,4 @@
-namespace Nomad.Api.DTOs.Report;
+namespace Alpha.Api.DTOs.Report;
 
 public class ReportQuestionDefinition
 {

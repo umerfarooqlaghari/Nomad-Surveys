@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Nomad Surveys API implements a comprehensive **Multi-Tenant Role-Based Access Control (RBAC)** system with **Claims-Based Authorization**. This document explains how the entire Role, User, and Tenant flow works.
+The Alpha Surveys API implements a comprehensive **Multi-Tenant Role-Based Access Control (RBAC)** system with **Claims-Based Authorization**. This document explains how the entire Role, User, and Tenant flow works.
 
 ## 🏢 Multi-Tenancy Architecture
 
@@ -189,8 +189,8 @@ sequenceDiagram
   "role": ["TenantAdmin"],
   "Permission": ["manage_users", "manage_surveys", "view_reports"],
   "exp": 1694123456,
-  "iss": "NomadSurveys",
-  "aud": "NomadSurveysUsers"
+  "iss": "AlphaSurveys",
+  "aud": "AlphaSurveysUsers"
 }
 ```
 
